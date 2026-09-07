@@ -88,7 +88,7 @@ pub async fn update(
     let granting = patch.default_permissions.is_some();
     let default_permissions = patch.default_permissions.as_deref().map(Permissions::from_list);
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check if user has permissions
     let perms = effective_permissions(&mut tx, room_id, caller_id).await?;
@@ -160,7 +160,7 @@ pub async fn create(
     validate::room_name(clean_room_name)?;
 
     // Open transaction
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check if user can create a room
     let allowed = [GlobalRole::Owner, GlobalRole::Admin, GlobalRole::Member];
@@ -225,7 +225,7 @@ pub async fn delete(
     caller_id: Uuid,
 ) -> Result<Vec<Uuid>> {
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Deleting a room requires Permission::DeleteRoom
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
@@ -270,7 +270,7 @@ pub async fn join(
 ) -> Result<()> {
 
     // Open transaction
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check room visibility
     let visibility: Option<Visibility> = sqlx::query_scalar(
@@ -344,7 +344,7 @@ pub async fn leave(
     user_id: Uuid,
 ) -> Result<()> {
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     access::remove(&mut tx, room_id, user_id).await?;
     tx.commit().await?;
 

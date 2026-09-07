@@ -55,12 +55,11 @@ pub async fn upload(
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<FileResponse>)> {
 
-    let mut tx = pool.begin().await?;
-
     // Reject unallowed roles to upload
+    let mut conn = pool.acquire().await?;
     let allowed = [GlobalRole::Owner, GlobalRole::Admin, GlobalRole::Member];
-    db::require_role(&mut tx, caller_id, &allowed).await?;
-    tx.commit().await?;
+    db::require_role(&mut conn, caller_id, &allowed).await?;
+    drop(conn);
 
     // Read POST body
     let field = match multipart.next_field().await {

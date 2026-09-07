@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
+use sqlx::pool::PoolConnection;
+use sqlx::{Sqlite, SqlitePool};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
@@ -222,7 +224,7 @@ pub async fn broadcast(
     room_id: Uuid,
     event: ServerEvent,
 ) {
-    let mut conn = match state.pool.acquire().await {
+    let mut conn = match acquire_retrying(&state.pool).await {
         Ok(conn) => conn,
         Err(e) => {
             tracing::error!("broadcast could not acquire a connection: {e}");
@@ -253,7 +255,7 @@ pub async fn inform_shared_members(
     user_id: Uuid,
     event: ServerEvent,
 ) {
-    let mut conn = match state.pool.acquire().await {
+    let mut conn = match acquire_retrying(&state.pool).await {
         Ok(conn) => conn,
         Err(e) => {
             tracing::error!("could not acquire a connection: {e}");
@@ -334,6 +336,27 @@ pub fn offline_users(
 }
 
 // Helper Methods //
+
+/// Acquires a connection, retrying on failure with a wait between attempts.
+async fn acquire_retrying(
+    pool: &SqlitePool
+) -> std::result::Result<PoolConnection<Sqlite>, sqlx::Error> {
+    let retries = config::get().database.broadcast_retries;
+    let delay = config::get().database.broadcast_retry_delay();
+    let mut attempt = 0;
+
+    loop {
+        match pool.acquire().await {
+            Ok(conn) => return Ok(conn),
+            Err(e) if attempt < retries => {
+                tracing::warn!("acquire attempt {attempt} failed: {e}");
+                tokio::time::sleep(delay).await;
+                attempt += 1;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
 
 /// Takes the read lock, recovering it if a writer panicked while holding it.
 fn read_lock(state: &AppState) -> std::sync::RwLockReadGuard<'_, HashMap<Uuid, Connected>> {

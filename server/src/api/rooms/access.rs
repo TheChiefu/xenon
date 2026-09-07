@@ -109,7 +109,7 @@ pub async fn update(
 ) -> Result<()> {
 
     // One transaction, so the permissions read here cannot change before the write
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check caller's permission in the room
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;

@@ -293,7 +293,7 @@ pub async fn delete(
     delete_history: bool,
 ) -> Result<Vec<Uuid>> {
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // one_owner needs a live owner, so the server is handed over first
     if db::global_role(&mut tx, user_id).await? == GlobalRole::Owner {
@@ -380,7 +380,7 @@ pub async fn transfer_ownership(
         return Err(AppError::Forbidden);
     }
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // User who isn't owner cannot transfer ownership
     if db::global_role(&mut tx, caller_id).await? != GlobalRole::Owner {
@@ -429,7 +429,7 @@ pub async fn set_role(
     }
 
     // Start transaction
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     let caller_role = db::global_role(&mut tx, caller_id).await?;
 

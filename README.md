@@ -53,6 +53,13 @@ Debian and Ubuntu:
 sudo apt install build-essential cmake
 ```
 
+Windows:
+```powershell
+winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+winget install Kitware.CMake
+winget install NASM.NASM
+```
+
 Then build:
 ```bash
 cd server

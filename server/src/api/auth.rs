@@ -45,10 +45,21 @@ pub async fn register(
     validate::display_name(display_name)?;
     validate::password(password)?;
 
-    // Open transaction
-    let mut tx = pool.begin().await?;
+    let mut conn = pool.acquire().await?;
 
-    // Claim invite first
+    // Reject a taken username before the invite is claimed
+    let taken: Option<i64> = sqlx::query_scalar(
+        "SELECT 1 FROM users WHERE username = ?1"
+    )
+    .bind(username)
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    if taken.is_some() {
+        return Err(AppError::UsernameTaken);
+    }
+
+    // Claim invite
     let claimed = sqlx::query(
         "
         UPDATE invites SET uses = uses + 1
@@ -60,17 +71,20 @@ pub async fn register(
     )
     .bind(code.trim().to_ascii_uppercase()) // Invites code are stored uppercase
     .bind(utils::now_ms())
-    .execute(&mut *tx)
+    .execute(&mut *conn)
     .await?
     .rows_affected();
+    drop(conn);
 
     if claimed == 0 {
-        // Transaction drops here, roll back claim that didn't happen
         return Err(AppError::InvalidInvite);
     }
 
     // Hash password for storage in DB
     let password_hash = utils::hash_password(password)?;
+
+    // Open transaction
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Create user
     let id = Uuid::now_v7();
@@ -118,7 +132,8 @@ pub async fn change_password(
 
     validate::password(new_password)?;
 
-    let mut tx = pool.begin().await?;
+    // Hash new password
+    let password_hash = utils::hash_password(new_password)?;
 
     // Get stored password hash to check
     let stored_hash: Option<String> = sqlx::query_scalar(
@@ -129,7 +144,7 @@ pub async fn change_password(
         "
     )
     .bind(user_id)
-    .fetch_optional(&mut *tx)
+    .fetch_optional(pool)
     .await?
     .flatten();
 
@@ -141,8 +156,8 @@ pub async fn change_password(
         return Err(AppError::InvalidCredentials);
     }
 
-    // Hash new password and update in DB
-    let password_hash = utils::hash_password(new_password)?;
+    // Update password in DB
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     sqlx::query(
         "
         UPDATE users SET password_hash = ?1
@@ -197,8 +212,6 @@ pub async fn login(
     password: &str,
 ) -> Result<String> {
 
-    let mut conn = pool.acquire().await?;
-
     // Username lookup
     let lookup = sqlx::query_as::<_, (Uuid, Option<String>)>(
         "
@@ -208,7 +221,7 @@ pub async fn login(
         "
     )
     .bind(username)
-    .fetch_one(&mut *conn)
+    .fetch_one(pool)
     .await;
 
     // Attempt to retrieve username and password hash
@@ -235,6 +248,7 @@ pub async fn login(
     }
 
     // Create session key
+    let mut conn = pool.acquire().await?;
     let token = db::create_session(&mut conn, user_id).await?;
 
     Ok(token)

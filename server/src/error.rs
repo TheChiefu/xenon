@@ -9,6 +9,7 @@ use axum::Json;
 use uuid::Uuid;
 
 use crate::bytesize::ByteSize;
+const SQLITE_BUSY: &str = "5"; // https://sqlite.org/rescode.html#busy
 
 /// Everything a request can fail with.
 #[derive(Debug)]
@@ -81,6 +82,16 @@ impl From<std::io::Error> for AppError {
     }
 }
 
+impl AppError {
+    /// Logs the error and answers with a generic 500, carrying the same id in
+    /// both so the response can be matched to its log line.
+    fn internal_error(&self) -> (StatusCode, String) {
+        let id = Uuid::now_v7();
+        tracing::error!("internal error {id}: {self}");
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("internal server error ({id})"))
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
@@ -95,22 +106,21 @@ impl IntoResponse for AppError {
             // A rejected request body reaches server as an io error
             AppError::Io(e) => match multipart_rejection(e) {
                 Some(rejection) => rejection,
-                None => {
-                    let id = Uuid::now_v7();
-                    tracing::error!("internal error {id}: {self}");
-                    (StatusCode::INTERNAL_SERVER_ERROR, format!("internal server error ({id})"))
-                }
+                None => self.internal_error(),
+            },
+
+            // Handle Database Errors
+            AppError::Db(e) => match e {
+                sqlx::Error::Database(db) => match db.code().as_deref() {
+                    Some(SQLITE_BUSY) => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
+                    _ => self.internal_error(), // Add new SQL error codes here if necessary
+                },
+                _ => self.internal_error(),
             },
 
             // Never reaches client
             AppError::OwnerExists |
-            AppError::Db(_) |
-            AppError::Hash(_) =>
-            {
-                let id = Uuid::now_v7();
-                tracing::error!("internal error {id}: {self}");
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("internal server error ({id})"))
-            }
+            AppError::Hash(_) => self.internal_error(),
         };
 
         (status, Json(serde_json::json!({"error": message}))).into_response()

@@ -86,7 +86,7 @@ where
     // them (ie. no references in the DB) can delete them at a later point
 
     // Insert file info into Database
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let stored = insert(&mut tx, filename, stream.sha256, stream.byte_size, stream.mime).await?;
     tx.commit().await?;
 

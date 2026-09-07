@@ -56,7 +56,7 @@ pub async fn create(
     expire_delta: Option<i64>,
 ) -> Result<()> {
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check if user has permission to create an invite
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;

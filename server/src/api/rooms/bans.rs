@@ -123,7 +123,7 @@ pub async fn create(
     expire_delta: Option<i64>,
 ) -> Result<()> {
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     require_permission(&mut tx, room_id, caller_id).await?;
 

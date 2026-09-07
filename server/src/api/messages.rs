@@ -72,7 +72,7 @@ pub async fn post(
     validate_post(body, attachments)?;
 
     // Start transaction
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check user perms
     let perms = db::effective_permissions(&mut tx, room_id, author_id).await?;
@@ -237,7 +237,7 @@ pub async fn delete(
     caller_id: Uuid,
 ) -> Result<Uuid> {
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let message = fetch_by_id(&mut tx, message_id).await?;
     let room_id = message.room_id;
 
@@ -313,7 +313,7 @@ pub async fn edit(
         validate::message_body(text)?;
     }
 
-    let mut tx = pool.begin().await?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check author
     let message = fetch_by_id(&mut tx, message_id).await?;
