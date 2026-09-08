@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60pt" height="60pt" viewBox="0 0 60 60">
+<defs>
+<mask id="mac-face" maskUnits="userSpaceOnUse" x="0" y="0" width="60" height="60">
+<rect x="0" y="0" width="60" height="60" fill="#fff"/>
+<rect x="40.905" y="13.89" width="3.6" height="9.495" rx="1.8" ry="1.8"/>
+<rect x="15.2796" y="13.9386" width="3.6" height="9.495" rx="1.8" ry="1.8"/>
+<path fill="none" stroke="#000" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" d="M31.245 2.4C27.8967 9.42445 26.9127 19.7198 26.34 30.63L33.93 30.39C33.7925 39.2318 32.9706 48.6712 35.97 57.36"/>
+<path fill="none" stroke="#000" stroke-width="3.6" stroke-linecap="round" d="M13.2075 41.1525C20.39122 49.73458 39.3145 50.61652 48.3975 41.085"/>
+</mask>
+</defs>
+<g mask="url(#mac-face)">
+<path transform="translate(1.35, 2.4)" fill="#000" fill-rule="evenodd" d="M29.895 0C26.5467 7.02445 25.5627 17.3198 24.99 28.23L32.58 27.99C32.4425 36.8318 31.6206 46.2712 34.62 54.96L4.9275 55.2C1.92023 54.8639 0.500054 52.8242 0 50.16L0 4.8C0.617578 2.32376 2.29244 0.736257 4.98 0Z"/>
+<path transform="translate(25.61, 2.49)" fill="#000" fill-rule="evenodd" d="M10.0969 54.8625C13.8087 54.8648 19.9949 54.8685 28.6557 54.8737C30.8846 54.2385 32.5438 53.1288 32.8894 50.88L32.8294 5.25C32.6279 2.72925 31.3491 0.901926 28.5394 0.06L5.635 -0.09C2.5557 7.99966 -0.771549 15.955 0.159433 28.47L7.80943 28.56C6.42592 33.8516 7.18842 42.6191 10.0969 54.8625Z"/>
+</g>
+</svg>

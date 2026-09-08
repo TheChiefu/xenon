@@ -1,0 +1,40 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Created using Krita: https://krita.org -->
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:krita="http://krita.org/namespaces/svg/krita"
+    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+    width="737.28pt"
+    height="737.28pt"
+    viewBox="0 0 737.28 737.28">
+  <defs>
+    <linearGradient id="xenonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#000f2c"/>
+      <stop offset="50%" stop-color="#229bfe"/>
+      <stop offset="100%" stop-color="#73d0ff"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="1" result="dilated"/>
+      <feOffset in="dilated" dx="1" dy="2" result="offsetAlpha"/>
+      <feFlood flood-color="#000000" result="black"/>
+      <feComposite in="black" in2="offsetAlpha" operator="in" result="hardShadow"/>
+      <feMerge>
+        <feMergeNode in="hardShadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <path id="shape0"
+      filter="url(#dropShadow)"
+      transform="translate(12.53370375, 55.4201915625007)"
+      fill="url(#xenonGradient)"
+      fill-rule="evenodd"
+      stroke-opacity="0"
+      stroke="#000000"
+      stroke-width="0"
+      stroke-linecap="square"
+      stroke-linejoin="bevel"
+      sodipodi:nodetypes="ccccccccccccccccccccccccccccccccccc"
+      d="M658.765 0C556.887 28.015 437.487 84.4399 300.566 169.275C249.383 98.2748 215.752 55.6822 199.67 41.497C181.288 17.8188 109.036 23.6521 100.987 24.2221C102.881 26.2435 239.322 197.62 240.795 211.477C168.967 276.705 56.2161 402.969 0 507.987C12.6369 475.766 231.718 269.827 268.452 248.491C279.637 249.54 327.391 364.211 396.574 395.399C451.115 416.527 591.988 395.974 595.799 390.441C584.455 388.167 470.499 408.688 412.756 345.547C385.836 311.267 320.683 220.589 322.106 208.456C321.037 188.28 549.209 61.0509 658.765 0ZM676.371 93.1696C700.325 112.633 768.377 347.86 567.923 509.982C384.769 648.848 209.334 607.521 130.205 537.985C124.909 533.761 77.9007 494.281 73.707 485.934C89.2127 501.163 129.828 526.913 139.204 530.366C153.383 538.721 329.626 639.804 554.06 470.547C673.811 376.143 728.976 230.527 676.371 93.1696ZM468.987 184.365C419.17 203.869 394.196 232.51 394.065 270.287C395.959 319.074 435.907 340.625 457.447 341.788L591.783 342.515L605.734 313.22L459.941 313.22C444.427 313.126 422.874 285.183 439.427 272.734L596.468 272.949C621.648 266.469 636.562 249.997 641.21 223.533C640.373 203.496 632.913 190.576 618.831 184.774C519.859 184.399 469.911 184.263 468.987 184.365M581.296 206.836C605.118 211.228 610.142 230.535 584.201 244.15L447.898 243.565C442.081 236.233 460.418 212.654 482.065 206.9Z"/>
+</svg>

@@ -1,26 +1,2 @@
-# Rust Files
-target/
-**/*.rs.bk
-*.pdb
-
-# Database Files
-*.db
-*.db-shm
-*.db-wal
-*.db.bak
-
-# Xenon Files
-config.toml
-/server/files/*
-*.log
-
-# Sidecar Files
-node_modules/
-vapid.json
-subscriptions.json
-xbox_links.json
-games.json
-*.json.tmp
-
-# Client
+# Test Files/Folders 
 /web/*

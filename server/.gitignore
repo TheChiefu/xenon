@@ -1,0 +1,22 @@
+# Rust Files
+target/
+**/*.rs.bk
+*.pdb
+
+# Database Files
+*.db
+*.db-shm
+*.db-wal
+*.db.bak
+
+# Xenon Files
+config.toml
+files/*
+*.log
+
+# Sidecar Files
+vapid.json
+subscriptions.json
+xbox_links.json
+games.json
+*.json.tmp
