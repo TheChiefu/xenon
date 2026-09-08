@@ -66,6 +66,11 @@ cd server
 cargo build --release
 ```
 
+To update the client TypeScript bindings based off of the rust code, run:
+```bash
+cargo test --features ts_bindings export_bindings
+```
+
 ## Configuration
 To configure the server, edit the `config.toml` file that is generated when the server
 is first run. By default it is written to the same directory the server is run at.
