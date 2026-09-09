@@ -1,53 +1,143 @@
-export type MessagePart = 
-    | {kind: 'text'; content: string;
-        bold?: boolean;
-        italic?: boolean;
-        strikethrough?: boolean;
+// Message Parts //
+
+interface Text {
+    kind: 'text';
+    content: string;
+    bold?: boolean;
+    italic?: boolean;
+    strikethrough?: boolean
+}
+
+interface Code {
+    kind: 'code';
+    content: string
+}
+
+interface Block {
+    kind: 'block';
+    content: string
+}
+
+interface Link {
+    kind: 'link';
+    href: string
+}
+
+interface Mention {
+    kind: 'mention';
+    userId: string
+}
+
+export type MessagePart = Text | Code | Block | Link | Mention;
+
+
+// Regex Definitions //
+const LINK: RegExp = /https?:\/\/[^\s<>"']+/y;
+const MENTION: RegExp = /@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/iy;
+const BOLD_ITALIC: RegExp = /\*\*\*([^*]+)\*\*\*|(?<!\w)___([^_]+?)___(?!\w)/y;
+const BOLD: RegExp = /\*\*([^*]+)\*\*|(?<!\w)__([^_]+?)__(?!\w)/y;
+const ITALIC: RegExp = /\*([^*\s][^*]*?)\*|(?<!\w)_([^_\s][^_]*?)_(?!\w)/y;
+const STRIKETHROUGH: RegExp = /~~([^~]+)~~/y;
+const BLOCK_CODE: RegExp = /```([\s\S]*?)```/y;
+const INLINE_CODE: RegExp = /`([^`\n]+)`/y;
+
+// Extract the matched pattern and return a MessagePart object
+// For cases that have 2 capture groups, 1st is preferred, 2nd is fallback
+// For cases that have 1 capture group, the whole group is returned as the content
+function patternToMsgPart(pattern: RegExp, match: RegExpExecArray): MessagePart {
+    switch (pattern) {
+        case BLOCK_CODE: return {
+            kind: 'block',
+            content: match[1] // ```code block```
+        };
+        case INLINE_CODE: return {
+            kind: 'code',
+            content: match[1] // `code`
+        };
+        case LINK: return {
+            kind: 'link',
+            href: match[0] // http(s)
+        };
+        case MENTION: return {
+            kind: 'mention',
+            userId: match[1] // @
+        };
+        case BOLD_ITALIC: return {
+            kind: 'text',
+            bold: true,
+            italic: true,
+            content: match[1] ?? match[2] // *** OR ___
+        };
+        case BOLD: return {
+            kind: 'text',
+            bold: true,
+            content: match[1] ?? match[2] // ** OR __
+        };
+        case ITALIC: return {
+            kind: 'text',
+            italic: true,
+            content: match[1] ?? match[2] // * OR _
+        };
+        case STRIKETHROUGH: return {
+            kind: 'text',
+            strikethrough: true,
+            content: match[1]
+        };
+        default: throw new Error('Unreachable: unrecognized pattern');
     }
-    | {kind: 'code'; content: string}
-    | {kind: 'block'; content: string}
-    | {kind: 'link'; href: string}
-    | {kind: 'mention'; userId: string};
+}
 
-// Regex Definitions
-const LINK: RegExp = /https?:\/\/[^\s<>"']+/g;
-const MENTION: RegExp = /@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
-const BOLD_ITALIC: RegExp = /\*\*\*([^*]+)\*\*\*|(?<!\w)___([^_]+?)___(?!\w)/g;
-const BOLD: RegExp = /\*\*([^*]+)\*\*|(?<!\w)__([^_]+?)__(?!\w)/g;
-const ITALIC: RegExp = /\*([^*\s][^*]*?)\*|(?<!\w)_([^_\s][^_]*?)_(?!\w)/g;
-const STRIKETHROUGH: RegExp = /~~([^~]+)~~/g;
-const BLOCK_CODE: RegExp = /```([\s\S]*?)```/g;
-const INLINE_CODE: RegExp = /`([^`\n]+)`/g;
+// List of all regex patterns to match against the message body
+const CONSTRUCTS: RegExp[] = [BLOCK_CODE, INLINE_CODE, LINK, MENTION, BOLD_ITALIC, BOLD, ITALIC, STRIKETHROUGH];
 
-const PATTERNS: { regex: RegExp; toPart: (match: RegExpMatchArray) => MessagePart }[] = [
-    { regex: BLOCK_CODE,     toPart: (m) => ({ kind: 'block', content: m[1] }) },
-    { regex: INLINE_CODE,    toPart: (m) => ({ kind: 'code', content: m[1] }) },
-    { regex: STRIKETHROUGH,  toPart: (m) => ({ kind: 'text', strikethrough: true, content: m[1] }) },
-    { regex: LINK,           toPart: (m) => ({ kind: 'link', href: m[0] }) },
-    { regex: MENTION,        toPart: (m) => ({ kind: 'mention', userId: m[1] }) },
-    { regex: BOLD_ITALIC,    toPart: (m) => ({ kind: 'text', bold: true, italic: true, content: m[1] ?? m[2] }) },
-    { regex: BOLD,           toPart: (m) => ({ kind: 'text', bold: true, content: m[1] ?? m[2] }) },
-    { regex: ITALIC,         toPart: (m) => ({ kind: 'text', italic: true, content: m[1] ?? m[2] }) },
-];
+// Parses a message body into an array of MessagePart objects
+export function parse(body: string): MessagePart[] {
 
-function parse(body: string): MessagePart[] {
-    type Match = {
-        start: number;
-        end: number;
-        part: MessagePart
-    };
+    // Initialize an empty array to hold the parsed message parts
+    const parts: MessagePart[] = [];
+    let i = 0;
+    let textStart = 0;
 
-    const matches: Match[] = [];
+    // Iterate through the message body by character
+    while (i < body.length) {
+        let matched = false;
 
-    for (const pattern of PATTERNS) {
-        const found = body.matchAll(pattern.regex);
-        for (const match of found) {
-            const part = pattern.toPart(match);
-            const start = match.index;
-            const end = start + match[0].length;
-            matches.push({ start: start, end: end, part: part });
+        // Iterate through each regex pattern to find a match in the message body
+        for (const pattern of CONSTRUCTS) {
+
+            // Reset the lastIndex of the regex pattern to the current index
+            pattern.lastIndex = i;
+            const match = pattern.exec(body);
+            if (!match) continue;
+
+            // If a match is found, push the text before the match as a text part
+            if (i > textStart) {
+                parts.push({
+                    kind: 'text',
+                    content: body.slice(textStart, i)
+                });
+            }
+
+            // Push the matched pattern as a MessagePart object
+            parts.push(patternToMsgPart(pattern, match));
+
+            // Update index/textStart to continue parsing after matched pattern
+            i = textStart = i + match[0].length;
+            matched = true;
+            break;
         }
+
+        // If no match is found, increment the index to continue parsing
+        if (!matched) i++;
     }
 
-    return matches;
+    // If there is any remaining text after the last match, push it as a text part
+    if (i > textStart) {
+        parts.push({
+            kind: 'text',
+            content: body.slice(textStart, i)
+        });
+    }
+
+    return parts;
 }

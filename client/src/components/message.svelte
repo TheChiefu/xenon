@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { MessageResponse } from '../bindings/MessageResponse';
+    import { parse } from '../lib/markdown';
 
     interface Props {
         message: MessageResponse;
@@ -12,6 +13,7 @@
     const createdAt = $derived(new Date(Number(message.created_at)));
     const editedAt = $derived(message.edited_at ? new Date(Number(message.edited_at)) : null);
     const deletedAt = $derived(message.deleted_at ? new Date(Number(message.deleted_at)) : null);
+    const parts = $derived(message.body !== null ? parse(message.body) : []);
 
     const avatar_width = "2em";
     const avatar_height = "2em";
@@ -52,7 +54,6 @@
 
     <!-- Body -->
     <div class="message-body">
-        
         <!-- Parse Message Kind -->
         <!-- Regular text -> p -->
         <!-- Contains `abc` or ```abc``` parse as MD -->
