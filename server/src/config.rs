@@ -255,6 +255,10 @@ pub struct Bind {
 
     /// PEM private key for `certificate`
     pub key: Option<String>,
+
+    /// Origins allowed to make cross-origin requests, e.g. a web client
+    /// served from a different address. Empty allows none.
+    pub allowed_origins: Vec<String>,
 }
 
 impl Default for Bind {
@@ -263,7 +267,8 @@ impl Default for Bind {
             ip: "127.0.0.1".to_string(),
             port: 3000,
             certificate: None,
-            key: None
+            key: None,
+            allowed_origins: Vec::new()
         }
     }
 }

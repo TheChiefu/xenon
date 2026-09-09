@@ -4,6 +4,9 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Serialize;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::config;
 use crate::error::Result;
 
@@ -11,6 +14,7 @@ use crate::error::Result;
 
 /// Name, version, kind, and description of this server.
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export))]
 pub struct ServerInfo {
     pub name: String,
     pub version: String,

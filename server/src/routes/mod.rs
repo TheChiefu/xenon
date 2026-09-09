@@ -9,14 +9,20 @@ mod rooms;
 mod server;
 mod users;
 
+use std::time::Duration;
+
 use axum::extract::{DefaultBodyLimit, FromRef, FromRequestParts};
 use axum::http;
+use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::request::Parts;
+use axum::http::Method;
 use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use sqlx::SqlitePool;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use uuid::Uuid;
 
+use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::sockets;
@@ -161,9 +167,42 @@ pub fn router(state: AppState) -> Router {
         .route("/server/type", get(server::kind))
         .route("/health", get(server::health_check))
         .with_state(state)
+        .layer(cors_layer())
 }
 
 // Helper Methods //
+
+/// Reports whether an origin may read the server's responses.
+fn origin_allowed(origin: &http::HeaderValue, _: &Parts) -> bool {
+    let config = config::get();
+    let Ok(origin) = origin.to_str() else { return false };
+
+    // A wildcard entry allows any origin
+    if config.bind.allowed_origins.iter().any(|allowed| allowed == "*") {
+        return true;
+    }
+    // An explicitly listed origin is allowed
+    if config.bind.allowed_origins.iter().any(|allowed| allowed == origin) {
+        return true;
+    }
+    // A server unreachable from any other machine allows any local origin
+    if config.binds_loopback() {
+        let Some((_, host)) = origin.split_once("://") else { return false };
+        let host = host.split(':').next().unwrap_or(host);
+        if host == "localhost" || host == "127.0.0.1" {
+            return true;
+        }
+    }
+    false
+}
+
+fn cors_layer() -> CorsLayer {
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::predicate(origin_allowed))
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::PUT, Method::DELETE])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE])
+        .max_age(Duration::from_secs(3600))
+}
 
 /// Reads the session token a request presents.
 ///

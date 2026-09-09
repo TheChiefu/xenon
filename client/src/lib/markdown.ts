@@ -88,7 +88,7 @@ function patternToMsgPart(pattern: RegExp, match: RegExpExecArray): MessagePart 
 }
 
 // List of all regex patterns to match against the message body
-const CONSTRUCTS: RegExp[] = [BLOCK_CODE, INLINE_CODE, LINK, MENTION, BOLD_ITALIC, BOLD, ITALIC, STRIKETHROUGH];
+const PATTERNS: RegExp[] = [BLOCK_CODE, INLINE_CODE, LINK, MENTION, BOLD_ITALIC, BOLD, ITALIC, STRIKETHROUGH];
 
 // Parses a message body into an array of MessagePart objects
 export function parse(body: string): MessagePart[] {
@@ -103,7 +103,7 @@ export function parse(body: string): MessagePart[] {
         let matched = false;
 
         // Iterate through each regex pattern to find a match in the message body
-        for (const pattern of CONSTRUCTS) {
+        for (const pattern of PATTERNS) {
 
             // Reset the lastIndex of the regex pattern to the current index
             pattern.lastIndex = i;
