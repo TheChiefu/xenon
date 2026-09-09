@@ -197,11 +197,12 @@ fn origin_allowed(origin: &http::HeaderValue, _: &Parts) -> bool {
 }
 
 fn cors_layer() -> CorsLayer {
+    let max_age = config::get().bind.cors_max_age;
     CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(origin_allowed))
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::PUT, Method::DELETE])
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
-        .max_age(Duration::from_secs(3600))
+        .max_age(Duration::from_secs(max_age))
 }
 
 /// Reads the session token a request presents.

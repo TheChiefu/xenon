@@ -259,6 +259,9 @@ pub struct Bind {
     /// Origins allowed to make cross-origin requests, e.g. a web client
     /// served from a different address. Empty allows none.
     pub allowed_origins: Vec<String>,
+
+    // Max age for a CORS request
+    pub cors_max_age: u64
 }
 
 impl Default for Bind {
@@ -268,7 +271,8 @@ impl Default for Bind {
             port: 3000,
             certificate: None,
             key: None,
-            allowed_origins: Vec::new()
+            allowed_origins: Vec::new(),
+            cors_max_age: 3600,
         }
     }
 }
