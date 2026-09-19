@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { MessageResponse } from "@/bindings/MessageResponse";
+    import type { MessageResponse } from "@/bindings/routes/messages";
     import { parse } from "@/lib/markdown";
 
     interface Props {

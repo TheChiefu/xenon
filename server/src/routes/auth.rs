@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::error::Result;
 use crate::models::GlobalRole;
 use crate::routes::AuthUser;
@@ -16,6 +19,7 @@ use crate::{api, db, validate};
 
 /// POST body for creating an account.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct RegisterRequest {
     pub invite_code: String,
     pub username: String,
@@ -25,6 +29,7 @@ pub struct RegisterRequest {
 
 /// POST body for starting a session.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -32,6 +37,7 @@ pub struct LoginRequest {
 
 /// POST body for creating a registration code.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct CreateInviteRequest {
     pub max_uses: Option<i64>,
     pub lifetime: Option<i64>,
@@ -39,6 +45,7 @@ pub struct CreateInviteRequest {
 
 /// Response carrying a new account's id and its first session token.
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct RegisterResponse {
     pub id: Uuid,
     pub session_token: String,
@@ -46,12 +53,14 @@ pub struct RegisterResponse {
 
 /// Response carrying a session token.
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct LoginResponse {
     pub token: String,
 }
 
 /// Response carrying a registration code.
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct CreateInviteResponse {
     pub code: String,
 }

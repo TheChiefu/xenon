@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { AttachmentResponse } from "@/bindings/AttachmentResponse";
+import type { AttachmentResponse } from "@/bindings/routes/messages";
 import download from "@/assets/icons/download.svg";
 
 interface Props {

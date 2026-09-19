@@ -1,5 +1,5 @@
 <script lang="ts">
-import type {ServerInfo} from "@/bindings/ServerInfo";
+import type {ServerInfo} from "@/bindings/routes/server";
 import { getBaseUrl } from "@/lib/server";
 
 let info = $state<ServerInfo | null>(null);

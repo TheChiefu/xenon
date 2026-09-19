@@ -14,7 +14,7 @@ use crate::error::Result;
 
 /// Name, version, kind, and description of this server.
 #[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/server.ts"))]
 pub struct ServerInfo {
     pub name: String,
     pub version: String,

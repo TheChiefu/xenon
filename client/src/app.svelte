@@ -1,7 +1,7 @@
 <script lang="ts">
     import Message from "./components/message.svelte";
     import ServerInfo from "./components/areas/server_info.svelte";
-    import type { MessageResponse } from "./bindings/MessageResponse";
+    import type { MessageResponse } from "./bindings/routes/messages";
 
     const sampleMessage: MessageResponse = {
         seq: 1n,

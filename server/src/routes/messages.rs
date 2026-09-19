@@ -41,7 +41,7 @@ pub struct EditMessageRequest {
 
 /// One file as a message attaches it.
 #[derive(Clone, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
 pub struct AttachmentResponse {
     pub id: Uuid,
     pub filename: String,
@@ -64,7 +64,7 @@ impl From<Attached> for AttachmentResponse {
 
 /// A message and the files attached to it.
 #[derive(Clone, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
 pub struct MessageResponse {
     pub seq: i64,
     pub id: Uuid,
@@ -79,6 +79,7 @@ pub struct MessageResponse {
 
 /// Response carrying when a message was edited.
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
 pub struct EditMessageResponse {
     pub edited_at: i64
 }
