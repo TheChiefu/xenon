@@ -5,3 +5,11 @@ const DEFAULT_BASE_URL = "http://localhost:3000";
 export function getBaseUrl(): string {
     return localStorage.getItem('serverBaseUrl') ?? DEFAULT_BASE_URL;
 }
+
+export function getToken(): string | null {
+    return localStorage.getItem('sessionToken');
+}
+
+export function setToken(token: string): void {
+    localStorage.setItem('sessionToken', token);
+}

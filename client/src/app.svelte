@@ -2,6 +2,8 @@
     import Message from "./components/message.svelte";
     import ServerInfo from "./components/areas/server_info.svelte";
     import type { MessageResponse } from "./bindings/routes/messages";
+    import Login from "./views/login.svelte";
+    import { getToken } from "./lib/session";
 
     const sampleMessage: MessageResponse = {
         seq: 1n,
@@ -14,8 +16,18 @@
         deleted_at: null,
         attachments: [],
     };
+
+    let token = $state(getToken());
+    function handleLogin() {
+      token = getToken();
+    }
+
 </script>
 
 
-<ServerInfo />
-<Message message={sampleMessage} author="Test User"></Message>
+{#if token !== null}
+    <ServerInfo />
+    <Message message={sampleMessage} author="Test User"></Message>
+{:else}
+    <Login onLogin={handleLogin}/>
+{/if}

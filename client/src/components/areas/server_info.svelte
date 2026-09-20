@@ -1,6 +1,6 @@
 <script lang="ts">
 import type {ServerInfo} from "@/bindings/routes/server";
-import { getBaseUrl } from "@/lib/server";
+import { getBaseUrl } from "@/lib/session";
 
 let info = $state<ServerInfo | null>(null);
 let error = $state<string | null>(null);
