@@ -1,0 +1,89 @@
+/* Dark Theme */
+
+:root {
+    /* General */
+    --background: rgba(21, 24, 29, 1);
+    --text: rgba(231, 234, 239, 1);
+    --border: rgba(47, 54, 65, 1);
+    --border-dim: rgba(47, 54, 65, 0.5);
+    --icon-size: 1.25rem;
+    --danger: rgba(190, 0, 0, 1);
+    --line-bar-width: 100%;
+
+    /* Components */
+    --component: rgba(27, 31, 38, 1);
+    --component-hover: rgba(60, 60, 60, 1);
+
+    /* Button Colors */
+    --btn-tab: rgba(21, 24, 29, 1);
+    --btn-tab-active: rgba(47, 54, 65, 1);
+    --btn-entry: rgba(21, 24, 29, 1);
+    --btn-entry-hover: rgba(30, 30, 30, 1);
+    --btn-action: rgba(79, 140, 255, 1);
+    --btn-action-hover: rgba(79, 120, 255, 1);
+
+    color-scheme: dark;
+}
+
+hr {
+    width: --var(--line-bar-width);
+    width: 100%;
+}
+
+input {
+    background: var(--background);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.icon {
+    display: inline-flex;
+    width: var(--icon-size);
+    height: var(--icon-size);
+}
+
+
+/* Buttons */
+
+button {
+    background: var(--component);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+button.inherit {
+    background: none;
+    border: none;
+}
+
+button:hover {
+    background-color: var(--component-hover);
+}
+
+button.is-tab {
+    background: var(--btn-tab);
+}
+
+button.is-tab.is-active {
+    background: var(--btn-tab-active);
+}
+
+button.is-entry {
+    background: var(--btn-entry);
+}
+
+button.is-entry:hover {
+    background: var(--btn-entry-hover);
+}
+
+button.is-action {
+    background: var(--btn-action);
+}
+
+button.is-action:hover {
+    background: var(--btn-action-hover);
+}
+
+button.is-danger:hover {
+    background-color: var(--danger);
+}

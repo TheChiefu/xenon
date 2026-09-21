@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { AttachmentResponse } from "@/bindings/routes/messages";
-import download from "@/assets/icons/download.svg";
+import download from "@/assets/icons/download.svg?raw";
 
 interface Props {
     attachment: AttachmentResponse;
@@ -24,7 +24,7 @@ const url = $derived(`/files/${attachment.id}`);
     {:else if attachment.mime.startsWith("audio/")}
         <audio src={url} controls></audio>
     {:else}
-        <a href={url} download>{attachment.filename}<img src={download} alt="Download Button"/></a>
+        <a href={url} download>{attachment.filename}<span class="icon" aria-hidden="true">{@html download}</span></a>
     {/if}
 
 </div>

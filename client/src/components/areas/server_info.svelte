@@ -1,47 +1,23 @@
 <script lang="ts">
 import type {ServerInfo} from "@/bindings/routes/server";
-import { getBaseUrl } from "@/lib/session";
+import { getUrl } from "@/lib/session.svelte";
+import { getServerInfo } from "@/lib/api/server";
 
 let info = $state<ServerInfo | null>(null);
 let error = $state<string | null>(null);
 
 $effect(() => {
-    fetch(`${getBaseUrl()}/server`)
-        .then((response) => response.json())
-        .then((data: ServerInfo) => { info = data; })
+    const url = getUrl();
+    if (url === null) {
+        return;
+    }
+
+    getServerInfo(url)
+        .then((data) => { info = data; })
         .catch((err) => { error = err.message; });
 });
 
 </script>
-
-<style>
-    .server-title {
-        font-size: 2em;
-        font-style: italic;
-        font-weight: bold;
-    }
-
-    .server-version {
-        font-size: 1em;
-        font-style: normal;
-        font-weight: 100;
-    }
-
-    .server-kind {
-        font-size: 0.65em;
-        padding: 1px 6px;
-        border-radius: 25%;
-        background: #2f3643;
-        color: #98a2b3;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-    }
-
-    .server-description {
-        font-size: 0.75em;
-    }
-
-</style>
 
 <div class="server-info" title={info?.name}>
     {#if error}

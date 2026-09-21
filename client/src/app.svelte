@@ -3,7 +3,8 @@
     import ServerInfo from "./components/areas/server_info.svelte";
     import type { MessageResponse } from "./bindings/routes/messages";
     import Login from "./views/login.svelte";
-    import { getToken } from "./lib/session";
+    import Toolbar from "./components/areas/toolbar.svelte";
+    import { getToken } from "./lib/session.svelte";
 
     const sampleMessage: MessageResponse = {
         seq: 1n,
@@ -17,17 +18,14 @@
         attachments: [],
     };
 
-    let token = $state(getToken());
-    function handleLogin() {
-      token = getToken();
-    }
 
 </script>
 
 
-{#if token !== null}
+{#if getToken() !== null}
+    <Toolbar/>
     <ServerInfo />
     <Message message={sampleMessage} author="Test User"></Message>
 {:else}
-    <Login onLogin={handleLogin}/>
+    <Login/>
 {/if}

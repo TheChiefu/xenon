@@ -1,0 +1,29 @@
+/* Light Theme */
+
+:root {
+  --background: rgba(255, 255, 255, 1);
+  --text: rgba(20, 23, 28, 1);
+  --component: rgba(246, 247, 249, 1);
+  --border: rgba(211, 215, 222, 1);
+  --border-dim: rgba(211, 215, 222, 0.5);
+  --icon-size: 1.25rem;
+  color-scheme: light;
+}
+
+button {
+  background: var(--component);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+input {
+  background: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.icon {
+  display: inline-flex;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
