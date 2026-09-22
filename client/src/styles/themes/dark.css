@@ -4,11 +4,13 @@
     /* General */
     --background: rgba(21, 24, 29, 1);
     --text: rgba(231, 234, 239, 1);
+    --text-dim: rgba(152, 162, 179, 1);
     --border: rgba(47, 54, 65, 1);
     --border-dim: rgba(47, 54, 65, 0.5);
     --icon-size: 1.25rem;
     --danger: rgba(190, 0, 0, 1);
     --line-bar-width: 100%;
+    --modal-background: rgba(0, 0, 0, 0.55);
 
     /* Components */
     --component: rgba(27, 31, 38, 1);
@@ -86,4 +88,13 @@ button.is-action:hover {
 
 button.is-danger:hover {
     background-color: var(--danger);
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--component-hover);
+}
+
+.icon-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
 }

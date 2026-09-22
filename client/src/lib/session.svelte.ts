@@ -15,6 +15,12 @@ function loginKey(username: string, url: string): string {
   return `${username}@${url}`;
 }
 
+// The active login entry, or null if nothing is active
+export function getActiveLogin(): Login | null {
+  if (activeKey === null) return null;
+  return logins[activeKey] ?? null;
+}
+
 // The token currently in use, or null if nothing is active
 export function getToken(): string | null {
   if (activeKey === null) {

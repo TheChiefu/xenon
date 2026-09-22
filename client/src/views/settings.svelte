@@ -1,80 +1,107 @@
 <script lang="ts">
-    import { signOut } from "@/lib/session.svelte";
-    import { getTheme, setTheme } from "@/lib/settings.svelte";
-    import icon_x from "@/assets/icons/x.svg?raw";
+  import { signOut } from "@/lib/session.svelte";
+  import { getTheme, setTheme } from "@/lib/settings.svelte";
+  import icon_x from "@/assets/icons/x.svg?raw";
 
-    interface Props {
-      onClose: () => void;
+  interface Props {
+    onClose: () => void;
+  }
+  let { onClose }: Props = $props();
+
+  let dialog = $state<HTMLDialogElement | null>(null);
+
+  let browser_notifications = $state(false);
+  let push_notifications = $state(false);
+  let is_admin = $state(false);
+
+  $effect(() => {
+    dialog?.showModal();
+  });
+
+  function changeTheme(event: Event) {
+    if (event.target instanceof HTMLSelectElement) {
+      setTheme(event.target.value);
     }
-    let { onClose }: Props = $props();
-
-    let browser_notifications = $state(false);
-    let push_notifications = $state(false);
-    let is_admin = $state(false);
-
-    function toggleBrowserNotifications() {
-      browser_notifications = !browser_notifications;
-    }
-
-    function enablePushNotifications() {
-      // Perform VAPID process
-      push_notifications = true;
-    }
-
-    function disablePushNotifications() {
-      // Perform disable VAPID process
-      push_notifications = false;
-    }
-
-    function changeTheme(event: Event) {
-      if (event.target instanceof HTMLSelectElement) {
-        setTheme(event.target.value);
-      }
-    }
-
+  }
 </script>
 
-<div class="settings">
+<style>
+  dialog {
+    width: 30rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    background: var(--component);
+    color: var(--text);
+  }
 
-    <!-- Top Right Corner - Close Button -->
-    <button id='btn-close' aria-label="Close Client Settings" onclick={onClose}>
-        <span class="icon" aria-hidden="true">{@html icon_x}</span>
+  dialog::backdrop {
+    background: var(--modal-background)
+  }
+
+  .settings-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.0rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-head h2 {
+    font-size: 1.25rem;
+  }
+
+  .rows {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+  }
+
+</style>
+
+<dialog bind:this={dialog} onclose={onClose}>
+
+  <div class="settings-head">
+    <h2>Client Settings</h2>
+    <button class="icon-btn" aria-label="Close" onclick={() => dialog?.close()}>
+      <span class="icon" aria-hidden="true">{@html icon_x}</span>
     </button>
+  </div>
 
-    <h1>Client Settings</h1>
-
-    <hr/>
-
-    <h2>Notifications:</h2>
-
-    {#if browser_notifications == false}
-        <button id="btn-notifications-on">Turn On Notifications</button>
+  <h3>Notifications</h3>
+  <br/>
+  <div class="rows">
+    {#if !browser_notifications}
+        <button>Turn On Brower Notifications</button>
     {:else}
-        <button id="btn-notifications-off">Turn Off Notifications</button>
+        <button>Turn Off Brower Notifications</button>
     {/if}
-    <small>Brower Notifications: {browser_notifications}</small>
 
-    {#if push_notifications}
-        <button id="btn-push-on">Turn On Push Notifications</button>
+    {#if !push_notifications}
+        <button>Turn On Push Notifications</button>
     {:else}
-        <button id="btn-push-off">Turn Off Push Notifications</button>
+        <button>Turn Off Push Notifications</button>
     {/if}
-    <small>Push Notifications: {push_notifications}</small>
-
-    <hr/>
 
     {#if is_admin}
-        <h2>Admin</h2>
-        <button id="btn-create-reg-code">Create Registration Code</button>
+        <h3>Admin</h3>
+        <button>Create Registration Code</button>
     {/if}
+  </div>
 
-    <h2>User</h2>
-    <label for="theme">Theme</label>
-    <select id="theme" value={getTheme()} onchange={changeTheme}>
-        <option value="dark">Dark</option>
-        <option value="light">Light</option>
-    </select>
-    <button id='btn-sign-out' onclick={signOut}>Sign Out</button>
+  <br/>
+  <h3>User</h3>
+  <br/>
+  <div class="rows">
 
+    <div> <!-- Theme -->
+        <label for="theme">Theme:</label>
+        <select id="theme" value={getTheme()} onchange={changeTheme}>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+        </select>
+    </div>
 
-</div>
+    <button onclick={signOut}>Sign Out</button>
+  </div>
+
+</dialog>

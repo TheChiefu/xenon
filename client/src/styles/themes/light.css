@@ -4,8 +4,10 @@
   --background: rgba(255, 255, 255, 1);
   --text: rgba(20, 23, 28, 1);
   --component: rgba(246, 247, 249, 1);
+  --component-hover: rgba(220, 222, 226, 1);
   --border: rgba(211, 215, 222, 1);
   --border-dim: rgba(211, 215, 222, 0.5);
+  --text-dim: rgba(92, 101, 114, 1);
   --icon-size: 1.25rem;
   color-scheme: light;
 }
@@ -26,4 +28,13 @@ input {
   display: inline-flex;
   width: var(--icon-size);
   height: var(--icon-size);
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--component-hover);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
