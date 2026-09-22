@@ -6,6 +6,9 @@ use axum::Json;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::api;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
@@ -17,6 +20,7 @@ use crate::state::AppState;
 
 /// DELETE body naming which subscription to remove.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/push.ts"))]
 pub struct UnsubscribeRequest {
     pub endpoint: String
 }

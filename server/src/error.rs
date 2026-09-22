@@ -6,10 +6,21 @@ use axum::extract::multipart::MultipartError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use serde::Serialize;
 use uuid::Uuid;
+
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
 
 use crate::bytesize::ByteSize;
 const SQLITE_BUSY: &str = "5"; // https://sqlite.org/rescode.html#busy
+
+/// Body of every error response
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "error.ts"))]
+pub struct ErrorResponse {
+    pub error: String,
+}
 
 /// Everything a request can fail with.
 #[derive(Debug)]
@@ -123,7 +134,7 @@ impl IntoResponse for AppError {
             AppError::Hash(_) => self.internal_error(),
         };
 
-        (status, Json(serde_json::json!({"error": message}))).into_response()
+        (status, Json(ErrorResponse { error: message })).into_response()
     }
 }
 

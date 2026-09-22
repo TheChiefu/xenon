@@ -30,8 +30,12 @@
     pending = true;
 
     try {
-      const token = await login(username, password, url || DEFAULT_BASE_URL);
-      addLogin(username, url, token);
+      // Remove trailing '/' to avoid fetch error confusion on users
+      const clean_url = (url || DEFAULT_BASE_URL).replace(/\/+$/, "");
+
+      // Attempt to fetch via cleaned URL
+      const token = await login(username, password, clean_url);
+      addLogin(username, clean_url, token);
       showForm = false;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
@@ -47,8 +51,12 @@
     pending = true;
 
     try {
-      const token = await register(username, password, display_name, invite_code, url || DEFAULT_BASE_URL);
-      addLogin(username, url, token);
+      // Remove trailing '/' to avoid fetch error confusion on users
+      const clean_url = (url || DEFAULT_BASE_URL).replace(/\/+$/, "");
+
+      // Attempt to fetch via cleaned URL
+      const token = await register(username, password, display_name, invite_code, clean_url);
+      addLogin(username, clean_url, token);
       showForm = false;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
