@@ -2,7 +2,8 @@
   import { signOut } from "@/lib/session.svelte";
   import { getTheme, setTheme } from "@/lib/settings.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";
-  import { getBrowserNotificationsEnabled, requestBrowserNotifications } from "@/lib/notifications.svelte";
+  import { browserNotificationsOn, requestBrowserNotifications, subscribeToPush, unsubscribeFromPush } from "@/lib/notifications.svelte";
+  import { getUrl } from "@/lib/session.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
 
   interface Props {
@@ -11,8 +12,8 @@
   let { onClose }: Props = $props();
 
   let dialog = $state<HTMLDialogElement | null>(null);
-    
-  let push_notifications = $state(false);
+
+  let push_subscription = $state<PushSubscription | null>(null);
   let is_admin = $state(false);
   let error = $state("");
 
@@ -30,6 +31,25 @@
     const result = await requestBrowserNotifications();
     if (result) {
       error = result;
+    }
+  }
+
+  async function enablePushNotifications() {
+    try {
+      push_subscription = await subscribeToPush(getUrl()!);
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  async function disablePushNotifications() {
+    if (push_subscription === null) return;
+
+    try {
+      await unsubscribeFromPush(getUrl()!, push_subscription);
+      push_subscription = null;
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
     }
   }
 
@@ -103,17 +123,17 @@
     <h3 class="full-row">Notifications</h3>
 
     <p>Browser Notifications:</p>
-    {#if !getBrowserNotificationsEnabled()}
+    {#if !browserNotificationsOn()}
         <button onclick={enableBrowserNotifications}>Enable</button>
     {:else}
         <button disabled={true} aria-hidden="true">Enabled</button>
     {/if}
 
     <p>Push Notifications:</p>
-    {#if !push_notifications}
-      <button>Enable</button>
+    {#if push_subscription === null}
+      <button onclick={enablePushNotifications}>Enable</button>
     {:else}
-      <button>Disable</button>
+      <button onclick={disablePushNotifications}>Disable</button>
     {/if}
 
     {#if is_admin}
