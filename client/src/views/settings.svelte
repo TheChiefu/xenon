@@ -2,8 +2,7 @@
   import { signOut } from "@/lib/session.svelte";
   import { getTheme, setTheme } from "@/lib/settings.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";
-  import { browserNotificationsOn, requestBrowserNotifications, subscribeToPush, unsubscribeFromPush } from "@/lib/notifications.svelte";
-  import { getUrl } from "@/lib/session.svelte";
+  import { isBrowserNotificationGranted, isPushSubscribed, enableBrowserNotifications, enablePush, disablePush } from "@/lib/notifications.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
 
   interface Props {
@@ -13,7 +12,6 @@
 
   let dialog = $state<HTMLDialogElement | null>(null);
 
-  let push_subscription = $state<PushSubscription | null>(null);
   let is_admin = $state(false);
   let error = $state("");
 
@@ -27,29 +25,11 @@
     }
   }
 
-  async function enableBrowserNotifications() {
-    const result = await requestBrowserNotifications();
+  // Runs an action, showing its error message if it returns one
+  async function tryRun(action: () => Promise<string | undefined>) {
+    const result = await action();
     if (result) {
       error = result;
-    }
-  }
-
-  async function enablePushNotifications() {
-    try {
-      push_subscription = await subscribeToPush(getUrl()!);
-    } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
-    }
-  }
-
-  async function disablePushNotifications() {
-    if (push_subscription === null) return;
-
-    try {
-      await unsubscribeFromPush(getUrl()!, push_subscription);
-      push_subscription = null;
-    } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
     }
   }
 
@@ -123,17 +103,17 @@
     <h3 class="full-row">Notifications</h3>
 
     <p>Browser Notifications:</p>
-    {#if !browserNotificationsOn()}
-        <button onclick={enableBrowserNotifications}>Enable</button>
+    {#if !isBrowserNotificationGranted()}
+        <button onclick={() => tryRun(enableBrowserNotifications)}>Enable</button>
     {:else}
         <button disabled={true} aria-hidden="true">Enabled</button>
     {/if}
 
     <p>Push Notifications:</p>
-    {#if push_subscription === null}
-      <button onclick={enablePushNotifications}>Enable</button>
+    {#if !isPushSubscribed()}
+      <button onclick={() => tryRun(enablePush)}>Enable</button>
     {:else}
-      <button onclick={disablePushNotifications}>Disable</button>
+      <button onclick={() => tryRun(disablePush)}>Disable</button>
     {/if}
 
     {#if is_admin}
