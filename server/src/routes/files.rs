@@ -2,7 +2,7 @@
 
 use axum::body::Body;
 use axum::extract::{Multipart, Path, State};
-use axum::http::{header, StatusCode};
+use axum::http::{header, HeaderName, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use futures_util::TryStreamExt;
@@ -109,7 +109,8 @@ pub async fn download(
         (header::CONTENT_DISPOSITION, "attachment".to_string()),
         (header::CONTENT_LENGTH, file.byte_size.to_string()),
         (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
-        (header::CACHE_CONTROL, "private, max-age=31536000, immutable".to_string())
+        (header::CACHE_CONTROL, "private, max-age=31536000, immutable".to_string()),
+        (HeaderName::from_static("x-file-mime"), file.mime.clone())
     ];
 
     // Send response
