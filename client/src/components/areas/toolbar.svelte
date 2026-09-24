@@ -1,7 +1,6 @@
 <script lang="ts">
-  import type { ServerInfo } from "@/bindings/routes/server";
-  import { getUrl, getActiveLogin } from "@/lib/session.svelte";
-  import { getServerInfo } from "@/lib/api/server";
+  import Identity from "@/components/identity.svelte";
+  import ServerInfo from "@/components/server_info.svelte";
   import Settings from "@/views/settings.svelte";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
@@ -9,17 +8,7 @@
   import icon_mic from "@/assets/icons/mic.svg?raw";
   import icon_search from "@/assets/icons/search.svg?raw";
 
-  let info = $state<ServerInfo | null>(null);
   let settingsOpen = $state(false);
-
-  $effect(() => {
-    const url = getUrl();
-    if (url === null) return;
-
-    getServerInfo(url)
-      .then((data) => { info = data; })
-      .catch(() => { info = null; });
-  });
 </script>
 
 <style>
@@ -53,40 +42,6 @@
     color: var(--text-dim);
   }
 
-  .server-title {
-    display: flex;
-    flex-wrap: wrap;
-    align-content: center;
-    align-items: center;
-    gap: 0.0625rem 0.375rem;
-    min-width: 0;
-  }
-
-  .server-title h1 {
-    flex: 0 0 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  .server-kind {
-    order: 1;
-    padding: 1px 6px;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-size: 0.64rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .server-version {
-    color: var(--text-dim);
-    font-size: 0.72rem;
-    white-space: nowrap;
-  }
-
   .toolbar-tools {
     display: flex;
     align-items: center;
@@ -94,27 +49,6 @@
     margin-left: auto;
   }
 
-  .user-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    height: 100%;
-    padding: 0 1.125rem;
-    border: 0;
-    border-left: 1px solid var(--border);
-    background: var(--component);
-    color: var(--text);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .user-chip-name {
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 </style>
 
 <header class="toolbar">
@@ -126,15 +60,7 @@
     </button>
   </div>
 
-  <div class="server-title">
-    <h1>{info?.name ?? ''}</h1>
-    {#if info?.kind}
-      <span class="server-kind">{info.kind}</span>
-    {/if}
-    {#if info?.version}
-      <span class="server-version">v{info.version}</span>
-    {/if}
-  </div>
+  <ServerInfo/>
 
   <div class="toolbar-tools">
     <button class="icon-btn" aria-label="Check for updates">
@@ -151,11 +77,7 @@
     </button>
   </div>
 
-  {#if getActiveLogin() !== null}
-    <button class="user-chip" aria-label="Your profile">
-      <span class="user-chip-name">{getActiveLogin()?.username}</span>
-    </button>
-  {/if}
+  <Identity/>
 
   {#if settingsOpen}
     <Settings onClose={() => settingsOpen = false}/>
