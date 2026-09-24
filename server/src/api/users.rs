@@ -5,34 +5,14 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::api::linked_accounts;
 use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::{GlobalRole, LinkedAccount, Status, UserRow, UserSummary};
+use crate::models::{GlobalRole, Status, UserRow, UserSummary};
 use crate::utils;
 use crate::validate;
 
 // Data Structs //
-
-/// A user as a client sees them: their row, and what they have linked.
-#[derive(Serialize)]
-pub struct UserProfile {
-    pub id: Uuid,
-    pub username: String,
-    pub display_name: String,
-    pub description: String,
-    pub avatar_file_id: Option<Uuid>,
-    pub banner_file_id: Option<Uuid>,
-    pub global_role: GlobalRole,
-    pub created_at: i64,
-
-    /// Set on a tombstoned account, which a client marks rather than hides
-    pub deleted_at: Option<i64>,
-
-    /// Empty for a user who has linked nothing
-    pub links: Vec<LinkedAccount>
-}
 
 /// PATCH body for a user's own profile. An absent field is left as it stands.
 #[derive(Deserialize)]
@@ -110,7 +90,7 @@ pub async fn list(
 pub async fn get(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
-) -> Result<UserProfile> {
+) -> Result<UserRow> {
 
     let mut conn = pool.acquire().await?;
 
@@ -126,21 +106,7 @@ pub async fn get(
     .fetch_optional(&mut *conn)
     .await?;
 
-    let row = row.ok_or(AppError::NotFound)?;
-    let links = linked_accounts::list(pool, user_id).await?;
-
-    Ok(UserProfile {
-        id: row.id,
-        username: row.username,
-        display_name: row.display_name,
-        description: row.description,
-        avatar_file_id: row.avatar_file_id,
-        banner_file_id: row.banner_file_id,
-        global_role: row.global_role,
-        created_at: row.created_at,
-        deleted_at: row.deleted_at,
-        links
-    })
+    row.ok_or(AppError::NotFound)
 }
 
 /// Reads the display names for a set of accounts.

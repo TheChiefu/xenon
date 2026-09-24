@@ -9,11 +9,13 @@
     onClose: () => void;
   }
   let { onClose }: Props = $props();
-
   let dialog = $state<HTMLDialogElement | null>(null);
-
-  let is_admin = $state(false);
   let error = $state("");
+
+  // Messages
+  const msg_remove_push = "Are you sure you want to disable push notifications?";
+  const msg_sign_out = "Are you sure you want to sign out?";
+  const msg_disable_notification = "Browser notifications must be revoked via browser settings.";
 
   $effect(() => {
     dialog?.showModal();
@@ -26,7 +28,22 @@
   }
 
   // Runs an action, showing its error message if it returns one
-  async function tryRun(action: () => Promise<string | undefined>) {
+  async function tryRun(
+    action: () => Promise<string | undefined>,
+    message: string = ""
+  ) {
+
+    // Optional message
+    if (message) {
+      const result = await confirmDialog(message);
+
+      // If dialog is declined, cancel operation
+      if (!result) {
+        return;
+      }
+    }
+
+    // Perform action
     const result = await action();
     if (result) {
       error = result;
@@ -34,7 +51,7 @@
   }
 
   async function doSignout(){
-    const result = await confirmDialog("Are you sure you want to sign out?");
+    const result = await confirmDialog(msg_sign_out);
     if (result) {
       signOut();
     }
@@ -106,19 +123,16 @@
     {#if !isBrowserNotificationGranted()}
         <button onclick={() => tryRun(enableBrowserNotifications)}>Enable</button>
     {:else}
-        <button disabled={true} aria-hidden="true">Enabled</button>
+        <button onclick={() => error = msg_disable_notification}>Disable</button>
     {/if}
 
     <p>Push Notifications:</p>
     {#if !isPushSubscribed()}
       <button onclick={() => tryRun(enablePush)}>Enable</button>
     {:else}
-      <button onclick={() => tryRun(disablePush)}>Disable</button>
-    {/if}
-
-    {#if is_admin}
-        <h3 class="full-row">Admin</h3>
-        <button class="full-row">Create Registration Code</button>
+      <button class="is-danger" onclick={() => tryRun(disablePush, msg_remove_push)}>
+          Disable
+      </button>
     {/if}
 
     <h3 class="full-row">User</h3>
@@ -127,6 +141,13 @@
     <select id="theme" value={getTheme()} onchange={changeTheme}>
         <option value="dark">Dark</option>
         <option value="light">Light</option>
+    </select>
+
+    <label for="animated-photos">Animate Photos:</label>
+    <select id="animated-photos">
+        <option value="always">Always</option>
+        <option value="on-hover">On Hover</option>
+        <option value="never">Never</option>
     </select>
 
     <button onclick={doSignout} class="full-row is-danger">Sign Out</button>

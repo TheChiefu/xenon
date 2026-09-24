@@ -1,16 +1,20 @@
 //! HTTP handlers for users.
 
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::api::users::{ProfilePatch, UserProfile};
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
+use crate::api::linked_accounts;
+use crate::api::users::ProfilePatch;
 use crate::db;
 use crate::error::Result;
-use crate::models::{GlobalRole, Status, UserSummary};
+use crate::models::{GlobalRole, LinkedAccount, Status, UserSummary};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{presence, registry};
@@ -18,6 +22,26 @@ use crate::state::AppState;
 use crate::{api, config};
 
 // Data Structs //
+
+/// A user's profile, as the client sees it.
+#[derive(Serialize)]
+#[cfg_attr(
+    feature = "ts_bindings",
+    derive(TS),
+    ts(export, export_to = "routes/users.ts")
+)]
+pub struct UserProfileResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub description: String,
+    pub avatar_file_id: Option<Uuid>,
+    pub banner_file_id: Option<Uuid>,
+    pub global_role: GlobalRole,
+    pub created_at: i64,
+    pub deleted_at: Option<i64>,
+    pub links: Vec<LinkedAccount>,
+}
 
 /// PATCH body for changing a user's global role.
 #[derive(Deserialize)]
@@ -60,7 +84,7 @@ pub struct DeleteAccountRequest {
 /// PUT body for the status a user's connections start at.
 #[derive(Deserialize)]
 pub struct StatusRequest {
-    pub status: Status
+    pub status: Status,
 }
 
 /// Query string for a paged user listing.
@@ -85,16 +109,10 @@ pub async fn get_users(
     State(pool): State<SqlitePool>,
     Query(query): Query<UsersQuery>,
 ) -> Result<Json<Vec<UserSummary>>> {
-
     let max = config::get().limits.users_page;
     let limit = query.limit.unwrap_or(max).clamp(1, max);
 
-    let users = api::users::list(
-        &pool,
-        query.match_user,
-        query.after,
-        limit
-    ).await?;
+    let users = api::users::list(&pool, query.match_user, query.after, limit).await?;
 
     Ok(Json(users))
 }
@@ -109,11 +127,8 @@ pub async fn get_user(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(user_id): Path<Uuid>,
-) -> Result<Json<UserProfile>> {
-
-    let user = api::users::get(&pool, user_id).await?;
-
-    Ok(Json(user))
+) -> Result<Json<UserProfileResponse>> {
+    Ok(Json(build_profile(&pool, user_id).await?))
 }
 
 /// Gets the caller's own profile.
@@ -125,11 +140,29 @@ pub async fn get_user(
 pub async fn get_me(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-) -> Result<Json<UserProfile>> {
+) -> Result<Json<UserProfileResponse>> {
+    Ok(Json(build_profile(&pool, user_id).await?))
+}
 
-    let user = api::users::get(&pool, user_id).await?;
+/// Build a public profile based on user related components
+///
+/// Returns `AppError::NotFound` if no such user exists.
+async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileResponse> {
+    let row = api::users::get(pool, user_id).await?;
+    let links = linked_accounts::list(pool, user_id).await?;
 
-    Ok(Json(user))
+    Ok(UserProfileResponse {
+        id: row.id,
+        username: row.username,
+        display_name: row.display_name,
+        description: row.description,
+        avatar_file_id: row.avatar_file_id,
+        banner_file_id: row.banner_file_id,
+        global_role: row.global_role,
+        created_at: row.created_at,
+        deleted_at: row.deleted_at,
+        links,
+    })
 }
 
 /// Writes the caller's own profile.
@@ -144,7 +177,6 @@ pub async fn update_me(
     State(app_state): State<AppState>,
     Json(body): Json<ProfilePatch>,
 ) -> Result<StatusCode> {
-
     // Profile as stored, or None if no such user
     let updated = api::users::update(&app_state.pool, user_id, body).await?;
 
@@ -179,7 +211,6 @@ pub async fn update_my_status(
     State(app_state): State<AppState>,
     Json(body): Json<StatusRequest>,
 ) -> Result<StatusCode> {
-
     api::users::set_preferred_status(&app_state.pool, user_id, body.status).await?;
 
     // A status comes back only when the caller holds a connection to change
@@ -203,7 +234,6 @@ pub async fn update_my_password(
     State(pool): State<SqlitePool>,
     Json(body): Json<PasswordRequest>,
 ) -> Result<StatusCode> {
-
     api::auth::change_password(
         &pool,
         user_id,
@@ -211,7 +241,8 @@ pub async fn update_my_password(
         &body.new_password,
         body.revoke_others,
         &session_hash,
-    ).await?;
+    )
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -228,7 +259,6 @@ pub async fn transfer_ownership(
     State(pool): State<SqlitePool>,
     Json(body): Json<TransferOwnershipRequest>,
 ) -> Result<StatusCode> {
-
     api::users::transfer_ownership(&pool, caller_id, body.user_id, body.demote_to).await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -246,13 +276,13 @@ pub async fn delete_me(
     State(app_state): State<AppState>,
     Json(body): Json<DeleteAccountRequest>,
 ) -> Result<StatusCode> {
-
     let rooms = api::users::delete(
         &app_state.pool,
         user_id,
         body.anonymize,
-        body.delete_history
-    ).await?;
+        body.delete_history,
+    )
+    .await?;
 
     broadcast_member_left(&app_state, user_id, rooms).await;
 
@@ -273,13 +303,8 @@ pub async fn delete_user(
     Path(target_id): Path<Uuid>,
     Json(body): Json<DeleteAccountRequest>,
 ) -> Result<StatusCode> {
-
-    let rooms = api::users::delete_other(
-        &app_state.pool,
-        caller_id,
-        target_id,
-        body.anonymize
-    ).await?;
+    let rooms =
+        api::users::delete_other(&app_state.pool, caller_id, target_id, body.anonymize).await?;
 
     broadcast_member_left(&app_state, target_id, rooms).await;
 
@@ -293,11 +318,7 @@ pub async fn delete_user(
 /// * `app_state` - Pool and socket registry.
 /// * `user_id` - Member that was removed.
 /// * `rooms` - Rooms the membership was removed from.
-async fn broadcast_member_left(
-    app_state: &AppState,
-    user_id: Uuid,
-    rooms: Vec<Uuid>,
-) {
+async fn broadcast_member_left(app_state: &AppState, user_id: Uuid, rooms: Vec<Uuid>) {
     for room_id in rooms {
         let event = ServerEvent::MemberLeft { room_id, user_id };
         registry::broadcast(app_state, room_id, event).await;
@@ -318,9 +339,7 @@ pub async fn set_role(
     Path(target_id): Path<Uuid>,
     Json(body): Json<SetRoleRequest>,
 ) -> Result<StatusCode> {
-
     api::users::set_role(&pool, caller_id, target_id, body.role).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
-

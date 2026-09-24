@@ -6,17 +6,21 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 // Roles //
 
 /// A user's server-wide role, stored as an integer. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "models.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum GlobalRole {
     Owner = 0,
     Admin = 1,
     Member = 2,
-    Visitor = 3
+    Visitor = 3,
 }
 
 /// How a room is discovered and entered, stored as an integer. (PERMANENT)
@@ -29,7 +33,7 @@ pub enum Visibility {
     /// Invite only.
     Locked = 1,
     /// Invite only.
-    Hidden = 2
+    Hidden = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
@@ -43,11 +47,12 @@ pub enum Notify {
 
 /// A game service an account is linked to, stored as an integer. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "models.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum Platform {
     Xbox = 0,
-    Steam = 1
+    Steam = 1,
 }
 
 /// What a user asks to appear as while connected, stored as an integer. (PERMANENT)
@@ -58,7 +63,7 @@ pub enum Status {
     Online = 0,
     Busy = 1,
     Away = 2,
-    Invisible = 3
+    Invisible = 3,
 }
 
 // Permissions //
@@ -142,7 +147,7 @@ impl Permissions {
     pub fn has(self, p: Permission) -> bool {
         let perm = p as u8;
         let bit = 1i64 << perm; // Shift by 'perm' bits left
-        self.0 & bit != 0            // AND | Check if 'perm' bit is set (0 - No, 1 -Yes)
+        self.0 & bit != 0 // AND | Check if 'perm' bit is set (0 - No, 1 -Yes)
     }
 
     /// Returns the mask with the given permission added.
@@ -193,7 +198,9 @@ impl Permissions {
 }
 
 impl Default for Permissions {
-    fn default() -> Self { Self::NONE }
+    fn default() -> Self {
+        Self::NONE
+    }
 }
 
 // Users //
@@ -219,17 +226,18 @@ pub struct UserRow {
     pub created_at: i64,
 
     /// Set on a tombstoned account, which a client marks rather than hides
-    pub deleted_at: Option<i64>
+    pub deleted_at: Option<i64>,
 }
 
 /// A `linked_accounts` row.
 #[derive(sqlx::FromRow, Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "models.ts"))]
 pub struct LinkedAccount {
     // Platform's name (ie. Xbox)
     pub platform: Platform,
 
     /// Name shown for the account
-    pub handle: String
+    pub handle: String,
 }
 
 // Room //
@@ -242,7 +250,7 @@ pub struct Room {
     pub visibility: Visibility,
     pub default_permissions: Permissions,
     pub created_at: i64,
-    pub mutation_seq: i64
+    pub mutation_seq: i64,
 }
 
 // Messages //
@@ -257,7 +265,7 @@ pub struct Message {
     pub body: Option<String>,
     pub created_at: i64,
     pub edited_at: Option<i64>,
-    pub deleted_at: Option<i64>
+    pub deleted_at: Option<i64>,
 }
 
 // Files //
@@ -270,5 +278,5 @@ pub struct File {
     pub filename: String,
     pub mime: String,
     pub byte_size: i64,
-    pub created_at: i64
+    pub created_at: i64,
 }
