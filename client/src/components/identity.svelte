@@ -4,6 +4,7 @@
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
 
   let avatar = $state<FetchedFile | null>(null);
+  let profileOpen = $state(false);
 
   $effect(() => {
     const url = getUrl();
@@ -68,7 +69,7 @@
 </style>
 
 {#if getActiveLogin() !== null}
-  <button class="user" aria-label="Your profile">
+  <button class="user" aria-label="Your profile" onclick={() => profileOpen = true}>
     {#if avatar?.mime.startsWith("video/")}
       <video class="user-avatar" src={avatar.url} autoplay muted loop playsinline></video>
     {:else if avatar}

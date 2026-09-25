@@ -2,6 +2,23 @@
 import type { GlobalRole, LinkedAccount } from "../models";
 
 /**
+ * PATCH body for a user's own profile. An absent field is left as it stands.
+ */
+export type ProfilePatch = { display_name: string | null, 
+/**
+ * Empty string clears the text
+ */
+description: string | null, 
+/**
+ * Nil UUID clears the avatar
+ */
+avatar_file_id: string | null, 
+/**
+ * Nil UUID clears the banner
+ */
+banner_file_id: string | null, };
+
+/**
  * A user's profile, as the client sees it.
  */
 export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: bigint, deleted_at: bigint | null, links: Array<LinkedAccount>, };

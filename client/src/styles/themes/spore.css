@@ -1,0 +1,27 @@
+:root {
+    /* General */
+    --background: rgba(14, 20, 26, 1);
+    --text: rgba(230, 238, 240, 1);
+    --text-dim: rgba(148, 168, 174, 1);
+    --border: rgba(45, 80, 88, 1);
+    --border-dim: rgba(45, 80, 88, 0.5);
+    --icon-size: 1.25rem;
+    --danger: rgba(210, 55, 20, 1);
+    --line-bar-width: 100%;
+    --modal-background: rgba(0, 0, 0, 0.6);
+
+    /* Components */
+    --component: rgba(19, 27, 33, 1);
+    --component-hover: rgba(32, 52, 58, 1);
+
+    /* Button Colors */
+    --btn-disabled: rgba(45, 50, 52, 1);
+    --btn-tab: rgba(14, 20, 26, 1);
+    --btn-tab-active: rgba(45, 80, 88, 1);
+    --btn-entry: rgba(14, 20, 26, 1);
+    --btn-entry-hover: rgba(26, 38, 42, 1);
+    --btn-action: rgba(255, 158, 45, 1);
+    --btn-action-hover: rgba(255, 138, 20, 1);
+
+    color-scheme: dark;
+}

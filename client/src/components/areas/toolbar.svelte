@@ -2,6 +2,7 @@
   import Identity from "@/components/identity.svelte";
   import ServerInfo from "@/components/server_info.svelte";
   import Settings from "@/views/settings.svelte";
+
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
   import icon_headphones from "@/assets/icons/headphones.svg?raw";

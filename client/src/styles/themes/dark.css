@@ -9,7 +9,6 @@
     --border-dim: rgba(47, 54, 65, 0.5);
     --icon-size: 1.25rem;
     --danger: rgba(190, 0, 0, 1);
-    --line-bar-width: 100%;
     --modal-background: rgba(0, 0, 0, 0.55);
 
     /* Components */
@@ -30,11 +29,6 @@
 
 dialog {
     border: 1px solid var(--border);
-}
-
-hr {
-    width: --var(--line-bar-width);
-    width: 100%;
 }
 
 input {

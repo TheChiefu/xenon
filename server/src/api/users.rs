@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::api::rooms::access;
@@ -11,23 +10,6 @@ use crate::error::{AppError, Result};
 use crate::models::{GlobalRole, Status, UserRow, UserSummary};
 use crate::utils;
 use crate::validate;
-
-// Data Structs //
-
-/// PATCH body for a user's own profile. An absent field is left as it stands.
-#[derive(Deserialize)]
-pub struct ProfilePatch {
-    pub display_name: Option<String>,
-
-    /// Empty string clears the text
-    pub description: Option<String>,
-
-    /// Nil UUID clears the avatar
-    pub avatar_file_id: Option<Uuid>,
-
-    /// Nil UUID clears the banner
-    pub banner_file_id: Option<Uuid>,
-}
 
 // API Methods //
 
@@ -158,25 +140,28 @@ pub async fn display_names(
 pub async fn update(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
-    patch: ProfilePatch,
+    display_name: Option<String>,
+    description: Option<String>,
+    avatar_file_id: Option<Uuid>,
+    banner_file_id: Option<Uuid>,
 ) -> Result<Option<UserRow>> {
 
     // Check if any field has changed from update patch
-    let changed = patch.display_name.is_some()
-        || patch.description.is_some()
-        || patch.avatar_file_id.is_some()
-        || patch.banner_file_id.is_some();
+    let changed = display_name.is_some()
+        || description.is_some()
+        || avatar_file_id.is_some()
+        || banner_file_id.is_some();
 
     if !changed {
         return Ok(None);
     }
 
     // Validate strings
-    if let Some(name) = &patch.display_name {
+    if let Some(name) = &display_name {
         validate::display_name(name)?;
     }
 
-    if let Some(text) = &patch.description {
+    if let Some(text) = &description {
         validate::profile_description(text)?;
     }
 
@@ -198,10 +183,10 @@ pub async fn update(
                   banner_file_id, global_role, created_at, deleted_at
         "
     )
-    .bind(patch.display_name.as_deref())
-    .bind(patch.description.as_deref())
-    .bind(patch.avatar_file_id)
-    .bind(patch.banner_file_id)
+    .bind(display_name.as_deref())
+    .bind(description.as_deref())
+    .bind(avatar_file_id)
+    .bind(banner_file_id)
     .bind(Uuid::nil())
     .bind(user_id)
     .fetch_one(&mut *conn)

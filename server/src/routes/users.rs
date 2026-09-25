@@ -11,7 +11,6 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::api::linked_accounts;
-use crate::api::users::ProfilePatch;
 use crate::db;
 use crate::error::Result;
 use crate::models::{GlobalRole, LinkedAccount, Status, UserSummary};
@@ -41,6 +40,26 @@ pub struct UserProfileResponse {
     pub created_at: i64,
     pub deleted_at: Option<i64>,
     pub links: Vec<LinkedAccount>,
+}
+
+/// PATCH body for a user's own profile. An absent field is left as it stands.
+#[derive(Deserialize)]
+#[cfg_attr(
+    feature = "ts_bindings",
+    derive(TS),
+    ts(export, export_to = "routes/users.ts")
+)]
+pub struct ProfilePatch {
+    pub display_name: Option<String>,
+
+    /// Empty string clears the text
+    pub description: Option<String>,
+
+    /// Nil UUID clears the avatar
+    pub avatar_file_id: Option<Uuid>,
+
+    /// Nil UUID clears the banner
+    pub banner_file_id: Option<Uuid>,
 }
 
 /// PATCH body for changing a user's global role.
@@ -178,7 +197,14 @@ pub async fn update_me(
     Json(body): Json<ProfilePatch>,
 ) -> Result<StatusCode> {
     // Profile as stored, or None if no such user
-    let updated = api::users::update(&app_state.pool, user_id, body).await?;
+    let updated = api::users::update(
+        &app_state.pool,
+        user_id,
+        body.display_name,
+        body.description,
+        body.avatar_file_id,
+        body.banner_file_id,
+    ).await?;
 
     // Notify everyone sharing a room of the new name and pictures
     if let Some(profile) = updated {
