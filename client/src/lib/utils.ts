@@ -3,6 +3,17 @@ export interface FetchedFile {
     mime: string;
 }
 
+// Read a CSS time variable (e.g. "0.15s" or "150ms") from the page as milliseconds
+export function cssTime(name: string): number {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const number = parseFloat(value);
+    if (isNaN(number)) {
+        return 0;
+    }
+
+    return value.endsWith("ms") ? number : number * 1000;
+}
+
 // Fetch a file as a BLOB, interpret file from mime type
 export async function fetchFileBlob(url: string, fileId: string, token: string): Promise<FetchedFile> {
     const response = await fetch(`${url}/files/${fileId}`, {

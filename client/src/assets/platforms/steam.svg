@@ -10,6 +10,6 @@
 </mask>
 </defs>
 <g mask="url(#steam-cutouts)">
-<ellipse transform="translate(2.28, 2.157) scale(0.95)" rx="30" ry="30" cx="30" cy="30" fill="#000"/>
+<ellipse transform="translate(2.28, 2.157) scale(0.95)" rx="30" ry="30" cx="30" cy="30" fill="currentColor"/>
 </g>
 </svg>

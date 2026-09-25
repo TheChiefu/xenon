@@ -23,5 +23,11 @@
     --btn-action: rgba(255, 158, 45, 1);
     --btn-action-hover: rgba(255, 138, 20, 1);
 
+    /* Status Colors */
+    --status-online: rgba(59, 165, 93, 1);
+    --status-busy: rgba(210, 55, 20, 1);
+    --status-away: rgba(240, 166, 55, 1);
+    --status-invisible: rgba(148, 168, 174, 1);
+
     color-scheme: dark;
 }

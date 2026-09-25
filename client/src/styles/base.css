@@ -4,7 +4,7 @@
   box-sizing: border-box;
 }
 
-html, body {
+html, body, #app {
   margin: 0;
   height: 100%;
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -29,6 +29,13 @@ input {
   padding: 0.5rem 0.75rem;
   font: inherit;
   cursor: text;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  justify-self: start;
+  cursor: pointer;
 }
 
 select {

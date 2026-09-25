@@ -22,7 +22,7 @@
     align-content: center;
     align-items: center;
     gap: 0.0625rem 0.375rem;
-    min-width: 0;
+    min-width: 6rem;
   }
 
   .server-title h1 {
