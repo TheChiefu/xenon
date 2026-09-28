@@ -13,8 +13,8 @@ use ts_rs::TS;
 use crate::api::linked_accounts;
 use crate::db;
 use crate::error::Result;
-use crate::models::{GlobalRole, LinkedAccount, Status, UserSummary};
 use crate::routes::AuthUser;
+use crate::shared::{GlobalRole, Status, LinkedAccount};
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{presence, registry};
 use crate::state::AppState;
@@ -22,13 +22,10 @@ use crate::{api, config};
 
 // Data Structs //
 
-/// A user's profile, as the client sees it.
+
+/// A user's profile
 #[derive(Serialize)]
-#[cfg_attr(
-    feature = "ts_bindings",
-    derive(TS),
-    ts(export, export_to = "routes/users.ts")
-)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct UserProfileResponse {
     pub id: Uuid,
     pub username: String,
@@ -44,21 +41,21 @@ pub struct UserProfileResponse {
 
 /// PATCH body for a user's own profile. An absent field is left as it stands.
 #[derive(Deserialize)]
-#[cfg_attr(
-    feature = "ts_bindings",
-    derive(TS),
-    ts(export, export_to = "routes/users.ts")
-)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct ProfilePatch {
+    #[serde(default)]
     pub display_name: Option<String>,
 
     /// Empty string clears the text
+    #[serde(default)]
     pub description: Option<String>,
 
     /// Nil UUID clears the avatar
+    #[serde(default)]
     pub avatar_file_id: Option<Uuid>,
 
     /// Nil UUID clears the banner
+    #[serde(default)]
     pub banner_file_id: Option<Uuid>,
 }
 
@@ -100,10 +97,22 @@ pub struct DeleteAccountRequest {
     pub delete_history: bool,
 }
 
-/// PUT body for the status a user's connections start at.
-#[derive(Deserialize)]
-pub struct StatusRequest {
+/// The caller's own preferences
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
+pub struct PreferencesResponse {
     pub status: Status,
+    pub room_layout: String,
+}
+
+/// PATCH body for the caller's own preferences. An absent field is left as it stands
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
+pub struct PreferencesPatch {
+    #[serde(default)]
+    pub status: Option<Status>,
+    #[serde(default)]
+    pub room_layout: Option<String>,
 }
 
 /// Query string for a paged user listing.
@@ -127,13 +136,17 @@ pub async fn get_users(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
     Query(query): Query<UsersQuery>,
-) -> Result<Json<Vec<UserSummary>>> {
+) -> Result<Json<Vec<UserProfileResponse>>> {
     let max = config::get().limits.users_page;
     let limit = query.limit.unwrap_or(max).clamp(1, max);
 
     let users = api::users::list(&pool, query.match_user, query.after, limit).await?;
+    let mut profiles = Vec::with_capacity(users.len());
+    for user in users {
+        profiles.push(build_profile(&pool, user.id).await?);
+    }
 
-    Ok(Json(users))
+    Ok(Json(profiles))
 }
 
 /// Gets a user's public profile.
@@ -224,24 +237,38 @@ pub async fn update_me(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Writes the status the caller's connections start at, and applies it to the
-/// ones they hold now.
-///
-/// # Arguments
-///
-/// * `user_id` - Whose status is being written.
-/// * `app_state` - Pool and socket registry.
-/// * `body` - Status to store.
-pub async fn update_my_status(
+/// Gets the caller's own preferences
+pub async fn get_preferences(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<PreferencesResponse>> {
+
+    let mut conn = pool.acquire().await?;
+    let (status, room_layout) = db::get_preferences(&mut conn, user_id).await?;
+
+    Ok(Json(PreferencesResponse { status, room_layout }))
+}
+
+/// Writes the caller's own preferences
+pub async fn update_preferences(
     AuthUser(user_id, ..): AuthUser,
     State(app_state): State<AppState>,
-    Json(body): Json<StatusRequest>,
+    Json(body): Json<PreferencesPatch>,
 ) -> Result<StatusCode> {
-    api::users::set_preferred_status(&app_state.pool, user_id, body.status).await?;
 
-    // A status comes back only when the caller holds a connection to change
-    if let Some(previous) = registry::set_status(&app_state, user_id, body.status) {
-        presence::on_change(&app_state, user_id, Some(previous), Some(body.status)).await;
+    if let Some(status) = body.status {
+        api::users::set_preferred_status(&app_state.pool, user_id, status).await?;
+
+        // A status comes back only when the caller holds a connection to change
+        if let Some(previous) = registry::set_status(&app_state, user_id, status) {
+            presence::on_change(&app_state, user_id, Some(previous), Some(status)).await;
+        }
+    }
+
+    // Saves the caller's room list layout
+    if let Some(room_layout) = body.room_layout {
+        let mut conn = app_state.pool.acquire().await?;
+        db::set_room_layout(&mut conn, user_id, &room_layout).await?;
     }
 
     Ok(StatusCode::NO_CONTENT)

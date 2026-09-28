@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::models::{LinkedAccount, Platform};
+use crate::shared::{LinkedAccount, Platform};
 
 /// Records a link, replacing whatever the user had on that platform.
 ///

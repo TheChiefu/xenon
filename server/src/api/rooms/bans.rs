@@ -6,8 +6,9 @@ use uuid::Uuid;
 use crate::api::rooms;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::Permission;
+use crate::shared::Permission;
 use crate::utils;
+use crate::validate;
 
 // Data Structs //
 
@@ -130,6 +131,14 @@ pub async fn create(
     // Caller tries to ban themselves
     if caller_id == target_id {
         return Err(AppError::Validation("cannot ban yourself".to_string()));
+    }
+
+    if let Some(r) = &reason {
+        validate::ban_reason(r)?;
+    }
+
+    if let Some(delta) = expire_delta {
+        validate::expire_delta(delta)?;
     }
 
     // Ban cannot be used against another holder

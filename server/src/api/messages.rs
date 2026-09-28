@@ -8,9 +8,24 @@ use crate::api::messages::attachments::{Attached, Incoming};
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::{Message, Permission, Permissions};
+use crate::shared::{Permission, Permissions};
 use crate::utils;
 use crate::validate;
+
+// Data Structs //
+
+/// A `messages` row
+#[derive(sqlx::FromRow)]
+pub struct Message {
+    pub seq: i64,
+    pub id: Uuid,
+    pub room_id: Uuid,
+    pub author_id: Uuid,
+    pub body: Option<String>,
+    pub created_at: i64,
+    pub edited_at: Option<i64>,
+    pub deleted_at: Option<i64>,
+}
 
 // Data Structs //
 

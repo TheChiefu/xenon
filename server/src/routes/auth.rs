@@ -1,6 +1,6 @@
 //! HTTP handlers for registration, login, and registration codes.
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::{Deserialize, Serialize};
@@ -10,8 +10,8 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::error::Result;
-use crate::models::GlobalRole;
+use crate::error::{AppError, Result};
+use crate::shared::GlobalRole;
 use crate::routes::AuthUser;
 use crate::{api, db, validate};
 
@@ -105,13 +105,7 @@ pub async fn login(
     Ok(Json(LoginResponse { token }))
 }
 
-/// Creates a code that lets someone register.
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is issuing the code.
-/// * `pool` - Pool of SQL connections.
-/// * `body` - Use count and lifetime, each optional.
+/// Creates a code that lets someone register
 pub async fn create_registration_code(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -131,4 +125,23 @@ pub async fn create_registration_code(
     let code = db::create_invite(&mut conn, caller_id, Some(max_uses), Some(lifetime)).await?;
 
     Ok((StatusCode::CREATED, Json(CreateInviteResponse { code })))
+}
+
+/// Revokes a registration code, deleting it outright
+pub async fn revoke_registration_code(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(code): Path<String>,
+) -> Result<StatusCode> {
+
+    let mut conn = pool.acquire().await?;
+
+    let allowed = [GlobalRole::Owner, GlobalRole::Admin];
+    db::require_role(&mut conn, caller_id, &allowed).await?;
+
+    if !db::revoke_invite(&mut conn, &code.trim().to_ascii_uppercase()).await? {
+        return Err(AppError::NotFound);
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }

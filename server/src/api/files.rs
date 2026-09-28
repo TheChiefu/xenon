@@ -10,10 +10,20 @@ use uuid::Uuid;
 use crate::bytesize::ByteSize;
 use crate::config;
 use crate::error::{AppError, Result};
-use crate::models::File;
 use crate::utils;
 
 // Data Structs //
+
+/// A `files` row
+#[derive(sqlx::FromRow)]
+pub struct File {
+    pub id: Uuid,
+    pub sha256: Vec<u8>,
+    pub filename: String,
+    pub mime: String,
+    pub byte_size: i64,
+    pub created_at: i64,
+}
 
 /// Outcome of an upload. Bytes the server already holds return the stored row
 /// rather than writing a second copy.

@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::{self, AppError, Result};
-use crate::models::{GlobalRole, Permissions, Status, Visibility};
+use crate::shared::{GlobalRole, Permissions, Status, Visibility};
 use crate::utils;
 
 /// One day in milliseconds.
@@ -105,6 +105,11 @@ pub async fn insert_user(
     .await
     .map_err(error::unique_violation)?;
 
+    sqlx::query("INSERT INTO user_preferences (user_id) VALUES (?1)")
+        .bind(id)
+        .execute(&mut *conn)
+        .await?;
+
     Ok(())
 }
 
@@ -173,6 +178,29 @@ pub async fn create_invite(
     .await?;
 
     Ok(code)
+}
+
+/// Revokes a registration code, deleting it outright.
+///
+/// # Arguments
+///
+/// * `conn` - Connection to SQL DB.
+/// * `code` - Code being revoked.
+///
+/// # Returns
+///
+/// `false` if the code did not exist.
+pub async fn revoke_invite(
+    conn: &mut sqlx::SqliteConnection,
+    code: &str,
+) -> Result<bool> {
+
+    let deleted = sqlx::query("DELETE FROM invites WHERE code = ?1")
+        .bind(code)
+        .execute(&mut *conn)
+        .await?;
+
+    Ok(deleted.rows_affected() > 0)
 }
 
 /// Resolves what a user is allowed to do in a room.
@@ -333,9 +361,9 @@ pub async fn preferred_status(
 
     let status: Status = sqlx::query_scalar(
         "
-        SELECT preferred_status
-        FROM users
-        WHERE id = ?1
+        SELECT status
+        FROM user_preferences
+        WHERE user_id = ?1
         "
     )
     .bind(user_id)
@@ -343,6 +371,47 @@ pub async fn preferred_status(
     .await?;
 
     Ok(status)
+}
+
+/// Reads a user's preferences
+pub async fn get_preferences(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: Uuid,
+) -> Result<(Status, String)> {
+
+    let row: (Status, String) = sqlx::query_as(
+        "
+        SELECT status, room_layout
+        FROM user_preferences
+        WHERE user_id = ?1
+        "
+    )
+    .bind(user_id)
+    .fetch_one(&mut *conn)
+    .await?;
+
+    Ok(row)
+}
+
+/// Writes a user's room list layout
+pub async fn set_room_layout(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: Uuid,
+    room_layout: &str,
+) -> Result<()> {
+
+    sqlx::query(
+        "
+        UPDATE user_preferences SET room_layout = ?1
+        WHERE user_id = ?2
+        "
+    )
+    .bind(room_layout)
+    .bind(user_id)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
 }
 
 /// Lists the ids of everyone sharing a room with a user, the user included.

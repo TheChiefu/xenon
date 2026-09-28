@@ -146,6 +146,25 @@ pub fn invite_params(max_uses: i64, lifetime: i64) -> Result<()> {
     Ok(())
 }
 
+/// Checks that a room invite or ban's expiry lies in the future.
+///
+/// # Arguments
+///
+/// * `delta` - How long (in ms) from now the expiry is set to.
+///
+/// # Errors
+///
+/// Returns `AppError::Validation` if the delta is below 1.
+pub fn expire_delta(delta: i64) -> Result<()> {
+    if delta < 1 {
+        return Err(AppError::Validation(
+            "expiry error: must be at least 1 ms from now".to_string()
+        ));
+    }
+
+    Ok(())
+}
+
 /// Checks a room name's length.
 ///
 /// # Arguments
@@ -220,6 +239,27 @@ pub fn message_body(content: &str) -> Result<()> {
     if len > max {
         return Err(AppError::Validation(
             format!("message error: outside of max character limit ({max})")
+        ));
+    }
+
+    Ok(())
+}
+
+/// Checks a ban reason's length, against the same limit as a message body.
+///
+/// # Arguments
+///
+/// * `reason` - Reason given for the ban.
+///
+/// # Errors
+///
+/// Returns `AppError::Validation` if the reason is over the length limit.
+pub fn ban_reason(reason: &str) -> Result<()> {
+    let len = reason.chars().count();
+    let max = config::get().limits.message_body_max;
+    if len > max {
+        return Err(AppError::Validation(
+            format!("ban reason error: outside of max character limit ({max})")
         ));
     }
 

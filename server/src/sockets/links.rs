@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::api;
-use crate::models::Platform;
+use crate::shared::Platform;
 use crate::sockets::events::{LinkOutcome, ServerEvent};
 use crate::sockets::registry;
 use crate::sockets::sidecar;

@@ -3,9 +3,9 @@ mod bytesize;
 mod config;
 mod db;
 mod error;
-mod models;
 mod routes;
 mod serve;
+mod shared;
 mod sockets;
 mod state;
 mod utils;
@@ -20,7 +20,7 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
-use crate::models::GlobalRole;
+use crate::shared::GlobalRole;
 use crate::state::AppState;
 
 #[tokio::main]

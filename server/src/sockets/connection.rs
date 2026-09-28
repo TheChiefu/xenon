@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
-use crate::models::Status;
+use crate::shared::Status;
 use crate::routes::AuthUser;
 use crate::sockets::events::{ClientEvent, ServerEvent};
 use crate::sockets::game_presence;

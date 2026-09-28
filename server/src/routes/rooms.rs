@@ -1,4 +1,4 @@
-//! HTTP handlers for rooms and the tables scoped to a single room.
+//! HTTP handlers for rooms and the tables scoped to a single room
 
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -7,12 +7,16 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::api::rooms::RoomPatch;
 use crate::api::rooms::bans::Entry as BanEntry;
 use crate::api::rooms::invites::{Issued, Received};
 use crate::api::rooms::access::{Entry as RoomAccessEntry, RoomAccessPatch};
 use crate::error::{AppError, Result};
-use crate::models::{Permission, Permissions, Room, Visibility};
+use crate::api::rooms::Room;
+use crate::shared::{Permission, Permissions, Visibility};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{presence, registry};
@@ -21,7 +25,7 @@ use crate::{api, config};
 
 // Data Structs //
 
-/// POST body for creating a room.
+/// POST body for creating a room
 #[derive(Deserialize)]
 pub struct CreateRoomRequest {
     pub name: String,
@@ -30,14 +34,14 @@ pub struct CreateRoomRequest {
     pub claim_all: bool,
 }
 
-/// POST body for inviting a user to a room.
+/// POST body for inviting a user to a room
 #[derive(Deserialize)]
 pub struct CreateRoomInvite {
     pub invitee: Uuid,
     pub expire_delta: Option<i64>
 }
 
-/// POST body for banning a user from a room.
+/// POST body for banning a user from a room
 #[derive(Deserialize)]
 pub struct CreateRoomBan {
     pub target_id: Uuid,
@@ -45,13 +49,55 @@ pub struct CreateRoomBan {
     pub expire_delta: Option<i64>
 }
 
-/// Response carrying the id of a newly created room.
+/// Response carrying the id of a newly created room
 #[derive(Serialize)]
 pub struct CreateRoomResponse {
     pub id: Uuid,
 }
 
-/// Query string for a paged room listing.
+/// A room, as the caller's own room list sees it
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct MyRoomResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub visibility: Visibility,
+    pub mutation_seq: i64,
+}
+
+impl From<Room> for MyRoomResponse {
+    fn from(room: Room) -> Self {
+        Self {
+            id: room.id,
+            name: room.name,
+            visibility: room.visibility,
+            mutation_seq: room.mutation_seq,
+        }
+    }
+}
+
+/// A room, as the discoverable directory sees it
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct DiscoverableRoomResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub visibility: Visibility,
+    pub created_at: i64,
+}
+
+impl From<Room> for DiscoverableRoomResponse {
+    fn from(room: Room) -> Self {
+        Self {
+            id: room.id,
+            name: room.name,
+            visibility: room.visibility,
+            created_at: room.created_at,
+        }
+    }
+}
+
+/// Query string for a paged room listing
 #[derive(Deserialize)]
 pub struct DirectoryQuery {
     pub after: Option<Uuid>,
@@ -60,26 +106,7 @@ pub struct DirectoryQuery {
 
 // Routing Methods //
 
-
-
-/// Get a room's information
-/// 
-/// # Arguments
-/// 
-/// * `caller_id` - User requesting informaion.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to query.
-pub async fn get_room(
-    AuthUser(caller_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-    Path(room_id): Path<Uuid>,
-) -> Result<Json<Room>> {
-    let room = api::rooms::get(&pool, room_id, caller_id).await?;
-    Ok(Json(room))
-}
-
-
-/// Lists the members of a room.
+/// Lists the members of a room
 ///
 /// # Arguments
 ///
@@ -97,7 +124,7 @@ pub async fn list_members(
     Ok(Json(members))
 }
 
-/// Writes a member's row in a room.
+/// Writes a member's row in a room
 ///
 /// # Arguments
 ///
@@ -134,10 +161,7 @@ pub async fn patch(
     Ok(StatusCode::OK)
 }
 
-
-
-
-/// Invites a user to a room.
+/// Invites a user to a room
 ///
 /// # Arguments
 ///
@@ -166,7 +190,7 @@ pub async fn invite_user(
     Ok(StatusCode::CREATED)
 }
 
-/// Gets the room invites the caller is a recipient of.
+/// Gets the room invites the caller is a recipient of
 ///
 /// # Arguments
 ///
@@ -182,7 +206,7 @@ pub async fn list_my_invites(
     Ok(Json(invites))
 }
 
-/// Gets the invites a room has issued.
+/// Gets the invites a room has issued
 ///
 /// # Arguments
 ///
@@ -200,7 +224,7 @@ pub async fn list_invites(
     Ok(Json(invites))
 }
 
-/// Declines a room invite.
+/// Declines a room invite
 ///
 /// # Arguments
 ///
@@ -218,7 +242,7 @@ pub async fn decline_invite(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Withdraws an invite the room issued.
+/// Withdraws an invite the room issued
 ///
 /// # Arguments
 ///
@@ -241,7 +265,7 @@ pub async fn revoke_invite(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Gets the users banned from a room.
+/// Gets the users banned from a room
 ///
 /// # Arguments
 ///
@@ -259,7 +283,7 @@ pub async fn list_bans(
     Ok(Json(bans))
 }
 
-/// Bans a user from a room.
+/// Bans a user from a room
 ///
 /// # Arguments
 ///
@@ -293,7 +317,7 @@ pub async fn ban_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Lifts a user's ban on a room.
+/// Lifts a user's ban on a room
 ///
 /// # Arguments
 ///
@@ -311,7 +335,7 @@ pub async fn unban_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Updates a room.
+/// Updates a room
 /// 
 /// # Arguments
 /// 
@@ -336,7 +360,7 @@ pub async fn update(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Creates a room.
+/// Creates a room
 ///
 /// # Arguments
 ///
@@ -371,7 +395,7 @@ pub async fn create_room(
     Ok((StatusCode::CREATED, Json(CreateRoomResponse { id })))
 }
 
-/// Deletes a room.
+/// Deletes a room
 ///
 /// # Arguments
 ///
@@ -393,7 +417,7 @@ pub async fn delete_room(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Joins a room.
+/// Joins a room
 ///
 /// # Arguments
 ///
@@ -416,7 +440,7 @@ pub async fn join_room(
     Ok(StatusCode::OK)
 }
 
-/// Leaves a room.
+/// Leaves a room
 ///
 /// # Arguments
 ///
@@ -438,7 +462,7 @@ pub async fn leave_room(
     Ok(StatusCode::OK)
 }
 
-/// Gets the rooms the caller is a member of.
+/// Gets the rooms the caller is a member of
 ///
 /// # Arguments
 ///
@@ -447,14 +471,15 @@ pub async fn leave_room(
 pub async fn list_my_rooms(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<Room>>> {
+) -> Result<Json<Vec<MyRoomResponse>>> {
 
     let rooms = api::rooms::list_mine(&pool, user_id).await?;
+    let rooms = rooms.into_iter().map(MyRoomResponse::from).collect();
 
     Ok(Json(rooms))
 }
 
-/// Gets one page of the Public and Locked rooms on the server.
+/// Gets one page of the Public and Locked rooms on the server
 ///
 /// # Arguments
 ///
@@ -464,12 +489,13 @@ pub async fn list_discoverable_rooms(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
     Query(query): Query<DirectoryQuery>,
-) -> Result<Json<Vec<Room>>> {
+) -> Result<Json<Vec<DiscoverableRoomResponse>>> {
 
     let max = config::get().limits.room_page;
     let limit = query.limit.unwrap_or(max).clamp(1, max);
 
     let rooms = api::rooms::list_discoverable(&pool, query.after, limit).await?;
+    let rooms = rooms.into_iter().map(DiscoverableRoomResponse::from).collect();
 
     Ok(Json(rooms))
 }

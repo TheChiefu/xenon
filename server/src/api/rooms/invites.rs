@@ -5,8 +5,9 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::{Permission, Permissions};
+use crate::shared::{Permission, Permissions};
 use crate::utils;
+use crate::validate;
 
 // Data Structs //
 
@@ -61,6 +62,10 @@ pub async fn create(
     // Check if user has permission to create an invite
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
     can_invite(perms, caller_id, target_id)?;
+
+    if let Some(delta) = expire_delta {
+        validate::expire_delta(delta)?;
+    }
 
     // Create invite
     let now = utils::now_ms();

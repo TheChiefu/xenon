@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
-use crate::models::File;
+use crate::api::files::File;
 
 // Data Structs //
 

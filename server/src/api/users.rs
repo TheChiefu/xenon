@@ -3,13 +3,33 @@
 use std::collections::HashMap;
 
 use uuid::Uuid;
+use serde::Serialize;
 
 use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::{GlobalRole, Status, UserRow, UserSummary};
+use crate::shared::{GlobalRole, Status};
 use crate::utils;
 use crate::validate;
+
+// Data Structs //
+
+/// The `users` column
+#[derive(sqlx::FromRow, Serialize)]
+pub struct User {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub description: String,
+    pub avatar_file_id: Option<Uuid>,
+    pub banner_file_id: Option<Uuid>,
+    pub global_role: GlobalRole,
+    pub created_at: i64,
+
+    /// Set on a tombstoned account, which a client marks rather than hides
+    pub deleted_at: Option<i64>,
+}
+
 
 // API Methods //
 
@@ -26,7 +46,7 @@ pub async fn list(
     match_user: Option<String>,
     after: Option<Uuid>,
     limit: i64,
-) -> Result<Vec<UserSummary>> {
+) -> Result<Vec<User>> {
 
     let mut conn = pool.acquire().await?;
 
@@ -39,7 +59,7 @@ pub async fn list(
         format!("{escaped}%")
     });
 
-    let users: Vec<UserSummary> = sqlx::query_as(
+    let users: Vec<User> = sqlx::query_as(
         "
         SELECT id, username, display_name
         FROM users u
@@ -72,11 +92,11 @@ pub async fn list(
 pub async fn get(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
-) -> Result<UserRow> {
+) -> Result<User> {
 
     let mut conn = pool.acquire().await?;
 
-    let row: Option<UserRow> = sqlx::query_as(
+    let row: Option<User> = sqlx::query_as(
         "
         SELECT id, username, display_name, description, avatar_file_id,
                banner_file_id, global_role, created_at, deleted_at
@@ -144,7 +164,7 @@ pub async fn update(
     description: Option<String>,
     avatar_file_id: Option<Uuid>,
     banner_file_id: Option<Uuid>,
-) -> Result<Option<UserRow>> {
+) -> Result<Option<User>> {
 
     // Check if any field has changed from update patch
     let changed = display_name.is_some()
@@ -171,7 +191,7 @@ pub async fn update(
     // - nullif returns NULL when both arguments match, so the nil id clears
     // - RETURNING hands back what the row ends up holding, which is neither the
     //   value a patch left out nor the nil id it clears with
-    let stored: UserRow = sqlx::query_as(
+    let stored: User = sqlx::query_as(
         "
         UPDATE users SET
             display_name = COALESCE(?1, display_name),
@@ -212,8 +232,8 @@ pub async fn set_preferred_status(
 
     sqlx::query(
         "
-        UPDATE users SET preferred_status = ?1
-        WHERE id = ?2
+        UPDATE user_preferences SET status = ?1
+        WHERE user_id = ?2
         "
     )
     .bind(status)
@@ -545,7 +565,6 @@ async fn strip_profile(
             description = '',
             avatar_file_id = NULL,
             banner_file_id = NULL,
-            email = NULL,
             deleted_at = ?4
         WHERE id = ?5
         "

@@ -80,6 +80,7 @@ pub fn router(state: AppState) -> Router {
         .route("/login", post(auth::login))
         .route("/register", post(auth::register))
         .route("/register-code", post(auth::create_registration_code))
+        .route("/register-code/{code}", delete(auth::revoke_registration_code))
         .route("/transfer-ownership", post(users::transfer_ownership))
 
         // Me
@@ -89,7 +90,10 @@ pub fn router(state: AppState) -> Router {
             .delete(users::delete_me)
         )
         .route("/me/password", patch(users::update_my_password))
-        .route("/me/status", put(users::update_my_status))
+        .route("/me/preferences",
+            get(users::get_preferences)
+            .patch(users::update_preferences)
+        )
         .route("/me/rooms", get(rooms::list_my_rooms))
         .route("/me/invites", get(rooms::list_my_invites))
         .route("/me/invites/{room_id}", delete(rooms::decline_invite))
@@ -100,8 +104,7 @@ pub fn router(state: AppState) -> Router {
             .get(rooms::list_discoverable_rooms)
         )
         .route("/rooms/{id}",
-            get(rooms::get_room)
-            .delete(rooms::delete_room)
+            delete(rooms::delete_room)
             .patch(rooms::update)
         )
         .route("/rooms/{id}/join", post(rooms::join_room))

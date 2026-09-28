@@ -8,7 +8,7 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::models::{Platform, Status};
+use crate::shared::{Platform, Status};
 use crate::routes::messages::MessageResponse;
 use crate::sockets::presence::{Device, Presence};
 

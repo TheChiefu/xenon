@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db;
 use crate::error::Result;
-use crate::models::Status;
+use crate::shared::Status;
 use crate::sockets::events::{ServerEvent, UserPresence};
 use crate::sockets::game_presence;
 use crate::sockets::registry;

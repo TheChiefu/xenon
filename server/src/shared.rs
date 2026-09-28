@@ -1,10 +1,9 @@
-//! Rows as the rest of the server sees them.
+//! Types shared between the database and the client.
 //!
 //! enums marked with "PERMANENT" is stored as its integer. Never reuse or
 //! renumber a retired variant's number once rows exist.
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
@@ -13,7 +12,7 @@ use ts_rs::TS;
 
 /// A user's server-wide role, stored as an integer. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "models.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum GlobalRole {
@@ -25,14 +24,15 @@ pub enum GlobalRole {
 
 /// How a room is discovered and entered, stored as an integer. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum Visibility {
-    /// Self service.
+    /// Self service
     Public = 0,
-    /// Invite only.
+    /// Invite only
     Locked = 1,
-    /// Invite only.
+    /// Invite only
     Hidden = 2,
 }
 
@@ -47,7 +47,7 @@ pub enum Notify {
 
 /// A game service an account is linked to, stored as an integer. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "models.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum Platform {
@@ -57,6 +57,7 @@ pub enum Platform {
 
 /// What a user asks to appear as while connected, stored as an integer. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum Status {
@@ -203,80 +204,13 @@ impl Default for Permissions {
     }
 }
 
-// Users //
-
-/// Who a user is at a glance
-#[derive(sqlx::FromRow, Serialize)]
-pub struct UserSummary {
-    pub id: Uuid,
-    pub username: String,
-    pub display_name: String,
-}
-
-/// The `users` columns a client may see.
-#[derive(sqlx::FromRow, Serialize)]
-pub struct UserRow {
-    pub id: Uuid,
-    pub username: String,
-    pub display_name: String,
-    pub description: String,
-    pub avatar_file_id: Option<Uuid>,
-    pub banner_file_id: Option<Uuid>,
-    pub global_role: GlobalRole,
-    pub created_at: i64,
-
-    /// Set on a tombstoned account, which a client marks rather than hides
-    pub deleted_at: Option<i64>,
-}
-
 /// A `linked_accounts` row.
 #[derive(sqlx::FromRow, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "models.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 pub struct LinkedAccount {
     // Platform's name (ie. Xbox)
     pub platform: Platform,
 
     /// Name shown for the account
     pub handle: String,
-}
-
-// Room //
-
-/// A `rooms` row.
-#[derive(sqlx::FromRow, Serialize)]
-pub struct Room {
-    pub id: Uuid,
-    pub name: String,
-    pub visibility: Visibility,
-    pub default_permissions: Permissions,
-    pub created_at: i64,
-    pub mutation_seq: i64,
-}
-
-// Messages //
-
-/// A `messages` row.
-#[derive(sqlx::FromRow)]
-pub struct Message {
-    pub seq: i64,
-    pub id: Uuid,
-    pub room_id: Uuid,
-    pub author_id: Uuid,
-    pub body: Option<String>,
-    pub created_at: i64,
-    pub edited_at: Option<i64>,
-    pub deleted_at: Option<i64>,
-}
-
-// Files //
-
-/// A `files` row.
-#[derive(sqlx::FromRow)]
-pub struct File {
-    pub id: Uuid,
-    pub sha256: Vec<u8>,
-    pub filename: String,
-    pub mime: String,
-    pub byte_size: i64,
-    pub created_at: i64,
 }

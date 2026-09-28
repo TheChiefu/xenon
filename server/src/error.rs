@@ -28,7 +28,6 @@ pub enum AppError {
     InvalidCredentials,
     InvalidInvite,
     UsernameTaken,
-    EmailTaken,
     OwnerExists,
     Forbidden,
     NotFound,
@@ -48,7 +47,6 @@ impl fmt::Display for AppError {
             AppError::Db(e) => write!(f, "database error: {e}"),
             AppError::Hash(e) => write!(f, "password hashing error: {e}"),
             AppError::Validation(msg) => write!(f, "{msg}"),
-            AppError::EmailTaken => write!(f, "email already in use"),
             AppError::OwnerExists => write!(f, "server owner already exists"),
             AppError::Forbidden => write!(f,"action not allowed"),
             AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
@@ -108,7 +106,7 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::InvalidInvite => (StatusCode::FORBIDDEN, self.to_string()),
-            AppError::UsernameTaken | AppError::EmailTaken => (StatusCode::CONFLICT, self.to_string()),
+            AppError::UsernameTaken => (StatusCode::CONFLICT, self.to_string()),
             AppError::Validation(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             AppError::TooLarge(_) => (StatusCode::PAYLOAD_TOO_LARGE, self.to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
@@ -152,8 +150,6 @@ pub fn unique_violation(e: sqlx::Error) -> AppError {
             let msg = db.message();
             if msg.contains("users.username") {
                 Some(AppError::UsernameTaken)
-            } else if msg.contains("users.email") {
-                Some(AppError::EmailTaken)
             } else if msg.contains("users.global_role") {
                 Some(AppError::OwnerExists)   // one_owner; bootstrap only
             } else {

@@ -14,7 +14,8 @@ use uuid::Uuid;
 use crate::api::files::Stored;
 use crate::bytesize;
 use crate::error::{AppError, Result};
-use crate::models::{File, GlobalRole};
+use crate::api::files::File;
+use crate::shared::GlobalRole;
 use crate::routes::AuthUser;
 use crate::{api, config, db, validate};
 

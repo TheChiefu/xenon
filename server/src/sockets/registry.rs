@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::db;
-use crate::models::Status;
+use crate::shared::Status;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::presence::Device;
 use crate::state::AppState;
@@ -24,7 +24,7 @@ pub struct Connected {
     /// The writing end of a channel every socket the user holds reads
     pub events: broadcast::Sender<String>,
 
-    /// Starts at `users.preferred_status`, then whatever the user declares
+    /// Starts at `user_preferences.status`, then whatever the user declares
     pub status: Status,
 
     /// One entry per live socket that named a device, in connect order

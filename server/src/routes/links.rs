@@ -11,7 +11,7 @@ use serde::Serialize;
 
 use crate::api;
 use crate::error::{AppError, Result};
-use crate::models::Platform;
+use crate::shared::Platform;
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{links, registry, sidecar};

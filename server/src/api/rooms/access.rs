@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::{Notify, Permission, Permissions};
+use crate::shared::{Notify, Permission, Permissions};
 
 // Data Structs //
 
@@ -35,7 +35,7 @@ pub struct NotifyUserPair {
 
 // API Methods //
 
-/// Lists the members of a room, oldest membership first.
+/// Lists the members of a room.
 ///
 /// # Arguments
 ///
@@ -74,7 +74,6 @@ pub async fn list(
             CASE WHEN a.user_id = ?2 THEN a.notify END AS notify
         FROM room_access a
         WHERE a.room_id = ?1
-        ORDER BY a.granted_at, a.user_id
         "
     )
     .bind(room_id)

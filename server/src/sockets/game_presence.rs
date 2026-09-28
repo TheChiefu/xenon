@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::Result;
-use crate::models::Status;
+use crate::shared::Status;
 use crate::sockets::events::{GameActivity, GamePresence, ServerEvent, UserGamePresence};
 use crate::sockets::presence;
 use crate::sockets::registry;

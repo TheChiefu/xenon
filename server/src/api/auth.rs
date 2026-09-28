@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::models::GlobalRole;
+use crate::shared::GlobalRole;
 use crate::utils;
 use crate::validate;
 
@@ -64,7 +64,6 @@ pub async fn register(
         "
         UPDATE invites SET uses = uses + 1
         WHERE code = ?1
-            AND revoked_at IS NULL
             AND (expires_at IS NULL OR expires_at > ?2)
             AND (max_uses IS NULL OR uses < max_uses)
         ",

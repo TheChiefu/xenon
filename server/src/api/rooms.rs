@@ -4,17 +4,28 @@ pub mod bans;
 pub mod invites;
 pub mod access;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::db::{self, effective_permissions};
 use crate::error::{AppError, Result};
-use crate::models::{GlobalRole, Permission, Permissions, Room, Visibility};
+use crate::shared::{GlobalRole, Permission, Permissions, Visibility};
 use crate::utils;
 use crate::validate;
 
-// API Methods //
+// Data Structs //
 
+/// A `rooms` row
+#[derive(sqlx::FromRow, Serialize)]
+pub struct Room {
+    pub id: Uuid,
+    pub name: String,
+    pub visibility: Visibility,
+    pub created_at: i64,
+    pub mutation_seq: i64,
+}
+
+// API Methods //
 
 /// Gets a room's information by ID (hidden rooms only show to users in them)
 ///
@@ -32,7 +43,7 @@ pub async fn get(
     let mut conn = pool.acquire().await?;
     let room: Room = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at, r.mutation_seq
+        SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
         FROM rooms r
         WHERE r.id = ?1
             AND (r.visibility IN (?2, ?3)
@@ -367,7 +378,7 @@ pub async fn list_mine(
     // Get list based on user's room access
     let rooms: Vec<Room> = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at, r.mutation_seq
+        SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
         FROM rooms r JOIN room_access a ON a.room_id = r.id
         WHERE a.user_id = ?1
         "
@@ -396,7 +407,7 @@ pub async fn list_discoverable(
 
     let rooms: Vec<Room> = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at, r.mutation_seq
+        SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
         FROM rooms r
         WHERE r.visibility IN (?1, ?2)
             AND (?3 IS NULL OR r.id > ?3)
