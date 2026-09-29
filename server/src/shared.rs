@@ -4,6 +4,7 @@
 //! renumber a retired variant's number once rows exist.
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
@@ -213,4 +214,14 @@ pub struct LinkedAccount {
 
     /// Name shown for the account
     pub handle: String,
+}
+
+/// One entry in a user's room list layout
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+pub struct RoomListItem {
+    pub id: Uuid,
+
+    /// Name of the folder this room is grouped under, if any
+    pub folder: Option<String>,
 }

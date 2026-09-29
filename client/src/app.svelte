@@ -5,6 +5,7 @@
   import { getToken, getUrl } from "./lib/session.svelte";
   import { isConfirmVisible, getConfirmMessage, resolveConfirm } from "./lib/confirm.svelte";
   import { loadProfile } from "./lib/profile.svelte";
+  import { loadPreferences } from "./lib/preferences.svelte";
 
   $effect(() => {
     const url = getUrl();
@@ -12,6 +13,7 @@
     if (url === null || token === null) return;
 
     loadProfile(url, token);
+    loadPreferences(url, token);
   });
 </script>
 

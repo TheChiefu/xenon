@@ -1,6 +1,9 @@
 <script lang="ts">
   import { getUrl, getToken, getActiveLogin, signOut } from "@/lib/session.svelte";
   import { getProfile } from "@/lib/profile.svelte";
+  import { getStoredPreferences, setStatus } from "@/lib/preferences.svelte";
+  import type { Status } from "@/bindings/shared";
+  import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { dialogFly } from "@/lib/transitions";
@@ -9,14 +12,13 @@
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
   import icon_headphones from "@/assets/icons/headphones.svg?raw";
+  import icon_headphones_muted from "@/assets/icons/headphones-muted.svg?raw";
   import icon_mic from "@/assets/icons/mic.svg?raw";
+  import icon_mic_muted from "@/assets/icons/mic-muted.svg?raw";
 
   let avatar = $state<FetchedFile | null>(null);
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
-
-  // Status picked in the menu, drawn as the bar on the button's left edge
-  let status = $state("online");
 
   // Messages
   const msg_sign_out = "Are you sure you want to sign out?";
@@ -32,6 +34,16 @@
     if (result) {
       signOut();
     }
+  }
+
+  function onStatusChange(event: Event) {
+    if (!(event.target instanceof HTMLSelectElement)) return;
+
+    const url = getUrl();
+    const token = getToken();
+    if (url === null || token === null) return;
+
+    setStatus(url, token, event.target.value as Status);
   }
 
   $effect(() => {
@@ -125,7 +137,9 @@
 
   .tools {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
   }
 
   .tools .icon-btn {
@@ -140,7 +154,7 @@
 
 <div class="identity">
   <button
-    class="user status-{status}"
+    class="user status-{getStoredPreferences()?.status ?? ''}"
     aria-expanded={menuOpen}
     onclick={() => menuOpen = !menuOpen}
   >
@@ -159,21 +173,38 @@
     <div class="menu-clip">
     <div class="menu" transition:dialogFly={{ y: "-1rem" }}>
       <div class="tools">
-        <button class="icon-btn" aria-label="Check for updates">
+        <button class="icon-btn" aria-label="Refresh Page" onclick={() => location.reload()} title="Hard refresh web page">
           <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
         </button>
-        <button class="icon-btn" aria-label="Settings" onclick={openSettings}>
+        <button class="icon-btn" aria-label="Settings" onclick={openSettings} title="Open Settings Menu">
           <span class="icon" aria-hidden="true">{@html icon_gear}</span>
         </button>
-        <button class="icon-btn" aria-label="Toggle sound">
-          <span class="icon" aria-hidden="true">{@html icon_headphones}</span>
+        <button
+          class="icon-btn"
+          class:is-muted={!getSoundEnabled()}
+          aria-label="Toggle sound"
+          title="Toggle Sound"
+          onclick={() => setSoundEnabled(!getSoundEnabled())}
+        >
+          <span class="icon" aria-hidden="true">{@html getSoundEnabled() ? icon_headphones : icon_headphones_muted}</span>
         </button>
-        <button class="icon-btn" aria-label="Toggle microphone">
-          <span class="icon" aria-hidden="true">{@html icon_mic}</span>
+        <button
+          class="icon-btn"
+          class:is-muted={!getMicEnabled()}
+          aria-label="Toggle microphone"
+          title="Toggle Microphone"
+          onclick={() => setMicEnabled(!getMicEnabled())}
+        >
+          <span class="icon" aria-hidden="true">{@html getMicEnabled() ? icon_mic : icon_mic_muted}</span>
         </button>
       </div>
 
-      <select id="status" title="How you are shown to others when using the client" bind:value={status}>
+      <select
+        id="status"
+        title="How you are shown to others when using the client"
+        value={getStoredPreferences()?.status ?? "online"}
+        onchange={onStatusChange}
+      >
         <option value="online">Online</option>
         <option value="busy">Do Not Disturb</option>
         <option value="away">Away</option>

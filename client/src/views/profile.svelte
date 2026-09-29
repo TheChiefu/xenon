@@ -86,6 +86,9 @@
       display_name={display_name}
       username="username"
       description={description}
+      status="online"
+      role="member"
+      links={[]}
       created_at="Jan 1, 2026"
       editable
     />

@@ -18,3 +18,22 @@ handle: string, };
  * A game service an account is linked to, stored as an integer. (PERMANENT)
  */
 export type Platform = "xbox" | "steam";
+
+/**
+ * One entry in a user's room list layout
+ */
+export type RoomListItem = { id: string, 
+/**
+ * Name of the folder this room is grouped under, if any
+ */
+folder: string | null, };
+
+/**
+ * What a user asks to appear as while connected, stored as an integer. (PERMANENT)
+ */
+export type Status = "online" | "busy" | "away" | "invisible";
+
+/**
+ * How a room is discovered and entered, stored as an integer. (PERMANENT)
+ */
+export type Visibility = "public" | "locked" | "hidden";

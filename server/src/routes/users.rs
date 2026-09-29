@@ -18,6 +18,7 @@ use crate::shared::{GlobalRole, Status, LinkedAccount};
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{presence, registry};
 use crate::state::AppState;
+use crate::validate;
 use crate::{api, config};
 
 // Data Structs //
@@ -267,6 +268,8 @@ pub async fn update_preferences(
 
     // Saves the caller's room list layout
     if let Some(room_layout) = body.room_layout {
+        validate::room_layout(&room_layout)?;
+
         let mut conn = app_state.pool.acquire().await?;
         db::set_room_layout(&mut conn, user_id, &room_layout).await?;
     }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GlobalRole, LinkedAccount, Platform } from "@/bindings/models";
+  import type { GlobalRole, LinkedAccount, Platform } from "@/bindings/shared";
   import icon_pencil from "@/assets/icons/pencil.svg?raw";
   import icon_xbox from "@/assets/platforms/xbox.svg?raw";
   import icon_steam from "@/assets/platforms/steam.svg?raw";

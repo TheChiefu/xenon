@@ -34,7 +34,7 @@ input {
   height: var(--icon-size);
 }
 
-.icon-btn:hover:not(:disabled) {
+.icon-btn:hover {
   background: var(--component-hover);
 }
 

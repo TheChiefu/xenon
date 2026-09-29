@@ -3,6 +3,7 @@
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::shared::RoomListItem;
 
 /// How many registrations a code covers when the request names no count.
 pub const INVITE_DEFAULT_MAX_USES: i64 = 1;
@@ -261,6 +262,17 @@ pub fn ban_reason(reason: &str) -> Result<()> {
         return Err(AppError::Validation(
             format!("ban reason error: outside of max character limit ({max})")
         ));
+    }
+
+    Ok(())
+}
+
+/// Checks that a room list layout is a JSON array of RoomListItem
+pub fn room_layout(layout: &str) -> Result<()> {
+    let parsed: serde_json::Result<Vec<RoomListItem>> = serde_json::from_str(layout);
+
+    if let Err(e) = parsed {
+        return Err(AppError::Validation(format!("room layout error: {e}")));
     }
 
     Ok(())

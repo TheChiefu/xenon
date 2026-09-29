@@ -210,8 +210,6 @@
 
         <p>Password</p>
         <input name="password" type="password" placeholder="Leave empty if not changing" bind:value={password}/>
-        <p>Email</p>
-        <input name="email" type="email" placeholder="Not Yet Implemented" disabled/>
         <label for="revoke-sessions">Sign Out Other Sessions</label>
         <input id="revoke-sessions" type="checkbox"/>
         <button class="full-row">Save Changes</button>

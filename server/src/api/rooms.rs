@@ -381,6 +381,7 @@ pub async fn list_mine(
         SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
         FROM rooms r JOIN room_access a ON a.room_id = r.id
         WHERE a.user_id = ?1
+        ORDER BY r.id
         "
     )
     .bind(user_id)
