@@ -7,7 +7,7 @@
   import { isConfirmVisible, getConfirmMessage, resolveConfirm } from "./lib/confirm.svelte";
   import { loadProfile } from "./lib/profile.svelte";
   import { loadPreferences } from "./lib/preferences.svelte";
-  import { loadRooms } from "./lib/rooms.svelte";
+  import { loadRooms } from "./lib/rooms/state.svelte";
 
   $effect(() => {
     const url = getUrl();

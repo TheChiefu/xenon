@@ -1,4 +1,4 @@
-import { moveRoom } from "@/lib/rooms.svelte";
+import { isLocked, moveRoom } from "@/lib/rooms/state.svelte";
 
 // Vertical travel before a held room is picked up, so a click still selects
 const MOVE_THRESHOLD: number = 5;
@@ -43,6 +43,7 @@ export function getRoomTransform(index: number): string | null {
 // Hold a room, picked up once past the threshold
 export function holdRoom(event: PointerEvent, index: number): void {
   if (event.button !== 0) return; // Only allow left click drag-drop
+  if (isLocked()) return;
   fromIndex = index;
   pressY = event.clientY;
   moving = false;

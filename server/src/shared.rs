@@ -72,6 +72,7 @@ pub enum Status {
 
 /// One bit position in a [`Permissions`] mask. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(u8)]
 pub enum Permission {
@@ -218,10 +219,11 @@ pub struct LinkedAccount {
 
 /// One entry in a user's room list layout
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
-pub struct RoomListItem {
-    pub id: Uuid,
-
-    /// Name of the folder this room is grouped under, if any
-    pub folder: Option<String>,
+pub enum RoomListItem {
+    /// A bare room id
+    Room(Uuid),
+    /// A folder holding an ordered list of room ids
+    Folder { name: String, rooms: Vec<Uuid> },
 }

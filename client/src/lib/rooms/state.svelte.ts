@@ -6,6 +6,7 @@ import { getPreferences, updatePreferences } from "@/lib/api/users";
 let layout: RoomListItem[] = $state([]);
 let rooms: Map<string, MyRoomResponse> = $state(new Map());
 let selectedRoom: string | null = $state(null);
+let locked: boolean = $state(true);
 
 export function getLayout(): RoomListItem[] {
   return layout;
@@ -43,18 +44,29 @@ export async function loadRooms(url: string, token: string): Promise<void> {
     rooms.set(room.id, room); // Update global room map with up to date info
   }
 
-  // Drop stored entry whose room no longer exists
+  // Drop any room id that's gone
   for (const entry of storedLayout) {
-    if (fetchedIds.has(entry.id)) {
-      layout.push(entry);
-      seenIds.add(entry.id);
+    if (typeof entry === "string") { // Room ID
+      if (fetchedIds.has(entry)) {
+        layout.push(entry);
+        seenIds.add(entry);
+      }
+    } else { // Folder
+      const roomIds: string[] = [];
+      for (const id of entry.rooms) {
+        if (fetchedIds.has(id)) {
+          roomIds.push(id);
+          seenIds.add(id);
+        }
+      }
+      layout.push({ name: entry.name, rooms: roomIds });
     }
   }
 
   // Unseen IDs are new, added to end of layout
   for (const room of fetched) {
     if (!seenIds.has(room.id)) {
-      layout.push({ id: room.id, folder: null });
+      layout.push(room.id);
     }
   }
 }
@@ -71,4 +83,18 @@ export function getSelectedRoom(): string | null {
 
 export function selectRoom(id: string): void {
   selectedRoom = id;
+}
+
+export function isLocked(): boolean {
+  return locked;
+}
+
+// Stops drag and drop, and saves the layout as it stands
+export async function lockLayout(url: string, token: string): Promise<void> {
+  locked = true;
+  await saveLayout(url, token);
+}
+
+export function unlockLayout(): void {
+  locked = false;
 }

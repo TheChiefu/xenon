@@ -1,10 +1,16 @@
 <script lang="ts">
-    import { getLayout, getRoomData, getSelectedRoom, selectRoom } from "@/lib/rooms.svelte";
-    import { cancelRoom, dragRoom, dropRoom, getRoomTransform, holdRoom, isHeld, isMoving } from "@/lib/room_drag.svelte";
-    import { endResize, getWidth, isResizing, resetWidth, resize, startResize } from "@/lib/room_resize.svelte";
-
-    // Resize handle
-    const HANDLE_WIDTH: number = 8;
+    import type { MyRoomResponse } from "@/bindings/routes/rooms";
+    import { getLayout, getRoomData, getSelectedRoom, isLocked, selectRoom } from "@/lib/rooms/state.svelte";
+    import { cancelRoom, dragRoom, dropRoom, getRoomTransform, holdRoom, isHeld, isMoving } from "@/lib/rooms/drag.svelte";
+    import { endResize, getWidth, HANDLE_WIDTH, isResizing, resetWidth, resize, startResize } from "@/lib/rooms/resize.svelte";
+    import { closeMenu, getMenuPos, onAddFolder, onNewRoom, onToggleLock, openMenu } from "@/lib/rooms/menu.svelte";
+    import { cancelFolder, confirmFolder, isCollapsed, isCreatingFolder, toggleFolder } from "@/lib/rooms/folders.svelte";
+    import icon_lock from "@/assets/icons/lock.svg?raw";
+    import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
+    import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
+    import icon_folder from "@/assets/icons/folder.svg?raw";
+    import icon_arrow_down from "@/assets/icons/arrow-down.svg?raw";
+    import icon_arrow_right from "@/assets/icons/arrow-right.svg?raw";
 
     let pane: HTMLDivElement | undefined = $state();
     let list: HTMLDivElement | undefined = $state();
@@ -70,24 +76,105 @@
     button {
         margin-left: -1px;
         text-align: left;
+        align-items: center;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         touch-action: none;
+        display: flex;
+        justify-content: space-between;
     }
 
     .selected {
         background-color: var(--component-hover);
     }
 
+    .nested {
+        padding-left: 2rem;
+    }
+
+    .menu-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+    }
+
+    .menu {
+        position: fixed;
+        z-index: 11;
+        display: flex;
+        flex-direction: column;
+        min-width: 10rem;
+        border: 1px solid var(--border);
+        background: var(--component);
+    }
+
 </style>
 
-<div class="rooms" style="width: {getWidth()}px" style:--handle-width="{HANDLE_WIDTH}px" bind:this={pane}>
+<!-- Layout for movable room button -->
+{#snippet roomButton(
+    roomId: string,
+    nested: boolean,
+    held: boolean,
+    transform: string | null,
+    onpointerdown: ((event: PointerEvent) => void) | undefined
+)}
+    {@const room = getRoomData(roomId)}
+    <button
+        class:held={held}
+        class:nested={nested}
+        class:selected={getSelectedRoom() === roomId}
+        style:transform={transform}
+        onpointerdown={onpointerdown}
+        onclick={() => selectRoom(roomId)}
+    >
+        {room?.name}
+        {#if room?.visibility === "locked"}
+            <span class="icon" aria-hidden="true">{@html icon_lock}</span>
+        {:else if room?.visibility === "hidden"}
+            <span class="icon" aria-hidden="true">{@html icon_eye_off}</span>
+        {/if}
+    </button>
+{/snippet}
 
+<!-- Layout for movable folder -->
+{#snippet folderButton(folderName: string, index: number)}
+    <button
+        class:held={isHeld(index)}
+        style:transform={getRoomTransform(index)}
+        onpointerdown={(event) => holdRoom(event, index)}
+        onclick={() => toggleFolder(folderName)}
+    >
+        <span class="icon" aria-hidden="true">{@html icon_folder}</span>
+        {folderName}
+        {#if isCollapsed(folderName)}
+            <span class="icon" aria-hidden="true">{@html icon_arrow_down}</span>
+        {:else}
+            <span class="icon" aria-hidden="true">{@html icon_arrow_right}</span>
+        {/if}
+    </button>
+{/snippet}
+
+
+<!-- Room Pane -->
+<div
+    class="rooms"
+    style="width: {getWidth()}px"
+    style:--handle-width="{HANDLE_WIDTH}px"
+    oncontextmenu={openMenu}
+    role="presentation"
+    bind:this={pane}
+>
+
+    <!-- Display Header and related buttons -->
     <div class="header">
         <h3>Rooms</h3>
+        {#if !isLocked()}
+            <span class="icon" aria-hidden="true">{@html icon_lock_open}</span>
+        {/if}
     </div>
-    <hr/>
+
+    <!-- Room List -->
     <div
         class="list"
         class:moving={isMoving()}
@@ -97,21 +184,45 @@
         onpointerup={dropRoom}
         onpointercancel={cancelRoom}
     >
-        {#each getLayout() as entry, index (entry.id)}
-        <button
-            class:selected={getSelectedRoom() === entry.id}
-            class:held={isHeld(index)}
-            style:transform={getRoomTransform(index)}
-            onpointerdown={(event) => holdRoom(event, index)}
-            onclick={() => selectRoom(entry.id)}
-        >
-            {getRoomData(entry.id)?.name}
-        </button>
-        {:else}
-            <div>No rooms</div>
+        {#each getLayout() as entry, index}
+
+            <!-- Top Level Room -->
+            {#if typeof entry === "string"}
+                {@render roomButton(
+                    entry,
+                    false,
+                    isHeld(index),
+                    getRoomTransform(index),
+                    (event) => holdRoom(event, index)
+                )}
+            {:else}
+
+            <!-- Folder -->
+            {@render folderButton(entry.name, index)}
+                <!-- Room inside folder -->
+                {#if !isCollapsed(entry.name)}
+                    {#each entry.rooms as roomId}
+                    {@render roomButton(roomId, true, false, null, undefined)}
+                    {/each}
+                {/if}
+            {/if}
         {/each}
+    
+        <!-- New Folder Input Bar -->
+        {#if isCreatingFolder()}
+        <input
+            type="text"
+            autofocus
+            onkeydown={(event) => {
+                if (event.key === "Enter") confirmFolder(event.currentTarget.value);
+                if (event.key === "Escape") cancelFolder();
+            }}
+            onblur={(event) => confirmFolder(event.currentTarget.value)}
+        />
+        {/if}
     </div>
 
+    <!-- Vertical Bar for resizing room pane-->
     <div
         class="resize-handle"
         class:dragging={isResizing()}
@@ -125,3 +236,13 @@
         ondblclick={resetWidth}
     ></div>
 </div>
+
+<!-- Right click context window -->
+{#if getMenuPos()}
+    <div class="menu-backdrop" role="presentation" onpointerdown={closeMenu}></div>
+    <div class="menu" style:left="{getMenuPos()?.x}px" style:top="{getMenuPos()?.y}px">
+        <button onclick={onToggleLock}>{isLocked() ? "Unlock Layout" : "Lock Layout"}</button>
+        <button onclick={onAddFolder}>Add Folder</button>
+        <button onclick={onNewRoom}>New Room</button>
+    </div>
+{/if}

@@ -27,6 +27,7 @@ use crate::{api, config};
 
 /// POST body for creating a room
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
 pub struct CreateRoomRequest {
     pub name: String,
     pub visibility: Visibility,
@@ -51,6 +52,7 @@ pub struct CreateRoomBan {
 
 /// Response carrying the id of a newly created room
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
 pub struct CreateRoomResponse {
     pub id: Uuid,
 }

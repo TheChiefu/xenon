@@ -15,6 +15,11 @@ export type LinkedAccount = { platform: Platform,
 handle: string, };
 
 /**
+ * One bit position in a [`Permissions`] mask. (PERMANENT)
+ */
+export type Permission = "post" | "attach" | "commands" | "deletemsg" | "invite" | "rename" | "ban" | "grant" | "deleteroom" | "connect" | "speak" | "mute" | "video" | "screenshare";
+
+/**
  * A game service an account is linked to, stored as an integer. (PERMANENT)
  */
 export type Platform = "xbox" | "steam";
@@ -22,11 +27,7 @@ export type Platform = "xbox" | "steam";
 /**
  * One entry in a user's room list layout
  */
-export type RoomListItem = { id: string, 
-/**
- * Name of the folder this room is grouped under, if any
- */
-folder: string | null, };
+export type RoomListItem = string | { name: string, rooms: Array<string>, };
 
 /**
  * What a user asks to appear as while connected, stored as an integer. (PERMANENT)

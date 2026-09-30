@@ -1,6 +1,7 @@
 // Room panel width
 const KEY_USER_ROOM_WIDTH: string = "prefRoomWidth";
-const DEFAULT_WIDTH: number = 200;
+const DEFAULT_WIDTH: number = 300;
+export const HANDLE_WIDTH: number = 8;
 
 const storedWidth: string | null = localStorage.getItem(KEY_USER_ROOM_WIDTH);
 
@@ -28,7 +29,7 @@ export function resize(event: PointerEvent, pane: HTMLElement | undefined): void
 
   const left: number = pane.getBoundingClientRect().left;
   const next: number = event.clientX - left;
-  width = Math.min(Math.max(next, 0), window.innerWidth);
+  width = Math.min(Math.max(next, HANDLE_WIDTH), window.innerWidth);
 }
 
 // End resize on release (or drop capture)
