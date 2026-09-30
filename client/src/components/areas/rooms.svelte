@@ -1,7 +1,9 @@
 <script lang="ts">
     import type { MyRoomResponse } from "@/bindings/routes/rooms";
-    import { getLayout, getRoomData, getSelectedRoom, isLocked, selectRoom } from "@/lib/rooms/state.svelte";
-    import { cancelRoom, dragRoom, dropRoom, getRoomTransform, holdRoom, isHeld, isMoving } from "@/lib/rooms/drag.svelte";
+    import { getLayout, isLocked } from "@/lib/rooms/layout.svelte";
+    import { getRoomData } from "@/lib/rooms.svelte";
+    import { getSelectedRoom, selectRoom } from "@/lib/rooms/selection.svelte";
+    import { cancelDrag, currentIndex, endDrag, getTransform, isDragging, startDrag, trackDrag } from "@/lib/rooms/drag.svelte";
     import { endResize, getWidth, HANDLE_WIDTH, isResizing, resetWidth, resize, startResize } from "@/lib/rooms/resize.svelte";
     import { closeMenu, getMenuPos, onAddFolder, onNewRoom, onToggleLock, openMenu } from "@/lib/rooms/menu.svelte";
     import { cancelFolder, confirmFolder, isCollapsed, isCreatingFolder, toggleFolder } from "@/lib/rooms/folders.svelte";
@@ -49,12 +51,6 @@
 
     .list.moving {
         cursor: grabbing;
-    }
-
-    .held {
-        position: relative;
-        z-index: 1;
-        background-color: var(--btn-action);
     }
 
     .resize-handle {
@@ -115,13 +111,11 @@
 {#snippet roomButton(
     roomId: string,
     nested: boolean,
-    held: boolean,
     transform: string | null,
     onpointerdown: ((event: PointerEvent) => void) | undefined
 )}
     {@const room = getRoomData(roomId)}
     <button
-        class:held={held}
         class:nested={nested}
         class:selected={getSelectedRoom() === roomId}
         style:transform={transform}
@@ -140,9 +134,8 @@
 <!-- Layout for movable folder -->
 {#snippet folderButton(folderName: string, index: number)}
     <button
-        class:held={isHeld(index)}
-        style:transform={getRoomTransform(index)}
-        onpointerdown={(event) => holdRoom(event, index)}
+        style:transform={getTransform(index)}
+        onpointerdown={(event) => startDrag(event, index)}
         onclick={() => toggleFolder(folderName)}
     >
         <span class="icon" aria-hidden="true">{@html icon_folder}</span>
@@ -177,12 +170,12 @@
     <!-- Room List -->
     <div
         class="list"
-        class:moving={isMoving()}
+        class:moving={isDragging()}
         role="presentation"
         bind:this={list}
-        onpointermove={(event) => dragRoom(event, list)}
-        onpointerup={dropRoom}
-        onpointercancel={cancelRoom}
+        onpointermove={trackDrag}
+        onpointerup={endDrag}
+        onpointercancel={cancelDrag}
     >
         {#each getLayout() as entry, index}
 
@@ -191,9 +184,8 @@
                 {@render roomButton(
                     entry,
                     false,
-                    isHeld(index),
-                    getRoomTransform(index),
-                    (event) => holdRoom(event, index)
+                    getTransform(index),
+                    (event) => startDrag(event, index)
                 )}
             {:else}
 
@@ -202,7 +194,7 @@
                 <!-- Room inside folder -->
                 {#if !isCollapsed(entry.name)}
                     {#each entry.rooms as roomId}
-                    {@render roomButton(roomId, true, false, null, undefined)}
+                    {@render roomButton(roomId, true, null, undefined)}
                     {/each}
                 {/if}
             {/if}

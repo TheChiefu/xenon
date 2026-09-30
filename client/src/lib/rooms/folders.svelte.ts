@@ -1,21 +1,17 @@
-import { getLayout, setLayout } from "@/lib/rooms/state.svelte";
+import { getLayout, setLayout } from "@/lib/rooms/layout.svelte";
 
-// Names of folders currently hiding their members
-let collapsed: Set<string> = $state(new Set());
+// Folder name to whether it's hiding its members
+let collapsed: Record<string, boolean> = $state({});
 
 // True while the inline "name this folder" field is showing
 let creating: boolean = $state(false);
 
 export function isCollapsed(name: string): boolean {
-  return collapsed.has(name);
+  return collapsed[name] === true;
 }
 
 export function toggleFolder(name: string): void {
-  if (collapsed.has(name)) {
-    collapsed.delete(name);
-  } else {
-    collapsed.add(name);
-  }
+  collapsed[name] = !collapsed[name];
 }
 
 export function isCreatingFolder(): boolean {

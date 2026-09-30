@@ -1,4 +1,4 @@
-import { isLocked, lockLayout, unlockLayout } from "@/lib/rooms/state.svelte";
+import { isLocked, lockLayout, unlockLayout } from "@/lib/rooms/layout.svelte";
 import { startCreatingFolder } from "@/lib/rooms/folders.svelte";
 import { getToken, getUrl } from "@/lib/session.svelte";
 

@@ -1,29 +1,37 @@
-import type { MyRoomResponse } from "@/bindings/routes/rooms";
 import type { RoomListItem } from "@/bindings/shared";
 import { listMyRooms } from "@/lib/api/rooms";
 import { getPreferences, updatePreferences } from "@/lib/api/users";
+import { setRoomData } from "@/lib/rooms.svelte";
 
 let layout: RoomListItem[] = $state([]);
-let rooms: Map<string, MyRoomResponse> = $state(new Map());
-let selectedRoom: string | null = $state(null);
 let locked: boolean = $state(true);
 
 export function getLayout(): RoomListItem[] {
   return layout;
 }
 
-export function getRoomData(id: string): MyRoomResponse | undefined {
-  return rooms.get(id);
-}
-
 export function setLayout(next: RoomListItem[]): void {
   layout = next;
 }
 
-// Move the entry at one layout position to another, shifting the entries between
-export function moveRoom(from: number, to: number): void {
-  const moved = layout.splice(from, 1);
-  layout.splice(to, 0, ...moved);
+// Reorders top-level entries, rooms and folders alike
+export function reorderRoom(fromIndex: number, toIndex: number): void {
+  const moved = layout.splice(fromIndex, 1);
+  layout.splice(toIndex, 0, ...moved);
+}
+
+// Adds a room as a new folder member
+export function addRoomToFolder(roomIndex: number, folderName: string): void {
+  const entry = layout[roomIndex];
+  if (typeof entry !== "string") return; // A folder can't sit inside a folder
+
+  for (const other of layout) {
+    if (typeof other !== "string" && other.name === folderName) {
+      layout.splice(roomIndex, 1);
+      other.rooms.push(entry);
+      return;
+    }
+  }
 }
 
 // Load room list for user
@@ -32,16 +40,14 @@ export async function loadRooms(url: string, token: string): Promise<void> {
   const preferences = await getPreferences(url, token); // Get user saved room layout preference
   const storedLayout = JSON.parse(preferences.room_layout) as RoomListItem[];
 
-  // Reset properties
+  setRoomData(fetched);
+
   const seenIds: Set<string> = new Set();
   layout = [];
-  rooms = new Map();
 
-  // Parse each fetched room
   const fetchedIds: Set<string> = new Set();
   for (const room of fetched) {
-    fetchedIds.add(room.id);  // Store IDs in set for fast lookup in layout sorting
-    rooms.set(room.id, room); // Update global room map with up to date info
+    fetchedIds.add(room.id);
   }
 
   // Drop any room id that's gone
@@ -71,18 +77,9 @@ export async function loadRooms(url: string, token: string): Promise<void> {
   }
 }
 
-// Persists the current layout. Called only on an explicit save or app close,
-// never on every move
+// Persists the current layout
 export async function saveLayout(url: string, token: string): Promise<void> {
   await updatePreferences(url, token, { room_layout: JSON.stringify(layout) });
-}
-
-export function getSelectedRoom(): string | null {
-  return selectedRoom;
-}
-
-export function selectRoom(id: string): void {
-  selectedRoom = id;
 }
 
 export function isLocked(): boolean {

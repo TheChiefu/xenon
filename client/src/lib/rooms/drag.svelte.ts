@@ -1,107 +1,90 @@
-import { isLocked, moveRoom } from "@/lib/rooms/state.svelte";
+import type { RoomListItem } from "@/bindings/shared";
+import { addRoomToFolder, getLayout, isLocked, reorderRoom } from "@/lib/rooms/layout.svelte";
+import { isCollapsed } from "@/lib/rooms/folders.svelte";
 
-// Vertical travel before a held room is picked up, so a click still selects
-const MOVE_THRESHOLD: number = 5;
+// Row at this position is held, null when nothing is held
+let heldIndex: number | null = $state(null);
 
-let fromIndex: number | null = $state(null);
-let pressY: number = 0;
+// Pointer position when the row was first held
+let startY: number = 0;
 
-// Room boxes, measured on pickup before any shifting
-let roomRects: DOMRect[] = [];
+// Height of the held row, measured once when it's picked up
+let rowHeight: number = 0;
+
+// Current pointer position, tracked while held
 let pointerY: number = $state(0);
-let moving: boolean = $state(false);
 
-export function isMoving(): boolean {
-  return moving;
+export function isDragging(): boolean {
+  return heldIndex !== null;
 }
 
-export function isHeld(index: number): boolean {
-  return moving && fromIndex === index;
-}
-
-// Held room follows the pointer, rooms between it and the drop position step aside
-// Null when the room sits in place
-export function getRoomTransform(index: number): string | null {
-  if (!moving || fromIndex === null) return null;
-
-  const drop: number = dropIndex();
-  const height: number = roomRects[fromIndex].height;
-
-  let shift: number = 0;
-  if (index === fromIndex) {
-    let center = roomRects[fromIndex].top + (roomRects[fromIndex].height / 2);
-    shift = pointerY - center;
-  } else if (fromIndex < index && index <= drop) {
-    shift = -height;
-  } else if (drop <= index && index < fromIndex) {
-    shift = height;
-  }
-
-  return shift !== 0 ? `translateY(${shift}px)` : null;
-}
-
-// Hold a room, picked up once past the threshold
-export function holdRoom(event: PointerEvent, index: number): void {
-  if (event.button !== 0) return; // Only allow left click drag-drop
+// Records the row and starting position a drag begins from
+export function startDrag(event: PointerEvent, rowIndex: number): void {
+  if (event.button !== 0) return; // Only allow left click drag
   if (isLocked()) return;
-  fromIndex = index;
-  pressY = event.clientY;
-  moving = false;
+
+  const row = event.currentTarget as HTMLElement;
+  heldIndex = rowIndex;
+  startY = event.clientY;
+  pointerY = event.clientY;
+  rowHeight = row.getBoundingClientRect().height;
 }
 
-// Pick up past the threshold, then follow the pointer
-// List takes the capture on pickup, so moves off the list still arrive
-export function dragRoom(event: PointerEvent, list: HTMLElement | undefined): void {
-  if (fromIndex === null || list === undefined) return;
-
-  // Released off the list before pickup
-  if (event.buttons === 0) {
-    fromIndex = null;
-    return;
-  }
-
-  if (!moving) {
-    if (Math.abs(event.clientY - pressY) < MOVE_THRESHOLD) return;
-
-    list.setPointerCapture(event.pointerId);
-    roomRects = [];
-    for (const room of list.children) {
-      roomRects.push(room.getBoundingClientRect());
-    }
-    moving = true;
-  }
-
+// Tracks the pointer while a row is held
+export function trackDrag(event: PointerEvent): void {
+  if (heldIndex === null) return;
   pointerY = event.clientY;
 }
 
-// Move held room to the drop position (on release)
-export function dropRoom(): void {
-  if (fromIndex !== null && moving) {
-    moveRoom(fromIndex, dropIndex());
+// Divides the distance moved by one row's height, then rounds to the
+// nearest whole row, to find how many rows the pointer has crossed
+export function currentIndex(): number {
+  if (heldIndex === null) return 0;
+
+  const crossed = heldIndex + Math.round((pointerY - startY) / rowHeight);
+  return Math.max(0, crossed);
+}
+
+// Position for one row while a drag is in progress, null if it shouldn't move
+export function getTransform(rowIndex: number): string | null {
+  if (heldIndex === null) return null;
+
+  // The held row follows the pointer directly
+  if (rowIndex === heldIndex) {
+    return `translateY(${pointerY - startY}px)`;
   }
-  fromIndex = null;
-  moving = false;
+
+  // Rows between the held row's start and current position shift by one row height
+  const target = currentIndex();
+
+  if (heldIndex < rowIndex && rowIndex <= target) {
+    return `translateY(${-rowHeight}px)`;
+  }
+
+  if (target <= rowIndex && rowIndex < heldIndex) {
+    return `translateY(${rowHeight}px)`;
+  }
+
+  return null;
 }
 
-// Browser ended drag before release, leave room in place
-export function cancelRoom(): void {
-  fromIndex = null;
-  moving = false;
+// Commits the held row to its current position or into a folder
+export function endDrag(): void {
+  if (heldIndex === null) return;
+
+  const target = currentIndex();
+  const targetEntry = getLayout()[target];
+
+  if (targetEntry === undefined || typeof targetEntry === "string") {
+    reorderRoom(heldIndex, target);
+  } else {
+    addRoomToFolder(heldIndex, targetEntry.name);
+  }
+
+  heldIndex = null;
 }
 
-
-// Helper Methods //
-
-// Drop position, count of other rooms centered above the pointer
-function dropIndex(): number {
-  let count: number = 0;
-  for (let i = 0; i < roomRects.length; i++) {
-    if (i === fromIndex) continue; // Held room's own slot doesn't count
-
-    const center: number = roomRects[i].top + roomRects[i].height / 2;
-    if (center < pointerY) {
-      count++;
-    }
-}
-  return count;
+// Browser ended the drag before release, nothing is committed
+export function cancelDrag(): void {
+  heldIndex = null;
 }
