@@ -5,6 +5,7 @@ import { getPreferences, updatePreferences } from "@/lib/api/users";
 
 let layout: RoomListItem[] = $state([]);
 let rooms: Map<string, MyRoomResponse> = $state(new Map());
+let selectedRoom: string | null = $state(null);
 
 export function getLayout(): RoomListItem[] {
   return layout;
@@ -18,6 +19,11 @@ export function setLayout(next: RoomListItem[]): void {
   layout = next;
 }
 
+// Move the entry at one layout position to another, shifting the entries between
+export function moveRoom(from: number, to: number): void {
+  const moved = layout.splice(from, 1);
+  layout.splice(to, 0, ...moved);
+}
 
 // Load room list for user
 export async function loadRooms(url: string, token: string): Promise<void> {
@@ -25,14 +31,17 @@ export async function loadRooms(url: string, token: string): Promise<void> {
   const preferences = await getPreferences(url, token); // Get user saved room layout preference
   const storedLayout = JSON.parse(preferences.room_layout) as RoomListItem[];
 
-  // Fetched room ids lookup set
-  const fetchedIds: Set<string> = new Set();
-  for (const room of fetched) {
-    fetchedIds.add(room.id);
-  }
-
+  // Reset properties
   const seenIds: Set<string> = new Set();
   layout = [];
+  rooms = new Map();
+
+  // Parse each fetched room
+  const fetchedIds: Set<string> = new Set();
+  for (const room of fetched) {
+    fetchedIds.add(room.id);  // Store IDs in set for fast lookup in layout sorting
+    rooms.set(room.id, room); // Update global room map with up to date info
+  }
 
   // Drop stored entry whose room no longer exists
   for (const entry of storedLayout) {
@@ -54,4 +63,12 @@ export async function loadRooms(url: string, token: string): Promise<void> {
 // never on every move
 export async function saveLayout(url: string, token: string): Promise<void> {
   await updatePreferences(url, token, { room_layout: JSON.stringify(layout) });
+}
+
+export function getSelectedRoom(): string | null {
+  return selectedRoom;
+}
+
+export function selectRoom(id: string): void {
+  selectedRoom = id;
 }
