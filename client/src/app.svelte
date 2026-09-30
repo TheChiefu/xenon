@@ -3,6 +3,7 @@
   import Toolbar from "./components/areas/toolbar.svelte";
   import Popup from "./views/popup.svelte";
   import Rooms from "./components/areas/rooms.svelte";
+  import ContextMenu from "./components/context_menu.svelte";
   import { getToken, getUrl } from "./lib/session.svelte";
   import { isConfirmVisible, getConfirmMessage, resolveConfirm } from "./lib/confirm.svelte";
   import { loadProfile } from "./lib/profile.svelte";
@@ -33,6 +34,9 @@
   <!-- If there is no token, show login screen -->
   <Login/>
 {/if}
+
+<!-- Right click menu, filled by whichever element was right clicked -->
+<ContextMenu/>
 
 <!-- Yes/No popup setter for generic popup messages -->
 {#if isConfirmVisible()}

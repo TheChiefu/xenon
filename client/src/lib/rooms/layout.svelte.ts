@@ -1,7 +1,8 @@
 import type { RoomListItem } from "@/bindings/shared";
 import { listMyRooms } from "@/lib/api/rooms";
 import { getPreferences, updatePreferences } from "@/lib/api/users";
-import { setRoomData } from "@/lib/rooms.svelte";
+import { setRoomData } from "@/lib/rooms/data.svelte";
+import { getToken, getUrl } from "@/lib/session.svelte";
 
 let layout: RoomListItem[] = $state([]);
 let locked: boolean = $state(true);
@@ -14,21 +15,40 @@ export function setLayout(next: RoomListItem[]): void {
   layout = next;
 }
 
-// Reorders top-level entries, rooms and folders alike
-export function reorderRoom(fromIndex: number, toIndex: number): void {
-  const moved = layout.splice(fromIndex, 1);
-  layout.splice(toIndex, 0, ...moved);
+// Moves a room or folder so it ends up at toIndex. A null folder means the top level
+export function moveEntry(fromIndex: number, fromFolder: string | null, toIndex: number, toFolder: string | null): void {
+  const source = listFor(fromFolder);
+  const dest = listFor(toFolder);
+  if (source === undefined || dest === undefined) return;
+
+  const entry = source[fromIndex];
+  if (entry === undefined) return;
+  if (typeof entry !== "string" && toFolder !== null) return; // A folder can't sit inside a folder
+
+  source.splice(fromIndex, 1);
+  dest.splice(toIndex, 0, entry);
 }
 
-// Adds a room as a new folder member
-export function addRoomToFolder(roomIndex: number, folderName: string): void {
-  const entry = layout[roomIndex];
-  if (typeof entry !== "string") return; // A folder can't sit inside a folder
+// The top level list, or one folder's rooms
+function listFor(folder: string | null): RoomListItem[] | undefined {
+  if (folder === null) {
+    return layout;
+  }
 
-  for (const other of layout) {
-    if (typeof other !== "string" && other.name === folderName) {
-      layout.splice(roomIndex, 1);
-      other.rooms.push(entry);
+  for (const entry of layout) {
+    if (typeof entry !== "string" && entry.name === folder) {
+      return entry.rooms;
+    }
+  }
+  return undefined;
+}
+
+// Removes a folder, its rooms take its place at the top level
+export function deleteFolder(folderName: string): void {
+  for (let index = 0; index < layout.length; index++) {
+    const entry = layout[index];
+    if (typeof entry !== "string" && entry.name === folderName) {
+      layout.splice(index, 1, ...entry.rooms);
       return;
     }
   }
@@ -94,4 +114,17 @@ export async function lockLayout(url: string, token: string): Promise<void> {
 
 export function unlockLayout(): void {
   locked = false;
+}
+
+// Unlocks a locked layout, or locks and saves an unlocked one
+export function toggleLock(): void {
+  const url = getUrl();
+  const token = getToken();
+  if (url === null || token === null) return;
+
+  if (locked) {
+    unlockLayout();
+  } else {
+    lockLayout(url, token);
+  }
 }

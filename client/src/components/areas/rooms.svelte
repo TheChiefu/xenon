@@ -1,11 +1,12 @@
 <script lang="ts">
     import type { MyRoomResponse } from "@/bindings/routes/rooms";
     import { getLayout, isLocked } from "@/lib/rooms/layout.svelte";
-    import { getRoomData } from "@/lib/rooms.svelte";
+    import { getRoomData } from "@/lib/rooms/data.svelte";
     import { getSelectedRoom, selectRoom } from "@/lib/rooms/selection.svelte";
-    import { cancelDrag, currentIndex, endDrag, getTransform, isDragging, startDrag, trackDrag } from "@/lib/rooms/drag.svelte";
+    import { cancelDrag, endDrag, hover, hoverEnd, isDragging, DropMark, dropMarkAt, isHeld, startDrag } from "@/lib/rooms/drag.svelte";
     import { endResize, getWidth, HANDLE_WIDTH, isResizing, resetWidth, resize, startResize } from "@/lib/rooms/resize.svelte";
-    import { closeMenu, getMenuPos, onAddFolder, onNewRoom, onToggleLock, openMenu } from "@/lib/rooms/menu.svelte";
+    import { openMenu } from "@/lib/menu.svelte";
+    import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { cancelFolder, confirmFolder, isCollapsed, isCreatingFolder, toggleFolder } from "@/lib/rooms/folders.svelte";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
@@ -45,8 +46,15 @@
     }
 
     .list {
+        flex: 1;
         display: flex;
         flex-direction: column;
+    }
+
+    /* Empty space below the last row, the end of the top level */
+    .end {
+        position: relative;
+        flex: 1;
     }
 
     .list.moving {
@@ -70,6 +78,7 @@
     }
 
     button {
+        position: relative;
         margin-left: -1px;
         text-align: left;
         align-items: center;
@@ -89,44 +98,57 @@
         padding-left: 2rem;
     }
 
-    .menu-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 10;
+    .held {
+        opacity: 0.5;
     }
 
-    .menu {
-        position: fixed;
-        z-index: 11;
-        display: flex;
-        flex-direction: column;
-        min-width: 10rem;
-        border: 1px solid var(--border);
-        background: var(--component);
+    /* Drawn over the row's edge so nothing moves */
+    .drop-above::before,
+    .drop-below::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        z-index: 1;
+        pointer-events: none;
+        background-color: var(--btn-action);
+    }
+
+    .drop-above::before {
+        top: 0;
+    }
+
+    .drop-below::after {
+        bottom: 0;
+    }
+
+    .drop-into {
+        outline: 2px solid var(--btn-action);
+        outline-offset: -2px;
     }
 
 </style>
 
-<!-- Layout for movable room button -->
-{#snippet roomButton(
-    roomId: string,
-    nested: boolean,
-    transform: string | null,
-    onpointerdown: ((event: PointerEvent) => void) | undefined
-)}
+<!-- Layout for movable room button. folder is null for a top level room -->
+{#snippet roomButton(roomId: string, index: number, folder: string | null)}
     {@const room = getRoomData(roomId)}
     <button
-        class:nested={nested}
+        class:nested={folder !== null}
         class:selected={getSelectedRoom() === roomId}
-        style:transform={transform}
-        onpointerdown={onpointerdown}
-        onclick={() => selectRoom(roomId)}
+        class:held={isHeld(index, folder)}
+        class:drop-above={dropMarkAt(index, folder) === DropMark.Above}
+        class:drop-below={dropMarkAt(index, folder) === DropMark.Below}
+        onpointerdown={(event) => startDrag(event, index, folder)}
+        onpointermove={(event) => hover(event, index, folder)}
+        onclick={() => { if (isLocked()) selectRoom(roomId); }}
+        oncontextmenu={(event) => openMenu(event, roomCtx(roomId))}
     >
         {room?.name}
         {#if room?.visibility === "locked"}
-            <span class="icon" aria-hidden="true">{@html icon_lock}</span>
+            <span class="icon" aria-hidden="true" title="Locked">{@html icon_lock}</span>
         {:else if room?.visibility === "hidden"}
-            <span class="icon" aria-hidden="true">{@html icon_eye_off}</span>
+            <span class="icon" aria-hidden="true" title="Hidden">{@html icon_eye_off}</span>
         {/if}
     </button>
 {/snippet}
@@ -134,27 +156,35 @@
 <!-- Layout for movable folder -->
 {#snippet folderButton(folderName: string, index: number)}
     <button
-        style:transform={getTransform(index)}
-        onpointerdown={(event) => startDrag(event, index)}
+        class:held={isHeld(index, null)}
+        class:drop-above={dropMarkAt(index, null) === DropMark.Above}
+        class:drop-below={dropMarkAt(index, null) === DropMark.Below}
+        class:drop-into={dropMarkAt(index, null) === DropMark.Into}
+        onpointerdown={(event) => startDrag(event, index, null)}
+        onpointermove={(event) => hover(event, index, null)}
         onclick={() => toggleFolder(folderName)}
+        oncontextmenu={(event) => openMenu(event, folderCtx(folderName))}
     >
-        <span class="icon" aria-hidden="true">{@html icon_folder}</span>
+        <span class="icon" aria-hidden="true" title="Folder">{@html icon_folder}</span>
         {folderName}
         {#if isCollapsed(folderName)}
-            <span class="icon" aria-hidden="true">{@html icon_arrow_down}</span>
+            <span class="icon" aria-hidden="true" title="Expand Folder">{@html icon_arrow_down}</span>
         {:else}
-            <span class="icon" aria-hidden="true">{@html icon_arrow_right}</span>
+            <span class="icon" aria-hidden="true" title="Collapse Folder">{@html icon_arrow_right}</span>
         {/if}
     </button>
 {/snippet}
 
+
+<!-- Release can happen anywhere, not only over the list -->
+<svelte:window onpointerup={endDrag} onpointercancel={cancelDrag}/>
 
 <!-- Room Pane -->
 <div
     class="rooms"
     style="width: {getWidth()}px"
     style:--handle-width="{HANDLE_WIDTH}px"
-    oncontextmenu={openMenu}
+    oncontextmenu={(event) => openMenu(event, paneCtx())}
     role="presentation"
     bind:this={pane}
 >
@@ -173,28 +203,20 @@
         class:moving={isDragging()}
         role="presentation"
         bind:this={list}
-        onpointermove={trackDrag}
-        onpointerup={endDrag}
-        onpointercancel={cancelDrag}
     >
         {#each getLayout() as entry, index}
 
             <!-- Top Level Room -->
             {#if typeof entry === "string"}
-                {@render roomButton(
-                    entry,
-                    false,
-                    getTransform(index),
-                    (event) => startDrag(event, index)
-                )}
+                {@render roomButton(entry, index, null)}
             {:else}
 
             <!-- Folder -->
             {@render folderButton(entry.name, index)}
                 <!-- Room inside folder -->
                 {#if !isCollapsed(entry.name)}
-                    {#each entry.rooms as roomId}
-                    {@render roomButton(roomId, true, null, undefined)}
+                    {#each entry.rooms as roomId, roomIndex}
+                    {@render roomButton(roomId, roomIndex, entry.name)}
                     {/each}
                 {/if}
             {/if}
@@ -209,9 +231,17 @@
                 if (event.key === "Enter") confirmFolder(event.currentTarget.value);
                 if (event.key === "Escape") cancelFolder();
             }}
-            onblur={(event) => confirmFolder(event.currentTarget.value)}
+            onblur={cancelFolder}
         />
         {/if}
+
+        <!-- Empty space below the last row -->
+        <div
+            class="end"
+            class:drop-above={dropMarkAt(getLayout().length, null) === DropMark.Above}
+            role="presentation"
+            onpointermove={hoverEnd}
+        ></div>
     </div>
 
     <!-- Vertical Bar for resizing room pane-->
@@ -228,13 +258,3 @@
         ondblclick={resetWidth}
     ></div>
 </div>
-
-<!-- Right click context window -->
-{#if getMenuPos()}
-    <div class="menu-backdrop" role="presentation" onpointerdown={closeMenu}></div>
-    <div class="menu" style:left="{getMenuPos()?.x}px" style:top="{getMenuPos()?.y}px">
-        <button onclick={onToggleLock}>{isLocked() ? "Unlock Layout" : "Lock Layout"}</button>
-        <button onclick={onAddFolder}>Add Folder</button>
-        <button onclick={onNewRoom}>New Room</button>
-    </div>
-{/if}
