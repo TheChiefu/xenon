@@ -21,6 +21,8 @@
 
 <style>
 
+    /* Pane */
+
     .rooms {
         --indent: 2rem;
         position: relative;
@@ -31,6 +33,8 @@
         background: var(--component);
         overflow: hidden;
     }
+
+    /* Header */
 
     .header {
         display: flex;
@@ -45,6 +49,8 @@
         font-size: 1rem;
     }
 
+    /* List */
+
     .list {
         flex: 1;
         display: flex;
@@ -55,21 +61,7 @@
         cursor: grabbing;
     }
 
-    .resize-handle {
-        position: absolute;
-        top: 0;
-        right: calc(var(--handle-width) / -2);
-        width: var(--handle-width);
-        height: 100%;
-        z-index: 1;
-        touch-action: none;
-        background-color: var(--border);
-        cursor: col-resize;
-    }
-
-    .resize-handle.dragging {
-        background-color: var(--btn-action);
-    }
+    /* Rows */
 
     .list button {
         position: relative;
@@ -84,6 +76,13 @@
         justify-content: space-between;
     }
 
+    .folder-name {
+        flex: 1;
+        margin-left: 0.5rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .selected {
         background-color: var(--component-hover);
     }
@@ -93,10 +92,12 @@
     }
 
     .held {
-        opacity: 0.5;
+        opacity: 0.75;
+        background-color: var(--btn-action);
     }
 
-    /* Drawn over the row's edge so nothing moves */
+    /* Drop Indicators */
+
     .drop-above::before,
     .drop-below::after {
         content: "";
@@ -126,6 +127,24 @@
     .drop-into {
         outline: 2px solid var(--btn-action);
         outline-offset: -2px;
+    }
+
+    /* Resize Handle */
+
+    .resize-handle {
+        position: absolute;
+        top: 0;
+        right: calc(var(--handle-width) / -2);
+        width: var(--handle-width);
+        height: 100%;
+        z-index: 1;
+        touch-action: none;
+        background-color: var(--border);
+        cursor: col-resize;
+    }
+
+    .resize-handle.dragging {
+        background-color: var(--btn-action);
     }
 
 </style>
@@ -178,7 +197,7 @@
             oncontextmenu={(event) => openMenu(event, folderCtx(folder))}
         >
             <span class="icon" aria-hidden="true" title="Folder">{@html icon_folder}</span>
-            {folder.name}
+            <span class="folder-name">{folder.name}</span>
             {#if folder.collapsed}
                 <span class="icon" aria-hidden="true" title="Expand Folder">{@html icon_arrow_down}</span>
             {:else}
