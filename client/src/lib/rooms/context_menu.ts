@@ -1,6 +1,7 @@
+import type { Folder } from "@/bindings/shared";
 import type { MenuItem } from "@/lib/menu.svelte";
 import { deleteFolder, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
-import { startCreatingFolder } from "@/lib/rooms/folders.svelte";
+import { startCreatingFolder, startRenamingFolder } from "@/lib/rooms/folders.svelte";
 
 // Right click on empty space in room pane
 export function paneCtx(): MenuItem[] {
@@ -23,23 +24,23 @@ export function roomCtx(roomId: string): MenuItem[] {
 }
 
 // Right click on a folder
-export function folderCtx(folderName: string): MenuItem[] {
+export function folderCtx(folder: Folder): MenuItem[] {
   const items: MenuItem[] = [];
 
-  // Only while unlocked
-  if (!isLocked()) {
-    items.push({
-      label: "Delete Folder",
-      action: () => deleteFolder(folderName)
-    });
-  }
+  items.push({
+    label: "Rename Folder",
+    action: () => startRenamingFolder(folder)
+  });
+
+  items.push({
+    label: "Delete Folder",
+    action: () => deleteFolder(folder)
+  });
 
   items.push({
     label: "Copy Folder Name",
-    action: () => navigator.clipboard.writeText(folderName)
+    action: () => navigator.clipboard.writeText(folder.name)
   });
-
-  addPaneItems(items);
   return items;
 }
 

@@ -217,6 +217,15 @@ pub struct LinkedAccount {
     pub handle: String,
 }
 
+/// A named group of rooms in a user's room list layout
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+pub struct Folder {
+    pub name: String,
+    pub rooms: Vec<Uuid>,
+    pub collapsed: bool,
+}
+
 /// One entry in a user's room list layout
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -224,6 +233,5 @@ pub struct LinkedAccount {
 pub enum RoomListItem {
     /// A bare room id
     Room(Uuid),
-    /// A folder holding an ordered list of room ids
-    Folder { name: String, rooms: Vec<Uuid> },
+    Folder(Folder),
 }

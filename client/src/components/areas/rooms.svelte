@@ -1,13 +1,13 @@
 <script lang="ts">
-    import type { MyRoomResponse } from "@/bindings/routes/rooms";
-    import { getLayout, isLocked } from "@/lib/rooms/layout.svelte";
+    import type { Folder } from "@/bindings/shared";
+    import { Drop, getLayout, isLocked, toggleFolder } from "@/lib/rooms/layout.svelte";
     import { getRoomData } from "@/lib/rooms/data.svelte";
     import { getSelectedRoom, selectRoom } from "@/lib/rooms/selection.svelte";
-    import { cancelDrag, endDrag, hover, hoverEnd, isDragging, DropMark, dropMarkAt, isHeld, startDrag } from "@/lib/rooms/drag.svelte";
+    import { cancelDrag, dropAt, endDrag, hover, hoverEnd, isDragging, isHeld, startDrag } from "@/lib/rooms/drag.svelte";
     import { endResize, getWidth, HANDLE_WIDTH, isResizing, resetWidth, resize, startResize } from "@/lib/rooms/resize.svelte";
     import { openMenu } from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
-    import { cancelFolder, confirmFolder, isCollapsed, isCreatingFolder, toggleFolder } from "@/lib/rooms/folders.svelte";
+    import { finishCreatingFolder, finishRenamingFolder, isCreatingFolder, isRenamingFolder, stopCreatingFolder, stopRenamingFolder } from "@/lib/rooms/folders.svelte";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
     import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
@@ -130,17 +130,17 @@
 
 </style>
 
-<!-- Layout for movable room button. folder is null for a top level room -->
-{#snippet roomButton(roomId: string, index: number, folder: string | null)}
+<!-- Layout for movable room button -->
+{#snippet roomButton(roomId: string, nested: boolean)}
     {@const room = getRoomData(roomId)}
     <button
-        class:nested={folder !== null}
+        class:nested
         class:selected={getSelectedRoom() === roomId}
-        class:held={isHeld(index, folder)}
-        class:drop-above={dropMarkAt(index, folder) === DropMark.Above}
-        class:drop-below={dropMarkAt(index, folder) === DropMark.Below}
-        onpointerdown={(event) => startDrag(event, index, folder)}
-        onpointermove={(event) => hover(event, index, folder)}
+        class:held={isHeld(roomId)}
+        class:drop-above={dropAt(roomId) === Drop.Above}
+        class:drop-below={dropAt(roomId) === Drop.Below}
+        onpointerdown={(event) => startDrag(event, roomId)}
+        onpointermove={(event) => hover(event, roomId)}
         onclick={() => { if (isLocked()) selectRoom(roomId); }}
         oncontextmenu={(event) => openMenu(event, roomCtx(roomId))}
     >
@@ -154,25 +154,35 @@
 {/snippet}
 
 <!-- Layout for movable folder -->
-{#snippet folderButton(folderName: string, index: number)}
-    <button
-        class:held={isHeld(index, null)}
-        class:drop-above={dropMarkAt(index, null) === DropMark.Above}
-        class:drop-below={dropMarkAt(index, null) === DropMark.Below}
-        class:drop-into={dropMarkAt(index, null) === DropMark.Into}
-        onpointerdown={(event) => startDrag(event, index, null)}
-        onpointermove={(event) => hover(event, index, null)}
-        onclick={() => toggleFolder(folderName)}
-        oncontextmenu={(event) => openMenu(event, folderCtx(folderName))}
-    >
-        <span class="icon" aria-hidden="true" title="Folder">{@html icon_folder}</span>
-        {folderName}
-        {#if isCollapsed(folderName)}
-            <span class="icon" aria-hidden="true" title="Expand Folder">{@html icon_arrow_down}</span>
-        {:else}
-            <span class="icon" aria-hidden="true" title="Collapse Folder">{@html icon_arrow_right}</span>
-        {/if}
-    </button>
+{#snippet folderButton(folder: Folder)}
+    {#if isRenamingFolder(folder)}
+        <input
+            type="text"
+            autofocus
+            value={folder.name}
+            onkeydown={(event) => finishRenamingFolder(event, folder)}
+            onblur={stopRenamingFolder}
+        />
+    {:else}
+        <button
+            class:held={isHeld(folder)}
+            class:drop-above={dropAt(folder) === Drop.Above}
+            class:drop-below={dropAt(folder) === Drop.Below}
+            class:drop-into={dropAt(folder) === Drop.Inside}
+            onpointerdown={(event) => startDrag(event, folder)}
+            onpointermove={(event) => hover(event, folder)}
+            onclick={() => toggleFolder(folder)}
+            oncontextmenu={(event) => openMenu(event, folderCtx(folder))}
+        >
+            <span class="icon" aria-hidden="true" title="Folder">{@html icon_folder}</span>
+            {folder.name}
+            {#if folder.collapsed}
+                <span class="icon" aria-hidden="true" title="Expand Folder">{@html icon_arrow_down}</span>
+            {:else}
+                <span class="icon" aria-hidden="true" title="Collapse Folder">{@html icon_arrow_right}</span>
+            {/if}
+        </button>
+    {/if}
 {/snippet}
 
 
@@ -204,19 +214,20 @@
         role="presentation"
         bind:this={list}
     >
-        {#each getLayout() as entry, index}
+        {#each getLayout() as entry}
 
-            <!-- Top Level Room -->
+            <!-- Room with no folder -->
             {#if typeof entry === "string"}
-                {@render roomButton(entry, index, null)}
+                {@render roomButton(entry, false)}
             {:else}
 
-            <!-- Folder -->
-            {@render folderButton(entry.name, index)}
+                <!-- Folder -->
+                {@render folderButton(entry)}
+
                 <!-- Room inside folder -->
-                {#if !isCollapsed(entry.name)}
-                    {#each entry.rooms as roomId, roomIndex}
-                    {@render roomButton(roomId, roomIndex, entry.name)}
+                {#if !entry.collapsed}
+                    {#each entry.rooms as roomId}
+                        {@render roomButton(roomId, true)}
                     {/each}
                 {/if}
             {/if}
@@ -224,21 +235,17 @@
     
         <!-- New Folder Input Bar -->
         {#if isCreatingFolder()}
-        <input
-            type="text"
-            autofocus
-            onkeydown={(event) => {
-                if (event.key === "Enter") confirmFolder(event.currentTarget.value);
-                if (event.key === "Escape") cancelFolder();
-            }}
-            onblur={cancelFolder}
-        />
+            <input
+                type="text"
+                autofocus
+                onkeydown={finishCreatingFolder}
+                onblur={stopCreatingFolder}
+            />
         {/if}
 
         <!-- Empty space below the last row -->
         <div
             class="end"
-            class:drop-above={dropMarkAt(getLayout().length, null) === DropMark.Above}
             role="presentation"
             onpointermove={hoverEnd}
         ></div>
