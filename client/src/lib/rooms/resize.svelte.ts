@@ -8,6 +8,8 @@ const storedWidth: string | null = localStorage.getItem(KEY_USER_ROOM_WIDTH);
 let width: number = $state(storedWidth !== null ? Number(storedWidth) : DEFAULT_WIDTH);
 let resizing: boolean = $state(false);
 
+// Getters and Setters 
+
 export function getWidth(): number {
   return width;
 }
@@ -16,14 +18,20 @@ export function isResizing(): boolean {
   return resizing;
 }
 
-// Routed to handle until release
-export function startResize(event: PointerEvent): void {
+export function reset(): void {
+  width = DEFAULT_WIDTH;
+  localStorage.setItem(KEY_USER_ROOM_WIDTH, String(width));
+}
+
+
+// Pointer Events //
+
+export function resizeStart(event: PointerEvent): void {
   const handle = event.currentTarget as HTMLElement;
   handle.setPointerCapture(event.pointerId);
   resizing = true;
 }
 
-// Follow pointer while resize in progress
 export function resize(event: PointerEvent, pane: HTMLElement | undefined): void {
   if (!resizing || pane === undefined) return;
 
@@ -32,17 +40,9 @@ export function resize(event: PointerEvent, pane: HTMLElement | undefined): void
   width = Math.min(Math.max(next, HANDLE_WIDTH), window.innerWidth);
 }
 
-// End resize on release (or drop capture)
-// Store result in local storage
-export function endResize(): void {
+export function resizeStop(): void {
   if (!resizing) return;
 
   resizing = false;
-  localStorage.setItem(KEY_USER_ROOM_WIDTH, String(width));
-}
-
-// Reset to the default width
-export function resetWidth(): void {
-  width = DEFAULT_WIDTH;
   localStorage.setItem(KEY_USER_ROOM_WIDTH, String(width));
 }

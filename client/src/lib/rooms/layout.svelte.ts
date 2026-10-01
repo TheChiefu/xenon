@@ -1,78 +1,65 @@
 import type { Folder, RoomListItem } from "@/bindings/shared";
 import { listMyRooms } from "@/lib/api/rooms";
 import { getPreferences, updatePreferences } from "@/lib/api/users";
-import { setRoomData } from "@/lib/rooms/data.svelte";
+import { setRoomData, type RoomId } from "@/lib/rooms/data.svelte";
 import { getToken, getUrl } from "@/lib/session.svelte";
 
-let layout: RoomListItem[] = $state([]);
-let locked: boolean = $state(true);
+// Note: any bare "string" types are assumed to be room rows
 
-// Layout Access //
+export enum Section {
+  Above,
+  Inside,
+  Below,
+}
+
+let layout: RoomListItem[] = $state([]);  // Rows of room and folders
+let locked: boolean = $state(true);       // Permission to change layout
+
+// Getters & Setters //
 
 export function getLayout(): RoomListItem[] {
   return layout;
 }
-
 export function setLayout(next: RoomListItem[]): void {
   layout = next;
 }
 
 // Layout Changes //
 
-// Where a drop lands in relation to the row it was released on
-export enum Drop {
-  Above,
-  Inside,
-  Below,
-}
-
 // Puts an entry above, inside or below a target
-export function moveEntry(moved: RoomListItem, target: RoomListItem, drop: Drop): void {
+export function moveEntry(moved: RoomListItem, target: RoomListItem, section: Section): void {
   if (moved === target) return;
 
-  // A room dropped inside a folder becomes its first room
-  if (drop === Drop.Inside) {
-    if (typeof moved !== "string") return;
-    if (typeof target === "string") return;
-
-    const inside = listContaining(moved);
-    inside.splice(inside.indexOf(moved), 1);
-    target.rooms.unshift(moved);
+   // Target is room
+  if (typeof target === "string") {
+    place(moved, target, section);
     return;
   }
 
-  const to = listContaining(target);
+  // Target is folder
+  if (typeof moved === "string") { // Moved is room
 
-  // A folder can't go inside a folder
-  if (typeof moved !== "string" && to !== layout) return;
-
-  const from = listContaining(moved);
-  from.splice(from.indexOf(moved), 1);
-
-  let index = to.indexOf(target);
-  if (drop === Drop.Below) {
-    index += 1;
+    // An open folder's bottom section counts as inside
+    if (section === Section.Below && !target.collapsed) section = Section.Inside;
   }
-
-  to.splice(index, 0, moved);
+  place(moved, target, section);
 }
 
-// Shows or hides the rooms inside a folder
-export function toggleFolder(folder: Folder): void {
+export function folderToggle(folder: Folder): void {
   folder.collapsed = !folder.collapsed;
   saveLayout();
 }
 
-export function renameFolder(folder: Folder, newName: string): void {
+export function folderRename(folder: Folder, newName: string): void {
   folder.name = newName;
   saveLayout();
 }
 
-// Removes a folder, its rooms take its place
-export function deleteFolder(folder: Folder): void {
+export function folderDelete(folder: Folder): void {
   const index = layout.indexOf(folder);
-  if (index === -1) return;
+  if (index === -1) return; // If folder is somehow not on layout, quick exit
 
+  // Move folder's rooms back into layout
   layout.splice(index, 1, ...folder.rooms);
   saveLayout();
 }
@@ -87,10 +74,10 @@ export async function loadRooms(url: string, token: string): Promise<void> {
 
   setRoomData(fetched);
 
-  const seenIds: Set<string> = new Set();
+  const seenIds: Set<RoomId> = new Set();
   layout = [];
 
-  const fetchedIds: Set<string> = new Set();
+  const fetchedIds: Set<RoomId> = new Set();
   for (const room of fetched) {
     fetchedIds.add(room.id);
   }
@@ -103,7 +90,7 @@ export async function loadRooms(url: string, token: string): Promise<void> {
         seenIds.add(entry);
       }
     } else { // Folder
-      const roomIds: string[] = [];
+      const roomIds: RoomId[] = [];
       for (const id of entry.rooms) {
         if (fetchedIds.has(id)) {
           roomIds.push(id);
@@ -157,6 +144,40 @@ export function toggleLock(): void {
 }
 
 // Helper Methods //
+
+// Puts an entry at the top of a folder when inside, otherwise above or below the target
+function place(moved: RoomListItem, target: RoomListItem, section: Section): void {
+
+  // Dropped inside the target
+  if (section === Section.Inside) {
+
+    // Only rooms go inside folders
+    if (typeof moved !== "string") return;
+    if (typeof target === "string") return;
+
+    // Reorder list moved came from (filling void)
+    const from = listContaining(moved);
+    from.splice(from.indexOf(moved), 1);
+
+    // Insert moved at the top of the folder
+    target.rooms.unshift(moved);
+    return;
+  }
+
+  // Above or below the target, in the list the target sits in
+  const to = listContaining(target);
+
+  // A folder can't go inside a folder
+  if (typeof moved !== "string" && to !== layout) return;
+
+  // Reorder list moved came from (filling void)
+  const from = listContaining(moved);
+  from.splice(from.indexOf(moved), 1);
+
+  // Insert moved above or below the target
+  const index = to.indexOf(target) + (section === Section.Below ? 1 : 0);
+  to.splice(index, 0, moved);
+}
 
 // The list an entry sits in, which is a folder's rooms or the layout
 function listContaining(entry: RoomListItem): RoomListItem[] {

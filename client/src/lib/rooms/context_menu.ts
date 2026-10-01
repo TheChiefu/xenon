@@ -1,7 +1,8 @@
 import type { Folder } from "@/bindings/shared";
 import type { MenuItem } from "@/lib/menu.svelte";
-import { deleteFolder, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
-import { startCreatingFolder, startRenamingFolder } from "@/lib/rooms/folders.svelte";
+import type { RoomId } from "@/lib/rooms/data.svelte";
+import { folderDelete, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
+import { startCreation, startRename } from "@/lib/rooms/folders.svelte";
 
 // Right click on empty space in room pane
 export function paneCtx(): MenuItem[] {
@@ -11,7 +12,7 @@ export function paneCtx(): MenuItem[] {
 }
 
 // Right click on a room
-export function roomCtx(roomId: string): MenuItem[] {
+export function roomCtx(roomId: RoomId): MenuItem[] {
   const items: MenuItem[] = [];
 
   items.push({
@@ -29,12 +30,12 @@ export function folderCtx(folder: Folder): MenuItem[] {
 
   items.push({
     label: "Rename Folder",
-    action: () => startRenamingFolder(folder)
+    action: () => startRename(folder)
   });
 
   items.push({
     label: "Delete Folder",
-    action: () => deleteFolder(folder)
+    action: () => folderDelete(folder)
   });
 
   items.push({
@@ -52,7 +53,7 @@ function addPaneItems(items: MenuItem[]): void {
     items.push({ label: "Unlock Layout", action: toggleLock });
   } else {
     items.push({ label: "Lock Layout", action: toggleLock });
-    items.push({ label: "Create Folder", action: startCreatingFolder });
+    items.push({ label: "Create Folder", action: startCreation });
   }
 
   // TODO: open the room creation dialog once it exists

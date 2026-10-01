@@ -1,8 +1,11 @@
 import type { MyRoomResponse } from "@/bindings/routes/rooms";
 
-let rooms: Map<string, MyRoomResponse> = $state(new Map());
+// A room's id, which is how rooms are stored in the layout
+export type RoomId = string;
 
-export function getRoomData(id: string): MyRoomResponse | undefined {
+let rooms: Map<RoomId, MyRoomResponse> = $state(new Map());
+
+export function getRoomData(id: RoomId): MyRoomResponse | undefined {
   return rooms.get(id);
 }
 
@@ -11,4 +14,15 @@ export function setRoomData(fetched: MyRoomResponse[]): void {
   for (const room of fetched) {
     rooms.set(room.id, room);
   }
+}
+
+// Room Selection
+let selectedRoom: RoomId | null = $state(null);
+
+export function getSelectedRoom(): RoomId | null {
+  return selectedRoom;
+}
+
+export function selectRoom(id: RoomId): void {
+  selectedRoom = id;
 }

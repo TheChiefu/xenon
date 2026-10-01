@@ -1,69 +1,59 @@
 import type { RoomListItem } from "@/bindings/shared";
-import { Drop, getLayout, isLocked, moveEntry } from "@/lib/rooms/layout.svelte";
+import { Section, isLocked, moveEntry } from "@/lib/rooms/layout.svelte";
 
-// The held row, null when nothing is held
-let held: RoomListItem | null = $state(null);
-
-// The row under the pointer, null when releasing changes nothing
-let hovered: RoomListItem | null = $state(null);
-
-// Which third of the hovered row the pointer is in
-let hoveredDrop: Drop = $state(Drop.Above);
+let held: RoomListItem | null = $state(null);    // Row being held
+let hover: RoomListItem | null = $state(null);   // Row being hovered over
+let hoverPart: Section = $state(Section.Above);  // Which part pointer is over
 
 // Pointer Events //
 
-export function startDrag(event: PointerEvent, row: RoomListItem): void {
+// Capture row being held on initial drag start
+export function dragStart(event: PointerEvent, row: RoomListItem): void {
   if (event.button !== 0) return; // Only allow left click drag
   if (isLocked()) return;
-
   held = row;
-  hovered = null;
+  hover = null;
 }
 
-export function hover(event: PointerEvent, row: RoomListItem): void {
+// Determine drag state while holding row
+export function dragging(event: PointerEvent, row: RoomListItem): void {
   if (held === null) return;
+  hover = row;
 
+  // Calculate which part of element the mouse is over (Y-Axis)
   const element = event.currentTarget as HTMLElement;
   const rect = element.getBoundingClientRect();
   const at = (event.clientY - rect.top) / rect.height;
 
-  hovered = row;
-
-  if (at < 1 / 3) {
-    hoveredDrop = Drop.Above;
-  } else if (at > 2 / 3) {
-    hoveredDrop = Drop.Below;
+  // Determine which section of the row is being hovered 
+  if (at < 0.33) {
+    hoverPart = Section.Above;
+  } else if (at > 0.66) {
+    hoverPart = Section.Below;
   } else {
-    hoveredDrop = Drop.Inside;
+    hoverPart = Section.Inside;
   }
 }
 
-// Pointer over the empty space below the last row
-export function hoverEnd(): void {
-  if (held === null) return;
+// Determine how to handle drag result
+export function dragRelease(): void {
 
-  const rows = getLayout();
-  hovered = rows[rows.length - 1] ?? null;
-  hoveredDrop = Drop.Below;
-}
-
-export function endDrag(): void {
-  if (held === null || hovered === null) {
-    cancelDrag();
+  // Invalid state is canceled
+  if (held === null || hover === null) {
+    dragStateReset();
     return;
   }
 
-  moveEntry(held, hovered, hoveredDrop);
-  cancelDrag();
-}
-
-// Also called when the browser ends the drag before release
-export function cancelDrag(): void {
-  held = null;
-  hovered = null;
+  // Move layout depending on move type
+  moveEntry(held, hover, hoverPart);
+  dragStateReset();
 }
 
 // Drag State //
+export function dragStateReset(): void {
+  held = null;
+  hover = null;
+}
 
 export function isDragging(): boolean {
   return held !== null;
@@ -74,7 +64,7 @@ export function isHeld(row: RoomListItem): boolean {
 }
 
 // Null when nothing is being dragged over this row
-export function dropAt(row: RoomListItem): Drop | null {
-  if (hovered !== row) return null;
-  return hoveredDrop;
+export function dropAt(row: RoomListItem): Section | null {
+  if (hover !== row) return null;
+  return hoverPart;
 }

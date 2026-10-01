@@ -1,13 +1,12 @@
 <script lang="ts">
     import type { Folder } from "@/bindings/shared";
-    import { Drop, getLayout, isLocked, toggleFolder } from "@/lib/rooms/layout.svelte";
-    import { getRoomData } from "@/lib/rooms/data.svelte";
-    import { getSelectedRoom, selectRoom } from "@/lib/rooms/selection.svelte";
-    import { cancelDrag, dropAt, endDrag, hover, hoverEnd, isDragging, isHeld, startDrag } from "@/lib/rooms/drag.svelte";
-    import { endResize, getWidth, HANDLE_WIDTH, isResizing, resetWidth, resize, startResize } from "@/lib/rooms/resize.svelte";
+    import { Section, folderToggle, getLayout, isLocked } from "@/lib/rooms/layout.svelte";
+    import { getRoomData, type RoomId, getSelectedRoom, selectRoom } from "@/lib/rooms/data.svelte";
+    import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
+    import { resizeStop, getWidth, HANDLE_WIDTH, isResizing, reset, resize, resizeStart } from "@/lib/rooms/resize.svelte";
     import { openMenu } from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
-    import { finishCreatingFolder, finishRenamingFolder, isCreatingFolder, isRenamingFolder, stopCreatingFolder, stopRenamingFolder } from "@/lib/rooms/folders.svelte";
+    import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
     import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
@@ -16,13 +15,13 @@
     import icon_arrow_right from "@/assets/icons/arrow-right.svg?raw";
 
     let pane: HTMLDivElement | undefined = $state();
-    let list: HTMLDivElement | undefined = $state();
 
 </script>
 
 <style>
 
     .rooms {
+        --indent: 2rem;
         position: relative;
         display: flex;
         flex-direction: column;
@@ -49,12 +48,6 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-    }
-
-    /* Empty space below the last row, the end of the top level */
-    .end {
-        position: relative;
-        flex: 1;
     }
 
     .list.moving {
@@ -95,7 +88,7 @@
     }
 
     .nested {
-        padding-left: 2rem;
+        padding-left: var(--indent);
     }
 
     .held {
@@ -123,6 +116,12 @@
         bottom: 0;
     }
 
+    .nested.drop-above::before,
+    .nested.drop-below::after,
+    .open.drop-below::after {
+        left: var(--indent);
+    }
+
     .drop-into {
         outline: 2px solid var(--btn-action);
         outline-offset: -2px;
@@ -131,16 +130,17 @@
 </style>
 
 <!-- Layout for movable room button -->
-{#snippet roomButton(roomId: string, nested: boolean)}
+{#snippet roomButton(roomId: RoomId, nested: boolean)}
     {@const room = getRoomData(roomId)}
+    {@const drop = dropAt(roomId)}
     <button
         class:nested
         class:selected={getSelectedRoom() === roomId}
         class:held={isHeld(roomId)}
-        class:drop-above={dropAt(roomId) === Drop.Above}
-        class:drop-below={dropAt(roomId) === Drop.Below}
-        onpointerdown={(event) => startDrag(event, roomId)}
-        onpointermove={(event) => hover(event, roomId)}
+        class:drop-above={drop === Section.Above}
+        class:drop-below={drop === Section.Below}
+        onpointerdown={(event) => dragStart(event, roomId)}
+        onpointermove={(event) => dragging(event, roomId)}
         onclick={() => { if (isLocked()) selectRoom(roomId); }}
         oncontextmenu={(event) => openMenu(event, roomCtx(roomId))}
     >
@@ -155,23 +155,25 @@
 
 <!-- Layout for movable folder -->
 {#snippet folderButton(folder: Folder)}
-    {#if isRenamingFolder(folder)}
+    {#if isRenaming(folder)}
         <input
             type="text"
             autofocus
             value={folder.name}
-            onkeydown={(event) => finishRenamingFolder(event, folder)}
-            onblur={stopRenamingFolder}
+            onkeydown={nameFinished}
+            onblur={nameReset}
         />
     {:else}
+        {@const drop = dropAt(folder)}
         <button
             class:held={isHeld(folder)}
-            class:drop-above={dropAt(folder) === Drop.Above}
-            class:drop-below={dropAt(folder) === Drop.Below}
-            class:drop-into={dropAt(folder) === Drop.Inside}
-            onpointerdown={(event) => startDrag(event, folder)}
-            onpointermove={(event) => hover(event, folder)}
-            onclick={() => toggleFolder(folder)}
+            class:drop-above={drop === Section.Above}
+            class:drop-below={drop === Section.Below}
+            class:drop-into={drop === Section.Inside}
+            class:open={!folder.collapsed}
+            onpointerdown={(event) => dragStart(event, folder)}
+            onpointermove={(event) => dragging(event, folder)}
+            onclick={() => folderToggle(folder)}
             oncontextmenu={(event) => openMenu(event, folderCtx(folder))}
         >
             <span class="icon" aria-hidden="true" title="Folder">{@html icon_folder}</span>
@@ -187,7 +189,7 @@
 
 
 <!-- Release can happen anywhere, not only over the list -->
-<svelte:window onpointerup={endDrag} onpointercancel={cancelDrag}/>
+<svelte:window onpointerup={dragRelease} onpointercancel={dragStateReset}/>
 
 <!-- Room Pane -->
 <div
@@ -212,7 +214,6 @@
         class="list"
         class:moving={isDragging()}
         role="presentation"
-        bind:this={list}
     >
         {#each getLayout() as entry}
 
@@ -234,21 +235,14 @@
         {/each}
     
         <!-- New Folder Input Bar -->
-        {#if isCreatingFolder()}
+        {#if isCreating()}
             <input
                 type="text"
                 autofocus
-                onkeydown={finishCreatingFolder}
-                onblur={stopCreatingFolder}
+                onkeydown={nameFinished}
+                onblur={nameReset}
             />
         {/if}
-
-        <!-- Empty space below the last row -->
-        <div
-            class="end"
-            role="presentation"
-            onpointermove={hoverEnd}
-        ></div>
     </div>
 
     <!-- Vertical Bar for resizing room pane-->
@@ -258,10 +252,10 @@
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize room list"
-        onpointerdown={startResize}
+        onpointerdown={resizeStart}
         onpointermove={(event) => resize(event, pane)}
-        onpointerup={endResize}
-        onlostpointercapture={endResize}
-        ondblclick={resetWidth}
+        onpointerup={resizeStop}
+        onlostpointercapture={resizeStop}
+        ondblclick={reset}
     ></div>
 </div>
