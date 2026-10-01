@@ -7,7 +7,18 @@ import { startCreation, startRename } from "@/lib/rooms/folders.svelte";
 // Right click on empty space in room pane
 export function paneCtx(): MenuItem[] {
   const items: MenuItem[] = [];
-  addPaneItems(items);
+
+  if (isLocked()) {
+    items.push({ label: "Unlock Layout", action: toggleLock });
+  } else {
+    items.push({ label: "Lock Layout", action: toggleLock });
+  }
+
+  items.push({ label: "Create Folder", action: startCreation });
+
+  // TODO: open the room creation dialog once it exists
+  items.push({ label: "New Room", action: () => {} });
+
   return items;
 }
 
@@ -19,8 +30,6 @@ export function roomCtx(roomId: RoomId): MenuItem[] {
     label: "Copy Room ID",
     action: () => navigator.clipboard.writeText(roomId)
   });
-
-  addPaneItems(items);
   return items;
 }
 
@@ -43,19 +52,4 @@ export function folderCtx(folder: Folder): MenuItem[] {
     action: () => navigator.clipboard.writeText(folder.name)
   });
   return items;
-}
-
-// Helper Methods //
-
-// Entries shown at the bottom of every room pane menu
-function addPaneItems(items: MenuItem[]): void {
-  if (isLocked()) {
-    items.push({ label: "Unlock Layout", action: toggleLock });
-  } else {
-    items.push({ label: "Lock Layout", action: toggleLock });
-    items.push({ label: "Create Folder", action: startCreation });
-  }
-
-  // TODO: open the room creation dialog once it exists
-  items.push({ label: "New Room", action: () => {} });
 }

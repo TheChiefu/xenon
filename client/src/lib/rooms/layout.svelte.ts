@@ -14,14 +14,12 @@ export enum Section {
 
 let layout: RoomListItem[] = $state([]);  // Rows of room and folders
 let locked: boolean = $state(true);       // Permission to change layout
+let saved: string = $state("[]");         // Layout as JSON when last loaded or saved
 
 // Getters & Setters //
 
 export function getLayout(): RoomListItem[] {
   return layout;
-}
-export function setLayout(next: RoomListItem[]): void {
-  layout = next;
 }
 
 // Layout Changes //
@@ -45,14 +43,16 @@ export function moveEntry(moved: RoomListItem, target: RoomListItem, section: Se
   place(moved, target, section);
 }
 
+export function folderCreate(name: string): void {
+  layout.push({ name, rooms: [], collapsed: false });
+}
+
 export function folderToggle(folder: Folder): void {
   folder.collapsed = !folder.collapsed;
-  saveLayout();
 }
 
 export function folderRename(folder: Folder, newName: string): void {
   folder.name = newName;
-  saveLayout();
 }
 
 export function folderDelete(folder: Folder): void {
@@ -61,7 +61,6 @@ export function folderDelete(folder: Folder): void {
 
   // Move folder's rooms back into layout
   layout.splice(index, 1, ...folder.rooms);
-  saveLayout();
 }
 
 // Server //
@@ -107,6 +106,8 @@ export async function loadRooms(url: string, token: string): Promise<void> {
       layout.push(room.id);
     }
   }
+
+  saved = JSON.stringify(layout);
 }
 
 // Persists the current layout
@@ -115,32 +116,23 @@ export async function saveLayout(): Promise<void> {
   const token = getToken();
   if (url === null || token === null) return;
 
-  await updatePreferences(url, token, { room_layout: JSON.stringify(layout) });
+  const current = JSON.stringify(layout);
+  await updatePreferences(url, token, { room_layout: current });
+  saved = current;
+}
+
+// True when the layout has changes that haven't been saved
+export function isUnsaved(): boolean {
+  return JSON.stringify(layout) !== saved;
 }
 
 // Lock //
-
 export function isLocked(): boolean {
   return locked;
 }
-
-export function unlockLayout(): void {
-  locked = false;
-}
-
-// Stops drag and drop, and saves the layout as it stands
-export async function lockLayout(): Promise<void> {
-  locked = true;
-  await saveLayout();
-}
-
-// Unlocks a locked layout, or locks and saves an unlocked one
+// Unlocks a locked layout, or locks an unlocked one
 export function toggleLock(): void {
-  if (locked) {
-    unlockLayout();
-  } else {
-    lockLayout();
-  }
+  locked = !locked;
 }
 
 // Helper Methods //

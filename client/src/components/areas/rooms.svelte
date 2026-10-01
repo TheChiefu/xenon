@@ -1,12 +1,13 @@
 <script lang="ts">
     import type { Folder } from "@/bindings/shared";
-    import { Section, folderToggle, getLayout, isLocked } from "@/lib/rooms/layout.svelte";
+    import { Section, folderToggle, getLayout, isLocked, isUnsaved, saveLayout } from "@/lib/rooms/layout.svelte";
     import { getRoomData, type RoomId, getSelectedRoom, selectRoom } from "@/lib/rooms/data.svelte";
     import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
     import { resizeStop, getWidth, HANDLE_WIDTH, isResizing, reset, resize, resizeStart } from "@/lib/rooms/resize.svelte";
     import { openMenu } from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
+    import icon_save from "@/assets/icons/save.svg?raw";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
     import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
@@ -70,7 +71,7 @@
         background-color: var(--btn-action);
     }
 
-    button {
+    .list button {
         position: relative;
         margin-left: -1px;
         text-align: left;
@@ -204,6 +205,15 @@
     <!-- Display Header and related buttons -->
     <div class="header">
         <h3>Rooms</h3>
+        <button
+            class="icon-btn"
+            style:visibility={isUnsaved() ? "visible" : "hidden"}
+            aria-label="Save layout"
+            title="Save layout"
+            onclick={saveLayout}
+        >
+            <span class="icon" aria-hidden="true">{@html icon_save}</span>
+        </button>
         {#if !isLocked()}
             <span class="icon" aria-hidden="true">{@html icon_lock_open}</span>
         {/if}
