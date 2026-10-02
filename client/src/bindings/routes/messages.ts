@@ -3,14 +3,14 @@
 /**
  * One file as a message attaches it.
  */
-export type AttachmentResponse = { id: string, filename: string, mime: string, byte_size: bigint, spoiler: boolean, };
+export type AttachmentResponse = { id: string, filename: string, mime: string, byte_size: number, spoiler: boolean, };
 
 /**
  * Response carrying when a message was edited.
  */
-export type EditMessageResponse = { edited_at: bigint, };
+export type EditMessageResponse = { edited_at: number, };
 
 /**
  * A message and the files attached to it.
  */
-export type MessageResponse = { seq: bigint, id: string, room_id: string, author_id: string, body: string | null, created_at: bigint, edited_at: bigint | null, deleted_at: bigint | null, attachments: Array<AttachmentResponse>, };
+export type MessageResponse = { seq: number, id: string, room_id: string, author_id: string, body: string | null, created_at: number, edited_at: number | null, deleted_at: number | null, attachments: Array<AttachmentResponse>, };

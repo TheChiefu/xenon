@@ -16,47 +16,67 @@
 </script>
 
 <style>
-  .server-title {
-    display: flex;
-    flex-wrap: wrap;
+
+  div {
+    --point: 40px;
+
     align-content: center;
     align-items: center;
-    gap: 0.0625rem 0.375rem;
-    min-width: 6rem;
+    align-self: stretch;
+    background: var(--border);
+    clip-path: polygon(
+      0 0,                            /* Top Left */
+      calc(100% - var(--point)) 0,    /* Top Edge */
+      100% 50%,                       /* Point */
+      calc(100% - var(--point)) 100%, /* Bottom Edge */
+      0 100%                          /* Bottom Left */
+    );
+    display: grid;
+    gap: 0.2rem;
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    padding: 0 var(--point) 0 0.75rem;
+    width: fit-content;
   }
 
-  .server-title h1 {
-    flex: 0 0 100%;
+  .title {
+    font-size: 1rem;
+    font-style: italic;
+    font-weight: 600;
+    grid-column: 1 / -1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 1rem;
-    font-weight: 600;
   }
 
-  .server-kind {
+  .kind {
+    background-color: var(--component);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    color: var(--text-dim);
+    font-size: 0.65rem;
+    grid-column: 2;
+    grid-row: 2;
     order: 1;
     padding: 1px 6px;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-size: 0.64rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    text-transform: capitalize;
   }
 
-  .server-version {
+  .version {
     color: var(--text-dim);
     font-size: 0.72rem;
+    grid-column: 1;
+    grid-row: 2;
     white-space: nowrap;
   }
 </style>
 
-<div class="server-title">
-  <h1>{info?.name ?? ''}</h1>
+<div>
+  <h1 class="title">{info?.name ?? ''}</h1>
   {#if info?.kind}
-    <span class="server-kind">{info.kind}</span>
+    <span class="kind">{info.kind}</span>
   {/if}
   {#if info?.version}
-    <span class="server-version">v{info.version}</span>
+    <span class="version">v{info.version}</span>
   {/if}
 </div>

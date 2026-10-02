@@ -14,9 +14,9 @@ export type CreateRoomResponse = { id: string, };
 /**
  * A room, as the discoverable directory sees it
  */
-export type DiscoverableRoomResponse = { id: string, name: string, visibility: Visibility, created_at: bigint, };
+export type DiscoverableRoomResponse = { id: string, name: string, visibility: Visibility, created_at: number, };
 
 /**
  * A room, as the caller's own room list sees it
  */
-export type MyRoomResponse = { id: string, name: string, visibility: Visibility, mutation_seq: bigint, };
+export type MyRoomResponse = { id: string, name: string, visibility: Visibility, mutation_seq: number, };

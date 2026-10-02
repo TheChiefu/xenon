@@ -31,4 +31,18 @@ banner_file_id: string | null, };
 /**
  * A user's profile
  */
-export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: bigint, deleted_at: bigint | null, links: Array<LinkedAccount>, };
+export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, deleted_at: number | null, links: Array<LinkedAccount>, };
+
+/**
+ * What a member row or search result shows of a user
+ */
+export type UserSummaryResponse = { id: string, username: string, display_name: string, avatar_file_id: string | null, banner_file_id: string | null, };
+
+/**
+ * POST body for looking up users.
+ */
+export type UsersLookup = { ids?: Array<string>, 
+/**
+ * Start of a username to match
+ */
+username?: string, after?: string, limit?: number, };

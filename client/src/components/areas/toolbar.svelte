@@ -12,7 +12,7 @@
     gap: 0.75rem;
     height: 4rem;
     flex: none;
-    padding: 0 0 0 0.75rem;
+    padding: 0;
     border-bottom: 1px solid var(--border);
     background: var(--component);
   }

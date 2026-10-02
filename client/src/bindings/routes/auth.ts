@@ -3,7 +3,7 @@
 /**
  * POST body for creating a registration code.
  */
-export type CreateInviteRequest = { max_uses: bigint | null, lifetime: bigint | null, };
+export type CreateInviteRequest = { max_uses: number | null, lifetime: number | null, };
 
 /**
  * Response carrying a registration code.
