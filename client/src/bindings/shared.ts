@@ -19,6 +19,8 @@ export type LinkedAccount = { platform: Platform,
  */
 handle: string, };
 
+export type Notify = "none" | "mentions" | "all";
+
 export type Permission = "post" | "attach" | "commands" | "delete_msg" | "invite" | "rename" | "ban" | "grant" | "delete_room" | "connect" | "speak" | "mute" | "video" | "screenshare";
 
 /**

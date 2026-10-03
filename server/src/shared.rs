@@ -38,6 +38,7 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
 #[repr(i8)]
 pub enum Notify {

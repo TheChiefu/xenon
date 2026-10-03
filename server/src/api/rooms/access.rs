@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 use uuid::Uuid;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::{Notify, Permission};
@@ -12,8 +15,10 @@ use crate::shared::{Notify, Permission};
 
 /// One member of a room, with their resolved permissions.
 #[derive(sqlx::FromRow, Serialize, Clone)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
 pub struct Entry {
     pub user_id: Uuid,
+    #[cfg_attr(feature = "ts_bindings", ts(as = "Vec<Permission>"))]
     pub permissions: Json<Vec<Permission>>,
     pub granted_at: i64,
     /// Present on a caller's own row, members never sees another's
