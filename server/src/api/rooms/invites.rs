@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::{Permission, Permissions};
+use crate::shared::Permission;
 use crate::utils;
 use crate::validate;
 
@@ -292,7 +292,7 @@ async fn require_permission(
 ) -> Result<()> {
 
     let perms = db::effective_permissions(&mut *conn, room_id, caller_id).await?;
-    if !perms.is_some_and(|p| p.has(Permission::Invite)) {
+    if !perms.is_some_and(|p| p.contains(&Permission::Invite)) {
         return Err(AppError::Forbidden);
     }
 
@@ -311,7 +311,7 @@ async fn require_permission(
 ///
 /// Returns `AppError::Forbidden` if the caller is not a member or lacks
 /// `Permission::Invite`, and `AppError::Validation` if the two ids are equal.
-fn can_invite(perms: Option<Permissions>, caller_id: Uuid, target_id: Uuid) -> Result<()> {
+fn can_invite(perms: Option<Vec<Permission>>, caller_id: Uuid, target_id: Uuid) -> Result<()> {
 
     // Permissions could not be found
     let Some(perms) = perms else {
@@ -324,7 +324,7 @@ fn can_invite(perms: Option<Permissions>, caller_id: Uuid, target_id: Uuid) -> R
     }
 
     // If caller does not have invite permissions
-    if !perms.has(Permission::Invite) {
+    if !perms.contains(&Permission::Invite) {
         return Err(AppError::Forbidden);
     }
 

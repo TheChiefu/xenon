@@ -70,139 +70,64 @@ pub enum Status {
 
 // Permissions //
 
-/// One bit position in a [`Permissions`] mask. (PERMANENT)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
-#[serde(rename_all = "lowercase")]
-#[repr(u8)]
+#[serde(rename_all = "snake_case")]
 pub enum Permission {
     /// Send messages
-    Post = 0,
+    Post,
     /// Attach files to a message
-    Attach = 1,
+    Attach,
     /// Use slash commands (unimplemented)
-    Commands = 2,
+    Commands,
     /// Delete other users' messages
-    DeleteMsg = 3,
+    DeleteMsg,
     /// Create invites to the room
-    Invite = 4,
+    Invite,
     /// Edit the room name and visibility
-    Rename = 5,
+    Rename,
     /// Remove a user from the room, with or without an expiry
-    Ban = 6,
+    Ban,
     /// Set other users' permissions, bounded by your own
-    Grant = 7,
+    Grant,
     /// Delete the room
-    DeleteRoom = 8,
+    DeleteRoom,
     /// Join voice chat (unimplemented)
-    Connect = 9,
+    Connect,
     /// Speak in voice chat (unimplemented)
-    Speak = 10,
+    Speak,
     /// Mute others in voice chat (unimplemented)
-    Mute = 11,
+    Mute,
     /// Show webcam video (unimplemented)
-    Video = 12,
+    Video,
     /// Share screen (unimplemented)
-    Screenshare = 13,
+    Screenshare,
 }
 
 impl Permission {
+    /// Every permission - Add new ones here
+    pub const ALL: [Permission; 14] = [
+        Self::Post,
+        Self::Attach,
+        Self::Commands,
+        Self::DeleteMsg,
+        Self::Invite,
+        Self::Rename,
+        Self::Ban,
+        Self::Grant,
+        Self::DeleteRoom,
+        Self::Connect,
+        Self::Speak,
+        Self::Mute,
+        Self::Video,
+        Self::Screenshare,
+    ];
+
     /// Reports whether the permission is aimed at a member, and so cannot be
     /// used against someone who also holds it
     #[must_use]
     pub const fn member_directed(self) -> bool {
         matches!(self, Self::Ban | Self::Grant | Self::Mute)
-    }
-}
-
-/// A set of [`Permission`] bits, stored as an integer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[sqlx(transparent)]
-#[serde(transparent)]
-pub struct Permissions(i64);
-
-impl Permissions {
-    pub const NONE: Self = Self(0);
-
-    /// Every permission - Add new ones here
-    pub const FULL: Self = Self::NONE
-        .grant(Permission::Post)
-        .grant(Permission::Attach)
-        .grant(Permission::Commands)
-        .grant(Permission::DeleteMsg)
-        .grant(Permission::Invite)
-        .grant(Permission::Rename)
-        .grant(Permission::Ban)
-        .grant(Permission::Grant)
-        .grant(Permission::DeleteRoom)
-        .grant(Permission::Connect)
-        .grant(Permission::Speak)
-        .grant(Permission::Mute)
-        .grant(Permission::Video)
-        .grant(Permission::Screenshare);
-
-    /// Reports whether the mask holds the given permission.
-    ///
-    /// # Arguments
-    ///
-    /// * `p` - Permission to test for.
-    #[must_use]
-    pub fn has(self, p: Permission) -> bool {
-        let perm = p as u8;
-        let bit = 1i64 << perm; // Shift by 'perm' bits left
-        self.0 & bit != 0 // AND | Check if 'perm' bit is set (0 - No, 1 -Yes)
-    }
-
-    /// Returns the mask with the given permission added.
-    ///
-    /// # Arguments
-    ///
-    /// * `p` - Permission to add.
-    #[must_use]
-    pub const fn grant(self, p: Permission) -> Self {
-        let perm = p as u8;
-        let bit = 1i64 << perm;
-        Self(self.0 | bit) // Turn 'perm' bit ON
-    }
-
-    /// Returns the mask with the given permission removed.
-    ///
-    /// # Arguments
-    ///
-    /// * `p` - Permission to remove.
-    #[must_use]
-    pub fn revoke(self, p: Permission) -> Self {
-        let perm = p as u8;
-        let bit = 1i64 << perm;
-        Self(self.0 & !bit) // Turn 'perm' bit OFF
-    }
-
-    /// Reports whether every permission in the given set is also in this one.
-    ///
-    /// # Arguments
-    ///
-    /// * `p` - Permission set that must be covered.
-    pub fn contains(self, p: Permissions) -> bool {
-        p.0 & !self.0 == 0 // No bit of 'p' is absent from self
-    }
-
-    /// Builds a mask from a list of permissions.
-    ///
-    /// # Arguments
-    ///
-    /// * `perms` - Permissions the mask holds.
-    pub fn from_list(perms: &[Permission]) -> Permissions {
-        let mut output = Self::NONE;
-        for perm in perms {
-            output = output.grant(*perm);
-        }
-        output
-    }
-}
-
-impl Default for Permissions {
-    fn default() -> Self {
-        Self::NONE
     }
 }
 

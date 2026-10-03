@@ -16,7 +16,7 @@ use crate::api::rooms::invites::{Issued, Received};
 use crate::api::rooms::access::{Entry as RoomAccessEntry, RoomAccessPatch};
 use crate::error::{AppError, Result};
 use crate::api::rooms::Room;
-use crate::shared::{Permission, Permissions, Visibility};
+use crate::shared::{Permission, Visibility};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{presence, registry};
@@ -147,8 +147,7 @@ pub async fn patch(
 ) -> Result<StatusCode> {
 
     if let Some(permissions) = body.permissions {
-        let perms = Permissions::from_list(&permissions);
-        api::rooms::access::update(&pool, room_id, caller_id, target_id, perms).await?;
+        api::rooms::access::update(&pool, room_id, caller_id, target_id, permissions).await?;
     }
 
     // Set caller's notification preference
@@ -375,13 +374,13 @@ pub async fn create_room(
     Json(body): Json<CreateRoomRequest>,
 ) -> Result<(StatusCode, Json<CreateRoomResponse>)> {
 
-    let default_permissions = Permissions::from_list(&body.default_permissions);
+    let default_permissions = body.default_permissions;
 
-    // The creator takes the full mask, or the template everyone else joins on
+    // The creator takes every permission, or the template everyone else joins on
     let caller_permissions = if body.claim_all {
-        Permissions::FULL
+        Permission::ALL.to_vec()
     } else {
-        default_permissions
+        default_permissions.clone()
     };
 
     // Attempt to create room

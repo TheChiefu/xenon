@@ -143,7 +143,7 @@ pub async fn create(
 
     // Ban cannot be used against another holder
     let target = db::effective_permissions(&mut tx, room_id, target_id).await?;
-    if target.is_some_and(|p| p.has(Permission::Ban)) {
+    if target.is_some_and(|p| p.contains(&Permission::Ban)) {
         return Err(AppError::Forbidden);
     }
 
@@ -244,7 +244,7 @@ async fn require_permission(
 ) -> Result<()> {
 
     let perms = db::effective_permissions(&mut *conn, room_id, caller_id).await?;
-    let permitted = perms.is_some_and(|p| p.has(Permission::Ban));
+    let permitted = perms.is_some_and(|p| p.contains(&Permission::Ban));
     let staff = db::staff_over_room(&mut *conn, room_id, caller_id).await?;
 
     if !(permitted || staff) {

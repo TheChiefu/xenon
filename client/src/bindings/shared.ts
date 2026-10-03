@@ -19,10 +19,7 @@ export type LinkedAccount = { platform: Platform,
  */
 handle: string, };
 
-/**
- * One bit position in a [`Permissions`] mask. (PERMANENT)
- */
-export type Permission = "post" | "attach" | "commands" | "deletemsg" | "invite" | "rename" | "ban" | "grant" | "deleteroom" | "connect" | "speak" | "mute" | "video" | "screenshare";
+export type Permission = "post" | "attach" | "commands" | "delete_msg" | "invite" | "rename" | "ban" | "grant" | "delete_room" | "connect" | "speak" | "mute" | "video" | "screenshare";
 
 /**
  * A game service an account is linked to, stored as an integer. (PERMANENT)

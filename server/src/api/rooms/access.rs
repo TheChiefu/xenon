@@ -1,19 +1,20 @@
 //! The `room_access` table: who belongs to a room, and what they may do in it.
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::Json;
 use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::{Notify, Permission, Permissions};
+use crate::shared::{Notify, Permission};
 
 // Data Structs //
 
-/// One member of a room, with their resolved permission mask.
+/// One member of a room, with their resolved permissions.
 #[derive(sqlx::FromRow, Serialize, Clone)]
 pub struct Entry {
     pub user_id: Uuid,
-    pub permissions: Permissions,
+    pub permissions: Json<Vec<Permission>>,
     pub granted_at: i64,
     /// Present on a caller's own row, members never sees another's
     pub notify: Option<Notify>
@@ -84,7 +85,7 @@ pub async fn list(
     Ok(result)
 }
 
-/// Replaces a member's permission mask in a room.
+/// Replaces a member's permissions in a room.
 ///
 /// # Arguments
 ///
@@ -92,7 +93,7 @@ pub async fn list(
 /// * `room_id` - Room the permissions apply to.
 /// * `caller_id` - Who is making the change.
 /// * `target_id` - Whose permissions are being set.
-/// * `permissions` - New mask to store.
+/// * `permissions` - New permissions to store.
 ///
 /// # Errors
 ///
@@ -104,7 +105,7 @@ pub async fn update(
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
-    permissions: Permissions,
+    permissions: Vec<Permission>,
 ) -> Result<()> {
 
     // One transaction, so the permissions read here cannot change before the write
@@ -116,12 +117,12 @@ pub async fn update(
         return Err(AppError::Forbidden);
     };
 
-    if !perms.has(Permission::Grant) {
+    if !perms.contains(&Permission::Grant) {
         return Err(AppError::Forbidden);
     }
 
-    // A grant is bounded by the caller's own mask
-    if !perms.contains(permissions) {
+    // A grant is bounded by the caller's own permissions
+    if !permissions.iter().all(|p| perms.contains(p)) {
         let err = "cannot grant permissions you do not hold".to_string();
         return Err(AppError::Validation(err));
     }
@@ -133,12 +134,12 @@ pub async fn update(
             return Err(AppError::NotFound);
         };
 
-        if target.has(Permission::Grant) {
+        if target.contains(&Permission::Grant) {
             return Err(AppError::Forbidden);
         }
     }
 
-    // Change target's permissions to new mask
+    // Change target's permissions
     let affected = sqlx::query(
         "
         UPDATE room_access
@@ -146,7 +147,7 @@ pub async fn update(
         WHERE room_id = ?2 AND user_id = ?3
         "
     )
-    .bind(permissions)
+    .bind(Json(permissions))
     .bind(room_id)
     .bind(target_id)
     .execute(&mut *tx)

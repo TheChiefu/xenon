@@ -5,11 +5,12 @@ pub mod invites;
 pub mod access;
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::Json;
 use uuid::Uuid;
 
 use crate::db::{self, effective_permissions};
 use crate::error::{AppError, Result};
-use crate::shared::{GlobalRole, Permission, Permissions, Visibility};
+use crate::shared::{GlobalRole, Permission, Visibility};
 use crate::utils;
 use crate::validate;
 
@@ -97,7 +98,6 @@ pub async fn update(
 
     let revealing = patch.visibility.is_some();
     let granting = patch.default_permissions.is_some();
-    let default_permissions = patch.default_permissions.as_deref().map(Permissions::from_list);
 
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
@@ -106,10 +106,10 @@ pub async fn update(
     let perms = perms.ok_or(AppError::Forbidden)?;
 
     // Check permissions for requested actions
-    if (renaming || revealing) && !perms.has(Permission::Rename) {
+    if (renaming || revealing) && !perms.contains(&Permission::Rename) {
         return Err(AppError::Forbidden);
     }
-    if granting && !perms.has(Permission::Grant) {
+    if granting && !perms.contains(&Permission::Grant) {
         return Err(AppError::Forbidden);
     }
 
@@ -127,7 +127,7 @@ pub async fn update(
     .bind(renaming)
     .bind(name)
     .bind(patch.visibility)
-    .bind(default_permissions)
+    .bind(patch.default_permissions.map(Json))
     .bind(room_id)
     .execute(&mut *tx)
     .await?;
@@ -145,8 +145,8 @@ pub async fn update(
 /// * `pool` - Pool of SQL connections.
 /// * `caller_id` - User creating the room.
 /// * `name` - Room name. (NULL/None not allowed)
-/// * `caller_permissions` - Mask the creator takes.
-/// * `default_permissions` - Mask a user takes on joining the room.
+/// * `caller_permissions` - Permissions the creator takes.
+/// * `default_permissions` - Permissions a user takes on joining the room.
 /// * `visibility` - Whether the room is discoverable and self-service.
 ///
 /// # Errors
@@ -157,8 +157,8 @@ pub async fn create(
     pool: &sqlx::SqlitePool,
     caller_id: Uuid,
     name: &str,
-    caller_permissions: Permissions,
-    default_permissions: Permissions,
+    caller_permissions: Vec<Permission>,
+    default_permissions: Vec<Permission>,
     visibility: Visibility,
 ) -> Result<Uuid> {
 
@@ -190,7 +190,7 @@ pub async fn create(
     .bind(room_id)
     .bind(clean_room_name)
     .bind(visibility)
-    .bind(default_permissions)
+    .bind(Json(default_permissions))
     .bind(now)
     .execute(&mut *tx)
     .await?;
@@ -204,7 +204,7 @@ pub async fn create(
     )
     .bind(room_id)
     .bind(caller_id)
-    .bind(caller_permissions)
+    .bind(Json(caller_permissions))
     .bind(now)
     .execute(&mut *tx)
     .await?;
@@ -240,7 +240,7 @@ pub async fn delete(
 
     // Deleting a room requires Permission::DeleteRoom
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
-    let permitted = perms.is_some_and(|p| p.has(Permission::DeleteRoom));
+    let permitted = perms.is_some_and(|p| p.contains(&Permission::DeleteRoom));
     let staff = db::staff_over_room(&mut tx, room_id, caller_id).await?;
 
     if !(permitted || staff) {

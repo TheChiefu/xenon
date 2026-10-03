@@ -3,11 +3,12 @@
 //! Everything here takes a connection rather than a pool, so a caller can run
 //! several of these inside one transaction.
 
+use sqlx::types::Json;
 use uuid::Uuid;
 
 use crate::config;
 use crate::error::{self, AppError, Result};
-use crate::shared::{GlobalRole, Permissions, Status, Visibility};
+use crate::shared::{GlobalRole, Permission, Status, Visibility};
 use crate::utils;
 
 /// One day in milliseconds.
@@ -218,9 +219,9 @@ pub async fn effective_permissions(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
     user_id: Uuid,
-) -> Result<Option<Permissions>> {
+) -> Result<Option<Vec<Permission>>> {
 
-    let result: Option<Permissions> = sqlx::query_scalar(
+    let result: Option<Json<Vec<Permission>>> = sqlx::query_scalar(
         "
         SELECT a.permissions
         FROM room_access a
@@ -232,7 +233,7 @@ pub async fn effective_permissions(
     .fetch_optional(&mut *conn)
     .await?;
 
-    Ok(result)
+    Ok(result.map(|perms| perms.0))
 }
 
 /// Reads a user's server-wide role.

@@ -8,7 +8,7 @@ use crate::api::messages::attachments::{Attached, Incoming};
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::{Permission, Permissions};
+use crate::shared::Permission;
 use crate::utils;
 use crate::validate;
 
@@ -532,7 +532,7 @@ async fn fetch_by_id(
 ///
 /// * `perms` - The user's resolved permissions, `None` when they are not a member.
 /// * `has_attachments` - Whether the message carries files.
-fn can_post(perms: Option<Permissions>, has_attachments: bool) -> bool {
+fn can_post(perms: Option<Vec<Permission>>, has_attachments: bool) -> bool {
 
     // Not a member, so the room cannot be read either
     let Some(perms) = perms else {
@@ -540,12 +540,12 @@ fn can_post(perms: Option<Permissions>, has_attachments: bool) -> bool {
     };
 
     // Check if they can post text messages
-    if !perms.has(Permission::Post) {
+    if !perms.contains(&Permission::Post) {
         return false;
     }
 
     // Check if they can post attachments (if any are there)
-    if has_attachments && !perms.has(Permission::Attach) {
+    if has_attachments && !perms.contains(&Permission::Attach) {
         return false;
     }
 
@@ -559,7 +559,7 @@ fn can_post(perms: Option<Permissions>, has_attachments: bool) -> bool {
 /// * `perms` - The caller's resolved permissions, `None` when they are not a member.
 /// * `caller_id` - Who is deleting the message.
 /// * `author_id` - Who wrote the message.
-fn can_delete(perms: Option<Permissions>, caller_id: Uuid, author_id: Uuid) -> bool {
+fn can_delete(perms: Option<Vec<Permission>>, caller_id: Uuid, author_id: Uuid) -> bool {
 
     // Not a member, so the room cannot be read
     let Some(perms) = perms else {
@@ -572,5 +572,5 @@ fn can_delete(perms: Option<Permissions>, caller_id: Uuid, author_id: Uuid) -> b
     }
 
     // Deleting someone else's message takes an explicit permission
-    perms.has(Permission::DeleteMsg)
+    perms.contains(&Permission::DeleteMsg)
 }
