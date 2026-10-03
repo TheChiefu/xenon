@@ -10,7 +10,7 @@
   let password = $state("");
   let url = $state(DEFAULT_BASE_URL);
   let display_name = $state("");
-  let invite_code = $state("");
+  let registration_code = $state("");
 
   // View State
   let error = $state<string | null>(null);
@@ -55,7 +55,7 @@
       const clean_url = (url || DEFAULT_BASE_URL).replace(/\/+$/, "");
 
       // Attempt to fetch via cleaned URL
-      const token = await register(username, password, display_name, invite_code, clean_url);
+      const token = await register(username, password, display_name, registration_code, clean_url);
       addLogin(username, clean_url, token);
       showForm = false;
     } catch (err) {
@@ -234,8 +234,8 @@
                             <small>Name shown on client (any characters)</small>
                         </div>
                         <div class="field">
-                            <label for="invite-code">Invite Code</label>
-                            <input name="invite-code" bind:value={invite_code} required/>
+                            <label for="registration-code">Registration Code</label>
+                            <input name="registration-code" bind:value={registration_code} required/>
                             <small>Leave blank if not required</small>
                         </div>
                         <div class="field">

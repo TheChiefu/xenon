@@ -227,6 +227,19 @@ pub async fn fetch_messages(
     Ok(Json(response))
 }
 
+/// Gets one message
+pub async fn get_message(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(message_id): Path<Uuid>,
+) -> Result<Json<MessageResponse>> {
+
+    let (message, files) = api::messages::get(&pool, message_id, user_id).await?;
+    let attachments = files.into_iter().map(AttachmentResponse::from).collect();
+
+    Ok(Json(MessageResponse::new(message, attachments)))
+}
+
 /// Deletes a message.
 ///
 /// # Arguments

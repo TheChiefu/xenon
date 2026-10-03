@@ -184,6 +184,10 @@ impl Config {
             return Err("limits.users_page must be at least 1".to_string());
         }
 
+        if self.limits.users_lookup < 1 {
+            return Err("limits.users_lookup must be at least 1".to_string());
+        }
+
         if self.limits.message_buffer < 1 {
             return Err("limits.message_buffer must be at least 1".to_string());
         }
@@ -426,6 +430,7 @@ pub struct Limits {
     pub message_page: i64,
     pub room_page: i64,
     pub users_page: i64,
+    pub users_lookup: usize,
     pub message_buffer: usize
 }
 
@@ -446,6 +451,7 @@ impl Default for Limits {
             message_page: 200,
             room_page: 200,
             users_page: 25,
+            users_lookup: 500,
             message_buffer: 32
         }
     }

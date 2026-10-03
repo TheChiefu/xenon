@@ -204,8 +204,8 @@ CREATE TABLE user_files (
 
 CREATE INDEX user_files_file ON user_files(file_id);
 
--- Server registration invites
-CREATE TABLE invites (
+-- Server registration codes
+CREATE TABLE registration_codes (
     code        TEXT PRIMARY KEY,
     created_by  BLOB NOT NULL REFERENCES users(id),
     created_at  INTEGER NOT NULL,

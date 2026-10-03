@@ -10,26 +10,7 @@ use crate::validate;
 
 // API Methods //
 
-/// Redeems a registration code and creates the account, returning the new id
-/// and a session token.
-///
-/// The code is claimed before the user is inserted, so reaching `UsernameTaken`
-/// costs a valid code.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `code` - Registration code being redeemed.
-/// * `username` - Login name being claimed.
-/// * `display_name` - Name shown to other users.
-/// * `password` - Password to hash and store.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if a field is outside its length limits or
-/// the username holds a disallowed character, `AppError::InvalidInvite` if the
-/// code is unknown, revoked, expired, or spent, and `AppError::UsernameTaken`
-/// if the username exists.
+/// Creates an account from a registration code, returning its id and session token.
 pub async fn register(
     pool: &sqlx::SqlitePool,
     code: &str,
@@ -47,7 +28,7 @@ pub async fn register(
 
     let mut conn = pool.acquire().await?;
 
-    // Reject a taken username before the invite is claimed
+    // Reject a taken username before the registration code is claimed
     let taken: Option<i64> = sqlx::query_scalar(
         "SELECT 1 FROM users WHERE username = ?1"
     )
@@ -59,16 +40,16 @@ pub async fn register(
         return Err(AppError::UsernameTaken);
     }
 
-    // Claim invite
+    // Claim registration code
     let claimed = sqlx::query(
         "
-        UPDATE invites SET uses = uses + 1
+        UPDATE registration_codes SET uses = uses + 1
         WHERE code = ?1
             AND (expires_at IS NULL OR expires_at > ?2)
             AND (max_uses IS NULL OR uses < max_uses)
         ",
     )
-    .bind(code.trim().to_ascii_uppercase()) // Invites code are stored uppercase
+    .bind(code.trim().to_ascii_uppercase())
     .bind(utils::now_ms())
     .execute(&mut *conn)
     .await?
@@ -76,7 +57,7 @@ pub async fn register(
     drop(conn);
 
     if claimed == 0 {
-        return Err(AppError::InvalidInvite);
+        return Err(AppError::InvalidRegistrationCode);
     }
 
     // Hash password for storage in DB

@@ -31,8 +31,8 @@ pub fn now_ms() -> i64 {
         .as_millis() as i64
 }
 
-/// Generates a registration code from uppercase alphanumerics.
-pub fn generate_invite_code() -> String {
+/// Generates a random code from uppercase alphanumerics.
+pub fn generate_code() -> String {
     const CODE_ALPHABET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const CODE_LEN: usize = 12;
 

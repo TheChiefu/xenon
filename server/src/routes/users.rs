@@ -1,7 +1,7 @@
 //! HTTP handlers for users.
 
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -11,8 +11,9 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::api::linked_accounts;
+use crate::api::users::UserSummary;
 use crate::db;
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
 use crate::shared::{GlobalRole, Status, LinkedAccount};
 use crate::sockets::events::ServerEvent;
@@ -38,6 +39,29 @@ pub struct UserProfileResponse {
     pub created_at: i64,
     pub deleted_at: Option<i64>,
     pub links: Vec<LinkedAccount>,
+}
+
+/// What a member row or search result shows of a user
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
+pub struct UserSummaryResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_file_id: Option<Uuid>,
+    pub banner_file_id: Option<Uuid>,
+}
+
+impl From<UserSummary> for UserSummaryResponse {
+    fn from(user: UserSummary) -> Self {
+        Self {
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
+            avatar_file_id: user.avatar_file_id,
+            banner_file_id: user.banner_file_id,
+        }
+    }
 }
 
 /// PATCH body for a user's own profile. An absent field is left as it stands.
@@ -77,7 +101,7 @@ pub struct PasswordRequest {
     pub revoke_others: bool,
 }
 
-/// POST body for handing the server to another account.
+/// PUT body for handing the server to another account.
 #[derive(Deserialize)]
 pub struct TransferOwnershipRequest {
     pub user_id: Uuid,
@@ -116,38 +140,68 @@ pub struct PreferencesPatch {
     pub room_layout: Option<String>,
 }
 
-/// Query string for a paged user listing.
+/// POST body for looking up users.
 #[derive(Deserialize)]
-pub struct UsersQuery {
-    #[serde(rename = "q")]
-    pub match_user: Option<String>,
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts", optional_fields))]
+pub struct UsersLookup {
+    #[serde(default)]
+    pub ids: Option<Vec<Uuid>>,
+
+    /// Start of a username to match
+    #[serde(default)]
+    pub username: Option<String>,
+
+    #[serde(default)]
     pub after: Option<Uuid>,
+
+    #[serde(default)]
     pub limit: Option<i64>,
 }
 
 // Routing Methods //
 
-/// Gets one page of users on the server.
+/// Gets the summaries of a set of users.
 ///
 /// # Arguments
 ///
 /// * `pool` - Pool of SQL connections.
-/// * `query` - Username to match, cursor to page from, and how many to return.
+/// * `body` - Ids to fetch, or a username prefix to page through.
 pub async fn get_users(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
-    Query(query): Query<UsersQuery>,
-) -> Result<Json<Vec<UserProfileResponse>>> {
-    let max = config::get().limits.users_page;
-    let limit = query.limit.unwrap_or(max).clamp(1, max);
+    Json(body): Json<UsersLookup>,
+) -> Result<Json<Vec<UserSummaryResponse>>> {
 
-    let users = api::users::list(&pool, query.match_user, query.after, limit).await?;
-    let mut profiles = Vec::with_capacity(users.len());
-    for user in users {
-        profiles.push(build_profile(&pool, user.id).await?);
-    }
+    let users = match body.ids {
 
-    Ok(Json(profiles))
+        // Look up users by id
+        Some(ids) => {
+            // Reject ids mixed with the search fields
+            if body.username.is_some() || body.after.is_some() || body.limit.is_some() {
+                return Err(AppError::Validation(
+                    "ids cannot be combined with username, after, or limit".to_string()
+                ));
+            }
+
+            // Reject more ids than the lookup limit
+            let max = config::get().limits.users_lookup;
+            if ids.len() > max {
+                return Err(AppError::Validation(format!("at most {max} ids per lookup")));
+            }
+
+            api::users::by_ids(&pool, &ids).await?
+        }
+
+        // Search users by username prefix, one page at a time
+        None => {
+            let max = config::get().limits.users_page;
+            let limit = body.limit.unwrap_or(max).clamp(1, max);
+
+            api::users::by_username_prefix(&pool, body.username, body.after, limit).await?
+        }
+    };
+
+    Ok(Json(users.into_iter().map(UserSummaryResponse::from).collect()))
 }
 
 /// Gets a user's public profile.

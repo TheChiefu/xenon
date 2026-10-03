@@ -3,12 +3,12 @@
 /**
  * POST body for creating a registration code.
  */
-export type CreateInviteRequest = { max_uses: number | null, lifetime: number | null, };
+export type CreateRegistrationCodeRequest = { max_uses: number | null, lifetime: number | null, };
 
 /**
  * Response carrying a registration code.
  */
-export type CreateInviteResponse = { code: string, };
+export type CreateRegistrationCodeResponse = { code: string, };
 
 /**
  * POST body for starting a session.
@@ -23,9 +23,14 @@ export type LoginResponse = { token: string, };
 /**
  * POST body for creating an account.
  */
-export type RegisterRequest = { invite_code: string, username: string, display_name: string, password: string, };
+export type RegisterRequest = { registration_code: string, username: string, display_name: string, password: string, };
 
 /**
  * Response carrying a new account's id and its first session token.
  */
 export type RegisterResponse = { id: string, session_token: string, };
+
+/**
+ * DELETE body for revoking a registration code.
+ */
+export type RevokeRegistrationCodeRequest = { code: string, };

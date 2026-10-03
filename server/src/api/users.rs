@@ -30,28 +30,38 @@ pub struct User {
     pub deleted_at: Option<i64>,
 }
 
+/// The `users` columns a member row or search result shows
+#[derive(sqlx::FromRow)]
+pub struct UserSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_file_id: Option<Uuid>,
+    pub banner_file_id: Option<Uuid>,
+}
+
 
 // API Methods //
 
-/// Lists one page of users, optionally filtered by a username prefix.
+/// Lists one page of user summaries, optionally filtered by a username prefix.
 ///
 /// # Arguments
 ///
 /// * `pool` - Pool of SQL connections.
-/// * `match_user` - Username prefix to match on, or `None` for every user.
+/// * `prefix` - Username prefix to match on, or `None` for every user.
 /// * `after` - User id to page from, or `None` for the first page.
 /// * `limit` - How many users to return.
-pub async fn list(
+pub async fn by_username_prefix(
     pool: &sqlx::SqlitePool,
-    match_user: Option<String>,
+    prefix: Option<String>,
     after: Option<Uuid>,
     limit: i64,
-) -> Result<Vec<User>> {
+) -> Result<Vec<UserSummary>> {
 
     let mut conn = pool.acquire().await?;
 
     // Escape patterns for SQL string
-    let pattern = match_user.map(|name| {
+    let pattern = prefix.map(|name| {
         let escaped = name
             .replace('\\', "\\\\")
             .replace('%', "\\%")
@@ -59,9 +69,9 @@ pub async fn list(
         format!("{escaped}%")
     });
 
-    let users: Vec<User> = sqlx::query_as(
+    let users: Vec<UserSummary> = sqlx::query_as(
         "
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_file_id, banner_file_id
         FROM users u
         WHERE (?1 IS NULL OR u.id > ?1)
             AND (?2 IS NULL OR u.username LIKE ?2 ESCAPE '\\')
@@ -109,6 +119,45 @@ pub async fn get(
     .await?;
 
     row.ok_or(AppError::NotFound)
+}
+
+/// Reads the summaries of a set of accounts.
+///
+/// An id naming no account, or a deleted one, is absent from the result.
+///
+/// # Arguments
+///
+/// * `pool` - Pool of SQL connections.
+/// * `ids` - Accounts to read.
+pub async fn by_ids(
+    pool: &sqlx::SqlitePool,
+    ids: &[Uuid],
+) -> Result<Vec<UserSummary>> {
+
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut conn = pool.acquire().await?;
+
+    let mut builder = sqlx::QueryBuilder::new(
+        "
+        SELECT id, username, display_name, avatar_file_id, banner_file_id
+        FROM users
+        WHERE deleted_at IS NULL AND id IN (
+        "
+    );
+
+    // Each push adds one placeholder and holds its value
+    let mut list = builder.separated(", ");
+    for id in ids {
+        list.push_bind(*id);
+    }
+    list.push_unseparated(")");
+
+    let rows: Vec<UserSummary> = builder.build_query_as().fetch_all(&mut *conn).await?;
+
+    Ok(rows)
 }
 
 /// Reads the display names for a set of accounts.

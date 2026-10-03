@@ -17,6 +17,6 @@ export type CreateRoomResponse = { id: string, };
 export type DiscoverableRoomResponse = { id: string, name: string, visibility: Visibility, created_at: number, };
 
 /**
- * A room, as the caller's own room list sees it
+ * A room
  */
-export type MyRoomResponse = { id: string, name: string, visibility: Visibility, mutation_seq: number, };
+export type RoomResponse = { id: string, name: string, visibility: Visibility, mutation_seq: number, };

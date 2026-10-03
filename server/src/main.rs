@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
 /// Returns `AppError::Hash` if the password cannot be hashed, and
 /// `AppError::Db` if the insert fails for any reason but an owner existing.
 async fn ensure_owner(pool: &SqlitePool) -> Result<()> {
-    let password = utils::generate_invite_code();
+    let password = utils::generate_code();
     let hash = utils::hash_password(&password)?;
     let username = "owner";
     let display_name = "Owner";

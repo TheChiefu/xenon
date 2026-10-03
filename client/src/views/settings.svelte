@@ -18,7 +18,7 @@
   // User Credentials
   let username = $state("");
   let password = $state("");
-  let invite_code = $state("");
+  let registration_code = $state("");
   let linked_xbox = $state(false);
   let linked_steam = $state(false);
 

@@ -100,6 +100,7 @@ See more information here at: [README.md](../sidecar/README.md).
 | `message_page` | `200` | Messages returned per page |
 | `room_page` | `200` | Rooms returned per page |
 | `users_page` | `25` | Users returned per page |
+| `users_lookup` | `500` | Most user ids in one lookup |
 | `message_buffer` | `32` | Events queued for the sidecar connection before the oldest is dropped |
 
 Lengths are in characters. `file_bytes_max` is a string with a unit suffix,

@@ -1,6 +1,6 @@
-import type { MyRoomResponse } from "@/bindings/routes/rooms";
+import type { RoomResponse } from "@/bindings/routes/rooms";
 
-export async function listMyRooms(url: string, token: string): Promise<MyRoomResponse[]> {
+export async function listMyRooms(url: string, token: string): Promise<RoomResponse[]> {
     const response = await fetch(`${url}/me/rooms`, {
         headers: { "Authorization": `Bearer ${token}` },
     });
@@ -11,5 +11,5 @@ export async function listMyRooms(url: string, token: string): Promise<MyRoomRes
         throw new Error(data.error);
     }
 
-    return data as MyRoomResponse[];
+    return data as RoomResponse[];
 }

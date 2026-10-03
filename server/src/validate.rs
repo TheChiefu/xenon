@@ -6,12 +6,10 @@ use crate::error::{AppError, Result};
 use crate::shared::RoomListItem;
 
 /// How many registrations a code covers when the request names no count.
-pub const INVITE_DEFAULT_MAX_USES: i64 = 1;
+pub const REGISTRATION_CODE_DEFAULT_MAX_USES: i64 = 1;
 
 /// How long a registration code lasts when the request names no lifetime.
-pub const INVITE_LIFETIME_MS: i64 = db::DAY * 7;
-
-const _: () = assert!(INVITE_DEFAULT_MAX_USES >= 1);
+pub const REGISTRATION_CODE_LIFETIME_MS: i64 = db::DAY * 7;
 
 /// Filesystem limit on one path component.
 const FILE_NAME_MAX: usize = 255;
@@ -130,17 +128,17 @@ pub fn password(password: &str) -> Result<()> {
 /// # Errors
 ///
 /// Returns `AppError::Validation` if either value is below 1.
-pub fn invite_params(max_uses: i64, lifetime: i64) -> Result<()> {
+pub fn registration_code_params(max_uses: i64, lifetime: i64) -> Result<()> {
 
     if max_uses < 1 {
         return Err(AppError::Validation(
-            "invite error: max uses must be at least 1".to_string()
+            "registration code error: max uses must be at least 1".to_string()
         ));
     }
 
     if lifetime < 1 {
         return Err(AppError::Validation(
-            "invite error: lifetime must be at least 1 ms".to_string()
+            "registration code error: lifetime must be at least 1 ms".to_string()
         ));
     }
 

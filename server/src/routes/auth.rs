@@ -1,6 +1,6 @@
 //! HTTP handlers for registration, login, and registration codes.
 
-use axum::extract::{Path, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ use crate::{api, db, validate};
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct RegisterRequest {
-    pub invite_code: String,
+    pub registration_code: String,
     pub username: String,
     pub display_name: String,
     pub password: String,
@@ -38,9 +38,16 @@ pub struct LoginRequest {
 /// POST body for creating a registration code.
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
-pub struct CreateInviteRequest {
+pub struct CreateRegistrationCodeRequest {
     pub max_uses: Option<i64>,
     pub lifetime: Option<i64>,
+}
+
+/// DELETE body for revoking a registration code.
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
+pub struct RevokeRegistrationCodeRequest {
+    pub code: String,
 }
 
 /// Response carrying a new account's id and its first session token.
@@ -61,7 +68,7 @@ pub struct LoginResponse {
 /// Response carrying a registration code.
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
-pub struct CreateInviteResponse {
+pub struct CreateRegistrationCodeResponse {
     pub code: String,
 }
 
@@ -80,7 +87,7 @@ pub async fn register(
 
     let (id, token) = api::auth::register(
         &pool,
-        &body.invite_code,
+        &body.registration_code,
         &body.username,
         &body.display_name,
         &body.password,
@@ -109,29 +116,29 @@ pub async fn login(
 pub async fn create_registration_code(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-    Json(body): Json<CreateInviteRequest>,
-) -> Result<(StatusCode, Json<CreateInviteResponse>)> {
+    Json(body): Json<CreateRegistrationCodeRequest>,
+) -> Result<(StatusCode, Json<CreateRegistrationCodeResponse>)> {
 
     let mut conn = pool.acquire().await?;
 
-    // Check if user has permission to create an invite
+    // Check if user has permission to create a registration code
     let allowed = [GlobalRole::Owner, GlobalRole::Admin];
     db::require_role(&mut conn, caller_id, &allowed).await?;
 
-    // Create invite code
-    let max_uses = body.max_uses.unwrap_or(validate::INVITE_DEFAULT_MAX_USES);
-    let lifetime = body.lifetime.unwrap_or(validate::INVITE_LIFETIME_MS);
-    validate::invite_params(max_uses, lifetime)?;
-    let code = db::create_invite(&mut conn, caller_id, Some(max_uses), Some(lifetime)).await?;
+    // Create registration code
+    let max_uses = body.max_uses.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_MAX_USES);
+    let lifetime = body.lifetime.unwrap_or(validate::REGISTRATION_CODE_LIFETIME_MS);
+    validate::registration_code_params(max_uses, lifetime)?;
+    let code = db::create_registration_code(&mut conn, caller_id, Some(max_uses), Some(lifetime)).await?;
 
-    Ok((StatusCode::CREATED, Json(CreateInviteResponse { code })))
+    Ok((StatusCode::CREATED, Json(CreateRegistrationCodeResponse { code })))
 }
 
 /// Revokes a registration code, deleting it outright
 pub async fn revoke_registration_code(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-    Path(code): Path<String>,
+    Json(body): Json<RevokeRegistrationCodeRequest>,
 ) -> Result<StatusCode> {
 
     let mut conn = pool.acquire().await?;
@@ -139,7 +146,7 @@ pub async fn revoke_registration_code(
     let allowed = [GlobalRole::Owner, GlobalRole::Admin];
     db::require_role(&mut conn, caller_id, &allowed).await?;
 
-    if !db::revoke_invite(&mut conn, &code.trim().to_ascii_uppercase()).await? {
+    if !db::revoke_registration_code(&mut conn, &body.code.trim().to_ascii_uppercase()).await? {
         return Err(AppError::NotFound);
     }
 

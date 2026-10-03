@@ -78,10 +78,11 @@ where
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/login", post(auth::login))
-        .route("/register", post(auth::register))
-        .route("/register-code", post(auth::create_registration_code))
-        .route("/register-code/{code}", delete(auth::revoke_registration_code))
-        .route("/transfer-ownership", post(users::transfer_ownership))
+        .route("/codes",
+            post(auth::create_registration_code)
+            .delete(auth::revoke_registration_code)
+        )
+        .route("/owner", put(users::transfer_ownership))
 
         // Me
         .route("/me",
@@ -104,7 +105,8 @@ pub fn router(state: AppState) -> Router {
             .get(rooms::list_discoverable_rooms)
         )
         .route("/rooms/{id}",
-            delete(rooms::delete_room)
+            get(rooms::get_room)
+            .delete(rooms::delete_room)
             .patch(rooms::update)
         )
         .route("/rooms/{id}/join", post(rooms::join_room))
@@ -128,7 +130,8 @@ pub fn router(state: AppState) -> Router {
 
         // Messages
         .route("/messages/{id}",
-            delete(messages::delete_message)
+            get(messages::get_message)
+            .delete(messages::delete_message)
             .patch(messages::update_message)
         )
 
@@ -140,7 +143,20 @@ pub fn router(state: AppState) -> Router {
         .route("/files/{id}", get(files::download))
 
         // Users
-        .route("/users", get(users::get_users))
+        //
+        // POST /users/lookup looks up users by id or by username prefix. It
+        // belongs on QUERY /users: QUERY is the RFC 10008 method (June 2026), a
+        // read like GET that carries a body like POST, which this lookup needs
+        // since a large room's ids overflow a URL.
+        //
+        // axum 0.8.9 has no QUERY routing, as MethodFilter only knows the nine
+        // older methods. QUERY routing is merged into axum main (tokio-rs/axum#3801)
+        // and expected in axum 0.9. Once upgraded, move this to axum's `query` on
+        // /users and point the client at QUERY /users.
+        //
+        // CORS will have to list QUERY as well, see cors_layer.
+        .route("/users", post(auth::register))
+        .route("/users/lookup", post(users::get_users))
         .route("/users/{id}",
             get(users::get_user)
             .delete(users::delete_user)

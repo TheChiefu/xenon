@@ -57,17 +57,17 @@ pub struct CreateRoomResponse {
     pub id: Uuid,
 }
 
-/// A room, as the caller's own room list sees it
+/// A room
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct MyRoomResponse {
+pub struct RoomResponse {
     pub id: Uuid,
     pub name: String,
     pub visibility: Visibility,
     pub mutation_seq: i64,
 }
 
-impl From<Room> for MyRoomResponse {
+impl From<Room> for RoomResponse {
     fn from(room: Room) -> Self {
         Self {
             id: room.id,
@@ -473,12 +473,30 @@ pub async fn leave_room(
 pub async fn list_my_rooms(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<MyRoomResponse>>> {
+) -> Result<Json<Vec<RoomResponse>>> {
 
     let rooms = api::rooms::list_mine(&pool, user_id).await?;
-    let rooms = rooms.into_iter().map(MyRoomResponse::from).collect();
+    let rooms = rooms.into_iter().map(RoomResponse::from).collect();
 
     Ok(Json(rooms))
+}
+
+/// Gets one room
+///
+/// # Arguments
+///
+/// * `caller_id` - User making the request.
+/// * `pool` - Pool of SQL connections.
+/// * `room_id` - Room to get.
+pub async fn get_room(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(room_id): Path<Uuid>,
+) -> Result<Json<RoomResponse>> {
+
+    let room = api::rooms::get(&pool, room_id, caller_id).await?;
+
+    Ok(Json(RoomResponse::from(room)))
 }
 
 /// Gets one page of the Public and Locked rooms on the server

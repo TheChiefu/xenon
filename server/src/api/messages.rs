@@ -231,6 +231,38 @@ pub async fn fetch(
     Ok(result)
 }
 
+/// Reads one message with its attachments
+pub async fn get(
+    pool: &sqlx::SqlitePool,
+    message_id: Uuid,
+    user_id: Uuid,
+) -> Result<(Message, Vec<Attached>)> {
+
+    let mut conn = pool.acquire().await?;
+
+    let message: Message = sqlx::query_as(
+        "
+        SELECT seq, id, room_id, author_id, body, created_at, edited_at, deleted_at
+        FROM messages
+        WHERE id = ?1
+        "
+    )
+    .bind(message_id)
+    .fetch_optional(&mut *conn)
+    .await?
+    .ok_or(AppError::NotFound)?;
+
+    // Check if user has permission to access the room
+    let perms = db::effective_permissions(&mut conn, message.room_id, user_id).await?;
+    if perms.is_none() {
+        return Err(AppError::Forbidden);
+    }
+
+    let files = attachments::for_message(&mut conn, message.id).await?;
+
+    Ok((message, files))
+}
+
 /// Tombstones a message, returning the room it was in.
 ///
 /// The row stays, with its body and attachments cleared.

@@ -152,20 +152,20 @@ pub async fn create_session(
 /// * `created_by` - User issuing the code.
 /// * `max_uses` - How many registrations the code covers, or `None` for unlimited.
 /// * `lifetime` - How long (in ms) the code lasts, or `None` for no expiry.
-pub async fn create_invite(
+pub async fn create_registration_code(
     conn: &mut sqlx::SqliteConnection,
     created_by: Uuid,
     max_uses: Option<i64>,
     lifetime: Option<i64>,
 ) -> Result<String> {
 
-    let code = utils::generate_invite_code();
+    let code = utils::generate_code();
     let now = utils::now_ms();
     let expires_at = lifetime.map(|ms| now.saturating_add(ms));
 
     sqlx::query(
         "
-        INSERT INTO invites (code, created_by, created_at, expires_at, max_uses)
+        INSERT INTO registration_codes (code, created_by, created_at, expires_at, max_uses)
         VALUES (?1, ?2, ?3, ?4, ?5)
         ",
     )
@@ -190,12 +190,12 @@ pub async fn create_invite(
 /// # Returns
 ///
 /// `false` if the code did not exist.
-pub async fn revoke_invite(
+pub async fn revoke_registration_code(
     conn: &mut sqlx::SqliteConnection,
     code: &str,
 ) -> Result<bool> {
 
-    let deleted = sqlx::query("DELETE FROM invites WHERE code = ?1")
+    let deleted = sqlx::query("DELETE FROM registration_codes WHERE code = ?1")
         .bind(code)
         .execute(&mut *conn)
         .await?;
