@@ -4,21 +4,17 @@
   import Popup from "./views/popup.svelte";
   import Rooms from "./components/areas/rooms.svelte";
   import ContextMenu from "./components/context_menu.svelte";
-  import { getToken, getUrl } from "./lib/session.svelte";
+  import { getToken } from "./lib/session.svelte";
   import { isConfirmVisible, getConfirmMessage, resolveConfirm } from "./lib/confirm.svelte";
   import { loadProfile } from "./lib/profile.svelte";
   import { loadPreferences } from "./lib/preferences.svelte";
   import { loadRooms } from "./lib/rooms/layout.svelte";
 
   $effect(() => {
-    const url = getUrl();
-    const token = getToken();
-    if (url === null || token === null) return;
+    if (getToken() === null) return;
 
-    // Load after token is successfully set
-    loadProfile(url, token);
-    loadPreferences(url, token);
-    loadRooms(url, token);
+    loadProfile();
+    loadPreferences().then(loadRooms);
   });
 </script>
 

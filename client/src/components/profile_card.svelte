@@ -1,15 +1,15 @@
 <script lang="ts">
-  import type { GlobalRole, LinkedAccount, Platform } from "@/bindings/shared";
+  import type { LinkedAccount } from "@/bindings/shared";
+  import type { GlobalRole, Status } from "@/bindings/types";
+  import { ICONS_PLATFORM, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
   import icon_pencil from "@/assets/icons/pencil.svg?raw";
-  import icon_xbox from "@/assets/platforms/xbox.svg?raw";
-  import icon_steam from "@/assets/platforms/steam.svg?raw";
 
   interface Props {
     id: string;
     display_name: string;
     username: string;
     description: string;
-    status: "online" | "busy" | "away" | "invisible";
+    status: Status;
     role: GlobalRole;
     links: LinkedAccount[];
     created_at: string;
@@ -35,29 +35,6 @@
     editable = false,
   }: Props = $props();
 
-  const statusNames = {
-    online: "Online",
-    busy: "Do Not Disturb",
-    away: "Away",
-    invisible: "Invisible",
-  };
-
-  const roleNames: Record<GlobalRole, string> = {
-    owner: "Owner",
-    admin: "Admin",
-    member: "Member",
-    visitor: "Visitor",
-  };
-
-  const platformNames: Record<Platform, string> = {
-    xbox: "Xbox",
-    steam: "Steam",
-  };
-
-  const platformIcons: Record<Platform, string> = {
-    xbox: icon_xbox,
-    steam: icon_steam,
-  };
 </script>
 
 <style>
@@ -186,14 +163,14 @@
 
     <dl class="meta">
       <dt>Status</dt>
-      <dd>{statusNames[status]}</dd>
+      <dd>{LABELS_STATUS[status]}</dd>
       <dt>Role</dt>
-      <dd>{roleNames[role]}</dd>
+      <dd>{LABELS_ROLE[role]}</dd>
       <dt>Linked</dt>
       <dd>
         {#each links as link}
           <p class="link">
-            <span class="icon" title={platformNames[link.platform]}>{@html platformIcons[link.platform]}</span>
+            <span class="icon" title={LABELS_PLATFORM[link.platform]}>{@html ICONS_PLATFORM[link.platform]}</span>
             {link.handle}
           </p>
         {:else}

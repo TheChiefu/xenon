@@ -1,5 +1,7 @@
 <script lang="ts">
     import type { Folder } from "@/bindings/shared";
+    import { Visibility } from "@/bindings/types";
+    import { LABELS_VISIBILITY } from "@/lib/labels";
     import { Section, folderToggle, getLayout, isLocked, isUnsaved, saveLayout } from "@/lib/rooms/layout.svelte";
     import { getRoomData, type RoomId, getSelectedRoom, selectRoom } from "@/lib/rooms/data.svelte";
     import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
@@ -7,6 +9,8 @@
     import { openMenu } from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
+    import { close, isOpen } from "@/lib/rooms/creation.svelte";
+    import NewRoom from "@/views/new_room.svelte";
     import icon_save from "@/assets/icons/save.svg?raw";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
@@ -30,7 +34,7 @@
         flex-direction: column;
         flex: none;
         border-right: 1px solid var(--border);
-        background: var(--component);
+        background: rgba(30,30,30, 0.5);
         overflow: hidden;
     }
 
@@ -165,10 +169,10 @@
         oncontextmenu={(event) => openMenu(event, roomCtx(roomId))}
     >
         {room?.name}
-        {#if room?.visibility === "locked"}
-            <span class="icon" aria-hidden="true" title="Locked">{@html icon_lock}</span>
-        {:else if room?.visibility === "hidden"}
-            <span class="icon" aria-hidden="true" title="Hidden">{@html icon_eye_off}</span>
+        {#if room?.visibility === Visibility.Locked}
+            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.Locked]}>{@html icon_lock}</span>
+        {:else if room?.visibility === Visibility.Hidden}
+            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.Hidden]}>{@html icon_eye_off}</span>
         {/if}
     </button>
 {/snippet}
@@ -288,3 +292,8 @@
         ondblclick={reset}
     ></div>
 </div>
+
+<!-- Room creation dialog, opened from the pane's context menu -->
+{#if isOpen()}
+    <NewRoom onClose={close}/>
+{/if}

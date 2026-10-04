@@ -35,16 +35,6 @@ pub enum Device {
     Xbox
 }
 
-/// Reads the status a user's connections start at.
-pub async fn preferred_status(
-    state: &AppState,
-    user_id: Uuid,
-) -> Result<Status> {
-
-    let mut conn = state.pool.acquire().await?;
-    db::preferred_status(&mut conn, user_id).await
-}
-
 /// Builds the presence list a connecting user is sent. It contains everyone
 /// they share a room with, apart from anyone reported as Offline.
 pub async fn snapshot(
@@ -98,13 +88,12 @@ pub async fn on_join(
     user_id: Uuid,
 ) {
     // Nothing to send for a user holding no connection
-    let declared = registry::statuses_of(state, &[user_id]);
-    let Some(entry) = declared.first() else {
+    let Some(declared) = registry::status_of(state, user_id) else {
         return;
     };
 
     // No previous status: the room could not see the new member until now
-    on_change(state, user_id, None, Some(entry.status)).await;
+    on_change(state, user_id, None, Some(declared.status)).await;
 
     // A failed snapshot is logged, and the member joins with no presence list
     match snapshot(state, user_id).await {
@@ -141,8 +130,7 @@ pub async fn on_change(
     }
 
     // A user with no connection has no device
-    let declared = registry::statuses_of(state, &[user_id]);
-    let device = match declared.first() {
+    let device = match registry::status_of(state, user_id) {
         Some(entry) => entry.device,
         None => None
     };

@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::{self, AppError, Result};
-use crate::shared::{GlobalRole, Permission, Status, Visibility};
+use crate::shared::{GlobalRole, Permission, Visibility};
 use crate::utils;
 
 /// One day in milliseconds.
@@ -349,40 +349,15 @@ pub async fn room_member_ids(
     Ok(members)
 }
 
-/// Reads the status a user's connections start at.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `user_id` - User to read.
-pub async fn preferred_status(
-    conn: &mut sqlx::SqliteConnection,
-    user_id: Uuid,
-) -> Result<Status> {
-
-    let status: Status = sqlx::query_scalar(
-        "
-        SELECT status
-        FROM user_preferences
-        WHERE user_id = ?1
-        "
-    )
-    .bind(user_id)
-    .fetch_one(&mut *conn)
-    .await?;
-
-    Ok(status)
-}
-
 /// Reads a user's preferences
 pub async fn get_preferences(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
-) -> Result<(Status, String)> {
+) -> Result<String> {
 
-    let row: (Status, String) = sqlx::query_as(
+    let row: String = sqlx::query_scalar(
         "
-        SELECT status, room_layout
+        SELECT room_layout
         FROM user_preferences
         WHERE user_id = ?1
         "

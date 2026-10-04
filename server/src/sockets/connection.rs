@@ -23,10 +23,9 @@ use crate::state::AppState;
 /// request is still an ordinary GET.
 #[derive(Deserialize)]
 pub struct ConnectQuery {
-    /// What the client is running on, shown beside the user's presence. A
-    /// client that names none still connects.
     #[serde(default)]
-    pub device: Option<Device>
+    pub device: Option<Device>,
+    pub status: Status,
 }
 
 /// Upgrades an HTTP request into a WebSocket.
@@ -45,35 +44,22 @@ pub async fn ws_handler(
 ) -> Response {
 
     let handshake = ws.protocols(["Bearer"]);
-    let start_socket = move |socket| handle_socket(socket, user_id, query.device, state);
+    let start_socket = move |socket| {
+        handle_socket(socket, user_id, query.device, query.status, state)
+    };
     handshake.on_upgrade(start_socket)
 }
 
 // Helper Methods //
 
-/// Pushes server events to one connection until it closes.
-///
-/// # Arguments
-///
-/// * `socket` - The client's connection.
-/// * `user_id` - User the connection belongs to.
-/// * `device` - What the client is running on.
-/// * `state` - Pool and socket registry.
+/// Pushes server events to one connection until it closes
 async fn handle_socket(
     socket: WebSocket,
     user_id: Uuid,
     device: Option<Device>,
+    status: Status,
     state: AppState,
 ) {
-    // Where the connection starts, before the client declares anything
-    let status = match presence::preferred_status(&state, user_id).await {
-        Ok(status) => status,
-        Err(e) => {
-            tracing::error!("could not read the status for {user_id}: {e}");
-            Status::Online
-        }
-    };
-
     // Identifies this socket's entry in the user's device list
     let socket_id = registry::next_socket_id();
     let device = match device {

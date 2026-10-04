@@ -1,8 +1,8 @@
+import type { RoomResponse } from "@/bindings/routes/rooms";
 import type { Folder, RoomListItem } from "@/bindings/shared";
 import { listMyRooms } from "@/lib/api/rooms";
-import { getPreferences, updatePreferences } from "@/lib/api/users";
-import { setRoomData, type RoomId } from "@/lib/rooms/data.svelte";
-import { getToken, getUrl } from "@/lib/session.svelte";
+import { getStoredPreferences, savePreferences } from "@/lib/preferences.svelte";
+import { addRoomData, setRoomData, type RoomId } from "@/lib/rooms/data.svelte";
 
 // Note: any bare "string" types are assumed to be room rows
 
@@ -63,13 +63,18 @@ export function folderDelete(folder: Folder): void {
   layout.splice(index, 1, ...folder.rooms);
 }
 
+export function roomAdd(room: RoomResponse): void {
+  addRoomData(room);
+  layout.push(room.id);
+}
+
 // Server //
 
 // Load room list for user
-export async function loadRooms(url: string, token: string): Promise<void> {
-  const fetched = await listMyRooms(url, token); // Fetch all rooms user has access to
-  const preferences = await getPreferences(url, token); // Get user saved room layout preference
-  const storedLayout = JSON.parse(preferences.room_layout) as RoomListItem[];
+export async function loadRooms(): Promise<void> {
+  const fetched = await listMyRooms(); // Fetch all rooms user has access to
+  const stored = getStoredPreferences()?.room_layout; // User's saved arrangement
+  const storedLayout = stored ? JSON.parse(stored) as RoomListItem[] : [];
 
   setRoomData(fetched);
 
@@ -112,12 +117,8 @@ export async function loadRooms(url: string, token: string): Promise<void> {
 
 // Persists the current layout
 export async function saveLayout(): Promise<void> {
-  const url = getUrl();
-  const token = getToken();
-  if (url === null || token === null) return;
-
   const current = JSON.stringify(layout);
-  await updatePreferences(url, token, { room_layout: current });
+  await savePreferences({ room_layout: current });
   saved = current;
 }
 

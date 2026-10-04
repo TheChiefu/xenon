@@ -1,6 +1,5 @@
-import type { PreferencesResponse } from "@/bindings/routes/users";
-import type { Status } from "@/bindings/shared";
-import { getPreferences, updatePreferences } from "@/lib/api/users";
+import type { PreferencesPatch, PreferencesResponse } from "@/bindings/routes/users";
+import { request } from "@/lib/utils";
 
 let preferences: PreferencesResponse | null = $state(null);
 
@@ -9,12 +8,12 @@ export function getStoredPreferences(): PreferencesResponse | null {
 }
 
 // Fetches the caller's own preferences
-export async function loadPreferences(url: string, token: string): Promise<void> {
-  preferences = await getPreferences(url, token);
+export async function loadPreferences(): Promise<void> {
+  const response = await request("/me/preferences");
+  preferences = await response.json() as PreferencesResponse;
 }
 
-// Writes the caller's status to the server
-export async function setStatus(url: string, token: string, status: Status): Promise<void> {
-  await updatePreferences(url, token, { status });
-  if (preferences) preferences.status = status;
+// Writes any subset of the caller's own preferences
+export async function savePreferences(patch: Partial<PreferencesPatch>): Promise<void> {
+  await request("/me/preferences", "PATCH", patch);
 }

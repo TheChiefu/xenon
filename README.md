@@ -66,10 +66,15 @@ cd server
 cargo build --release
 ```
 
-To update the client TypeScript bindings based off of the rust code, run:
+To update the client TypeScript bindings based off of the rust code, run this from
+the `server` directory:
 ```bash
-cargo test --features ts_bindings export_bindings
+TS_RS_EXPORT_DIR=../client/src/bindings TS_RS_LARGE_INT=number cargo test --features ts_bindings export_bindings
 ```
+
+Both variables are required. `TS_RS_EXPORT_DIR` is where the files are written, which
+otherwise defaults to `server/bindings`. `TS_RS_LARGE_INT` writes 64 bit integers as
+`number`, which otherwise defaults to `bigint`.
 
 ## Configuration
 To configure the server, edit the `config.toml` file that is generated when the server

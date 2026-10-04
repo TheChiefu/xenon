@@ -25,17 +25,16 @@ CREATE TABLE users (
     avatar_file_id  BLOB REFERENCES files(id),
     banner_file_id  BLOB REFERENCES files(id),
     password_hash   TEXT,
-    global_role     INTEGER NOT NULL,
+    global_role     TEXT NOT NULL,
     created_at      INTEGER NOT NULL,
     deleted_at      INTEGER
 ) STRICT;
 
-CREATE UNIQUE INDEX one_owner ON users(global_role) WHERE global_role = 0 AND deleted_at IS NULL;
+CREATE UNIQUE INDEX one_owner ON users(global_role) WHERE global_role = 'owner' AND deleted_at IS NULL;
 
 -- One row per user, created alongside them
 CREATE TABLE user_preferences (
     user_id     BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    status      INTEGER NOT NULL DEFAULT 0,
     room_layout TEXT NOT NULL DEFAULT '[]'
 ) STRICT;
 
@@ -45,7 +44,7 @@ CREATE TABLE user_preferences (
 -- handle for them," nothing more.
 CREATE TABLE linked_accounts (
     user_id         BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    platform        INTEGER NOT NULL,
+    platform        TEXT NOT NULL,
     platform_handle TEXT NOT NULL,
     PRIMARY KEY (user_id, platform)
 ) STRICT;
@@ -61,17 +60,12 @@ CREATE TABLE sessions (
 CREATE INDEX sessions_user ON sessions(user_id);
 CREATE INDEX sessions_expiry ON sessions(expires_at) WHERE revoked_at IS NULL;
 
--- Visibility:
--- - 0: Public
--- - 1: Locked
--- - 2: Hidden
---
 -- default_permissions has no DEFAULT: creation must state it. The value is
 -- copied into room_access.permissions when a member joins.
 CREATE TABLE rooms (
     id                  BLOB PRIMARY KEY,
     name                TEXT NOT NULL,
-    visibility          INTEGER NOT NULL,
+    visibility          TEXT NOT NULL,
     default_permissions TEXT NOT NULL,
     created_at          INTEGER NOT NULL,
     -- Incremented on edit and tombstone
@@ -82,22 +76,17 @@ CREATE TABLE rooms (
 -- Hidden rooms are absent from the index and id is a UUIDv7 (byte order is creation order)
 -- of which the directory pages on with `id > ?`.
 --
--- Queries must filter with `visibility IN (0, 1)` to match this predicate.
-CREATE INDEX rooms_directory ON rooms(id) WHERE visibility IN (0, 1);
+-- Queries must filter with `visibility IN ('public', 'locked')` to match this predicate.
+CREATE INDEX rooms_directory ON rooms(id) WHERE visibility IN ('public', 'locked');
 
 -- A row grants read access to the room
---
--- Notify:
--- - 0: None
--- - 1: Mentions
--- - 2: All
 --
 -- granted_at holds join time
 CREATE TABLE room_access (
     room_id     BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     user_id     BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     permissions TEXT NOT NULL,
-    notify      INTEGER NOT NULL DEFAULT 0,
+    notify      TEXT NOT NULL DEFAULT 'none',
     granted_at  INTEGER NOT NULL,
     PRIMARY KEY (room_id, user_id)
 ) STRICT;

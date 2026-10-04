@@ -8,7 +8,6 @@ use crate::db;
 use crate::error::Result;
 use crate::shared::Status;
 use crate::sockets::events::{GameActivity, GamePresence, ServerEvent, UserGamePresence};
-use crate::sockets::presence;
 use crate::sockets::registry;
 use crate::state::AppState;
 
@@ -19,17 +18,13 @@ pub async fn on_report(
     user_id: Uuid,
     game: GameActivity,
 ) {
-    // Their stored preferred status or "Online" if not set
-    let stored = match presence::preferred_status(state, user_id).await {
-        Ok(status) => status,
-        Err(e) => {
-            tracing::error!("could not read the status for {user_id}: {e}");
-            Status::Online
-        }
+    let declared = match registry::status_of(state, user_id) {
+        Some(entry) => Some(entry.status),
+        None => None
     };
 
     // Invisible users have no game presence, remove entry
-    if stored == Status::Invisible {
+    if declared == Some(Status::Invisible) {
         write_map(state).remove(&user_id);
         return;
     }

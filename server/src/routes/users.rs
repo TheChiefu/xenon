@@ -15,9 +15,9 @@ use crate::api::users::UserSummary;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::shared::{GlobalRole, Status, LinkedAccount};
+use crate::shared::{GlobalRole, LinkedAccount};
 use crate::sockets::events::ServerEvent;
-use crate::sockets::{presence, registry};
+use crate::sockets::{registry};
 use crate::state::AppState;
 use crate::validate;
 use crate::{api, config};
@@ -126,7 +126,6 @@ pub struct DeleteAccountRequest {
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct PreferencesResponse {
-    pub status: Status,
     pub room_layout: String,
 }
 
@@ -134,8 +133,6 @@ pub struct PreferencesResponse {
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct PreferencesPatch {
-    #[serde(default)]
-    pub status: Option<Status>,
     #[serde(default)]
     pub room_layout: Option<String>,
 }
@@ -299,9 +296,9 @@ pub async fn get_preferences(
 ) -> Result<Json<PreferencesResponse>> {
 
     let mut conn = pool.acquire().await?;
-    let (status, room_layout) = db::get_preferences(&mut conn, user_id).await?;
+    let room_layout = db::get_preferences(&mut conn, user_id).await?;
 
-    Ok(Json(PreferencesResponse { status, room_layout }))
+    Ok(Json(PreferencesResponse { room_layout }))
 }
 
 /// Writes the caller's own preferences
@@ -310,15 +307,6 @@ pub async fn update_preferences(
     State(app_state): State<AppState>,
     Json(body): Json<PreferencesPatch>,
 ) -> Result<StatusCode> {
-
-    if let Some(status) = body.status {
-        api::users::set_preferred_status(&app_state.pool, user_id, status).await?;
-
-        // A status comes back only when the caller holds a connection to change
-        if let Some(previous) = registry::set_status(&app_state, user_id, status) {
-            presence::on_change(&app_state, user_id, Some(previous), Some(status)).await;
-        }
-    }
 
     // Saves the caller's room list layout
     if let Some(room_layout) = body.room_layout {

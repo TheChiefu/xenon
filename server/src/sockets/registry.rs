@@ -154,6 +154,14 @@ pub fn unsubscribe(
     reg.remove(&user_id).map(|connected| connected.status)
 }
 
+/// Reads what a user's connections declare
+pub fn status_of(
+    state: &AppState,
+    user_id: Uuid,
+) -> Option<UserStatus> {
+    statuses_of(state, &[user_id]).pop()
+}
+
 /// Reads what the given users are declaring, leaving out any holding no
 /// connection.
 ///

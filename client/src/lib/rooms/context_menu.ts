@@ -3,6 +3,7 @@ import type { MenuItem } from "@/lib/menu.svelte";
 import type { RoomId } from "@/lib/rooms/data.svelte";
 import { folderDelete, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
 import { startCreation, startRename } from "@/lib/rooms/folders.svelte";
+import { open } from "@/lib/rooms/creation.svelte";
 
 // Right click on empty space in room pane
 export function paneCtx(): MenuItem[] {
@@ -16,8 +17,7 @@ export function paneCtx(): MenuItem[] {
 
   items.push({ label: "Create Folder", action: startCreation });
 
-  // TODO: open the room creation dialog once it exists
-  items.push({ label: "New Room", action: () => {} });
+  items.push({ label: "New Room", action: open });
 
   return items;
 }

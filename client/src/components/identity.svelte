@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { getUrl, getToken, getActiveLogin, signOut } from "@/lib/session.svelte";
+  import { getActiveLogin, signOut } from "@/lib/session.svelte";
   import { getProfile } from "@/lib/profile.svelte";
-  import { getStoredPreferences, setStatus } from "@/lib/preferences.svelte";
-  import type { Status } from "@/bindings/shared";
+  import { getStatus, setStatus } from "@/lib/status.svelte";
+  import { LABELS_STATUS } from "@/lib/labels";
+  import { Status } from "@/bindings/types";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
@@ -39,23 +40,17 @@
   function onStatusChange(event: Event) {
     if (!(event.target instanceof HTMLSelectElement)) return;
 
-    const url = getUrl();
-    const token = getToken();
-    if (url === null || token === null) return;
-
-    setStatus(url, token, event.target.value as Status);
+    setStatus(event.target.value as Status);
   }
 
   $effect(() => {
-    const url = getUrl();
-    const token = getToken();
     const fileId = getProfile()?.avatar_file_id;
-    if (url === null || token === null || fileId == null) {
+    if (fileId == null) {
       avatar = null;
       return;
     }
 
-    fetchFileBlob(url, fileId, token).then((file) => { avatar = file; });
+    fetchFileBlob(fileId).then((file) => { avatar = file; });
 
     return () => {
       if (avatar) URL.revokeObjectURL(avatar.url);
@@ -154,7 +149,7 @@
 
 <div class="identity">
   <button
-    class="user status-{getStoredPreferences()?.status ?? ''}"
+    class="user status-{getStatus()}"
     aria-expanded={menuOpen}
     onclick={() => menuOpen = !menuOpen}
   >
@@ -202,13 +197,12 @@
       <select
         id="status"
         title="How you are shown to others when using the client"
-        value={getStoredPreferences()?.status ?? "online"}
+        value={getStatus()}
         onchange={onStatusChange}
       >
-        <option value="online">Online</option>
-        <option value="busy">Do Not Disturb</option>
-        <option value="away">Away</option>
-        <option value="invisible">Invisible</option>
+        {#each Object.values(Status) as value}
+          <option {value}>{LABELS_STATUS[value]}</option>
+        {/each}
       </select>
 
       <hr/>

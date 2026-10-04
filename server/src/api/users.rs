@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::{GlobalRole, Status};
+use crate::shared::{GlobalRole};
 use crate::utils;
 use crate::validate;
 
@@ -262,35 +262,6 @@ pub async fn update(
     .await?;
 
     Ok(Some(stored))
-}
-
-/// Writes the status a user's connections start at.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User whose preference is being written.
-/// * `status` - Status their next connection starts at.
-pub async fn set_preferred_status(
-    pool: &sqlx::SqlitePool,
-    user_id: Uuid,
-    status: Status,
-) -> Result<()> {
-
-    let mut conn = pool.acquire().await?;
-
-    sqlx::query(
-        "
-        UPDATE user_preferences SET status = ?1
-        WHERE user_id = ?2
-        "
-    )
-    .bind(status)
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
-
-    Ok(())
 }
 
 /// Tombstones an account, stripping its credentials and profile while leaving

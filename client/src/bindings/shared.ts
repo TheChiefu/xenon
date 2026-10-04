@@ -6,7 +6,7 @@
 export type Folder = { name: string, rooms: Array<string>, collapsed: boolean, };
 
 /**
- * A user's server-wide role, stored as an integer. (PERMANENT)
+ * A user's server-wide role
  */
 export type GlobalRole = "owner" | "admin" | "member" | "visitor";
 
@@ -24,7 +24,7 @@ export type Notify = "none" | "mentions" | "all";
 export type Permission = "post" | "attach" | "commands" | "delete_msg" | "invite" | "rename" | "ban" | "grant" | "delete_room" | "connect" | "speak" | "mute" | "video" | "screenshare";
 
 /**
- * A game service an account is linked to, stored as an integer. (PERMANENT)
+ * A game service an account is linked to
  */
 export type Platform = "xbox" | "steam";
 
@@ -34,11 +34,11 @@ export type Platform = "xbox" | "steam";
 export type RoomListItem = string | Folder;
 
 /**
- * What a user asks to appear as while connected, stored as an integer. (PERMANENT)
+ * What a user asks to appear as while connected
  */
 export type Status = "online" | "busy" | "away" | "invisible";
 
 /**
- * How a room is discovered and entered, stored as an integer. (PERMANENT)
+ * How a room is discovered and entered
  */
 export type Visibility = "public" | "locked" | "hidden";

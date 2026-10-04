@@ -11,62 +11,62 @@ use ts_rs::TS;
 
 // Roles //
 
-/// A user's server-wide role, stored as an integer. (PERMANENT)
+/// A user's server-wide role
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
-#[repr(i8)]
+#[sqlx(rename_all = "lowercase")]
 pub enum GlobalRole {
-    Owner = 0,
-    Admin = 1,
-    Member = 2,
-    Visitor = 3,
+    Owner,
+    Admin,
+    Member,
+    Visitor,
 }
 
-/// How a room is discovered and entered, stored as an integer. (PERMANENT)
+/// How a room is discovered and entered
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
-#[repr(i8)]
+#[sqlx(rename_all = "lowercase")]
 pub enum Visibility {
     /// Self service
-    Public = 0,
+    Public,
     /// Invite only
-    Locked = 1,
+    Locked,
     /// Invite only
-    Hidden = 2,
+    Hidden,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
-#[repr(i8)]
+#[sqlx(rename_all = "lowercase")]
 pub enum Notify {
-    None = 0,
-    Mentions = 1,
-    All = 2,
+    None,
+    Mentions,
+    All,
 }
 
-/// A game service an account is linked to, stored as an integer. (PERMANENT)
+/// A game service an account is linked to
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
-#[repr(i8)]
+#[sqlx(rename_all = "lowercase")]
 pub enum Platform {
-    Xbox = 0,
-    Steam = 1,
+    Xbox,
+    Steam,
 }
 
-/// What a user asks to appear as while connected, stored as an integer. (PERMANENT)
+/// What a user asks to appear as while connected
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
-#[repr(i8)]
+#[sqlx(rename_all = "lowercase")]
 pub enum Status {
-    Online = 0,
-    Busy = 1,
-    Away = 2,
-    Invisible = 3,
+    Online,
+    Busy,
+    Away,
+    Invisible,
 }
 
 // Permissions //
@@ -152,12 +152,11 @@ pub struct Folder {
     pub collapsed: bool,
 }
 
-/// One entry in a user's room list layout
+/// One entry in a user's room list layout, room ID and possible folder it's in
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 pub enum RoomListItem {
-    /// A bare room id
     Room(Uuid),
     Folder(Folder),
 }

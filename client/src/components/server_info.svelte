@@ -18,7 +18,7 @@
 <style>
 
   div {
-    --point: 40px;
+    --point: 35px;
 
     align-content: center;
     align-items: center;
@@ -26,9 +26,9 @@
     background: var(--border);
     clip-path: polygon(
       0 0,                            /* Top Left */
-      calc(100% - var(--point)) 0,    /* Top Edge */
-      100% 50%,                       /* Point */
-      calc(100% - var(--point)) 100%, /* Bottom Edge */
+      100% 0,                         /* Top Right */
+      calc(100% - var(--point)) 50%,  /* Notch */
+      100% 100%,                      /* Bottom Right */
       0 100%                          /* Bottom Left */
     );
     display: grid;

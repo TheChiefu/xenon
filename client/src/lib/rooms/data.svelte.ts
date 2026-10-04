@@ -16,6 +16,10 @@ export function setRoomData(fetched: RoomResponse[]): void {
   }
 }
 
+export function addRoomData(room: RoomResponse): void {
+  rooms.set(room.id, room);
+}
+
 // Room Selection
 let selectedRoom: RoomId | null = $state(null);
 

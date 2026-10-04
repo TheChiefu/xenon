@@ -1,15 +1,17 @@
-import type { RoomResponse } from "@/bindings/routes/rooms";
+import type { CreateRoomRequest, CreateRoomResponse, RoomResponse } from "@/bindings/routes/rooms";
+import { request } from "@/lib/utils";
 
-export async function listMyRooms(url: string, token: string): Promise<RoomResponse[]> {
-    const response = await fetch(`${url}/me/rooms`, {
-        headers: { "Authorization": `Bearer ${token}` },
-    });
+export async function createRoom(body: CreateRoomRequest): Promise<CreateRoomResponse> {
+    const response = await request("/rooms", "POST", body);
+    return await response.json() as CreateRoomResponse;
+}
 
-    const data = await response.json();
+export async function getRoom(roomId: string): Promise<RoomResponse> {
+    const response = await request(`/rooms/${roomId}`);
+    return await response.json() as RoomResponse;
+}
 
-    if (!response.ok) {
-        throw new Error(data.error);
-    }
-
-    return data as RoomResponse[];
+export async function listMyRooms(): Promise<RoomResponse[]> {
+    const response = await request("/me/rooms");
+    return await response.json() as RoomResponse[];
 }

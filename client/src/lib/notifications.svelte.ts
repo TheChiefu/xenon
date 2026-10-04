@@ -1,6 +1,7 @@
 // Client Settings - Notifications
 
-import { getToken, getUrl } from "@/lib/session.svelte";
+import { getUrl } from "@/lib/session.svelte";
+import { request } from "@/lib/utils";
 
 let browserGranted: boolean = $state(checkBrowserGranted());
 let pushSubscription: PushSubscription | null = $state(null);
@@ -87,23 +88,11 @@ export async function enablePush(): Promise<string | undefined> {
 
     // Send subscription to server
     const json = subscription.toJSON();
-    const response = await fetch(`${url}/me/push`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${getToken()}`,
-      },
-      body: JSON.stringify({
-        endpoint: json.endpoint!,
-        p256dh: decodeBase64Url(json.keys!.p256dh),
-        auth: decodeBase64Url(json.keys!.auth),
-      }),
+    await request("/me/push", "POST", {
+      endpoint: json.endpoint!,
+      p256dh: decodeBase64Url(json.keys!.p256dh),
+      auth: decodeBase64Url(json.keys!.auth),
     });
-
-    // If failed, return error
-    if (!response.ok) {
-      throw new Error((await response.json()).error);
-    }
 
     // No failures, save subscription
     pushSubscription = subscription;
@@ -126,27 +115,9 @@ export async function disablePush(): Promise<string | undefined> {
     return undefined;
   }
 
-  // No session to authenticate the DELETE request with
-  const url = getUrl();
-  if (url === null) {
-    return "Not signed in";
-  }
-
   try {
     // Delete existing push subscription
-    const response = await fetch(`${url}/me/push`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${getToken()}`,
-      },
-      body: JSON.stringify({ endpoint: pushSubscription.endpoint }),
-    });
-
-    // If failed, return error
-    if (!response.ok) {
-      throw new Error((await response.json()).error);
-    }
+    await request("/me/push", "DELETE", { endpoint: pushSubscription.endpoint });
 
     // No failures, unsubscribe on local browser
     await pushSubscription.unsubscribe();
