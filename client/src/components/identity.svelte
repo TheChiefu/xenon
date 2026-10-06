@@ -5,6 +5,7 @@
   import { LABELS_STATUS } from "@/lib/labels";
   import { Status } from "@/bindings/types";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
+  import { animatePhoto } from "@/lib/settings.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { dialogFly } from "@/lib/transitions";
@@ -154,7 +155,7 @@
     onclick={() => menuOpen = !menuOpen}
   >
     {#if avatar?.mime.startsWith("video/")}
-      <video class="user-avatar" src={avatar.url} autoplay muted loop playsinline></video>
+      <video class="user-avatar" {@attach animatePhoto} src={avatar.url} preload="auto" muted loop playsinline></video>
     {:else if avatar}
       <img class="user-avatar" src={avatar.url} alt=""/>
     {/if}

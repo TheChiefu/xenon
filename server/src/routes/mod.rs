@@ -221,6 +221,7 @@ fn cors_layer() -> CorsLayer {
         .allow_origin(AllowOrigin::predicate(origin_allowed))
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::PUT, Method::DELETE])
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
+        .expose_headers([files::FILE_MIME_HEADER])
         .max_age(Duration::from_secs(max_age))
 }
 

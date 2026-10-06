@@ -1,12 +1,19 @@
 // Text the client shows for each value
 
 import { GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/types";
+import { AnimatePhotos } from "@/lib/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
 
 export const ICONS_PLATFORM: Record<Platform, string> = {
   [Platform.Xbox]: icon_xbox,
   [Platform.Steam]: icon_steam,
+};
+
+export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {
+  [AnimatePhotos.Always]: "Always",
+  [AnimatePhotos.OnHover]: "On Hover",
+  [AnimatePhotos.Never]: "Never",
 };
 
 export const LABELS_PERMISSION: Record<Permission, string> = {

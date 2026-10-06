@@ -2,7 +2,8 @@
   import type { ProfilePatch } from "@/bindings/routes/users";
   import { dialogFly } from "@/lib/transitions";
   import ProfileEditor from "@/components/profile_editor.svelte";
-  import { getTheme, setTheme } from "@/lib/settings.svelte";
+  import { getTheme, setTheme, AnimatePhotos, getAnimatePhotos, setAnimatePhotos, getAwayMinutes, setAwayMinutes } from "@/lib/settings.svelte";
+  import { LABELS_ANIMATE_PHOTOS } from "@/lib/labels";
   import { confirmDialog } from "@/lib/confirm.svelte";
   import { isBrowserNotificationGranted, isPushSubscribed, enableBrowserNotifications, enablePush, disablePush } from "@/lib/notifications.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
@@ -22,6 +23,12 @@
   let linked_xbox = $state(false);
   let linked_steam = $state(false);
 
+  // Client Preferences
+  let theme = $state(getTheme());
+  let animate_photos = $state(getAnimatePhotos());
+  let away_minutes = $state<number | null>(getAwayMinutes());
+  let saved_text = $state<HTMLElement | null>(null);
+
   // Messages
   const msg_remove_push = "Are you sure you want to disable push notifications?";
   const msg_disable_notification = "Browser notifications must be revoked via browser settings.";
@@ -31,10 +38,18 @@
     dialog?.showModal();
   });
 
-  function changeTheme(event: Event) {
-    if (event.target instanceof HTMLSelectElement) {
-      setTheme(event.target.value);
+  function savePreferences() {
+    setTheme(theme);
+    setAnimatePhotos(animate_photos);
+
+    if (away_minutes !== null) {
+      setAwayMinutes(away_minutes);
     }
+
+    // Revert on invalid
+    away_minutes = getAwayMinutes();
+
+    saved_text?.animate({ opacity: [1, 1] }, 1000);
   }
 
   // Runs an action, showing its error message if it returns one
@@ -136,6 +151,12 @@
       border: none;
   }
 
+  .saved {
+      opacity: 0;
+      font-style: italic;
+      color: var(--text-dim);
+  }
+
 
 </style>
 
@@ -183,24 +204,27 @@
       </div>
 
       <div class="section rows">
-        <h3 class="full-row">Preferences</h3>
+        <h3>Preferences</h3>
+        <p class="saved" bind:this={saved_text}>Changes Saved</p>
 
         <p>Theme</p>
-        <select value={getTheme()} onchange={changeTheme}>
+        <select bind:value={theme}>
             <option value="dark">Dark</option>
             <option value="light">Light</option>
             <option value="spore">Spore</option>
         </select>
 
         <p>Animate Photos</p>
-        <select>
-            <option value="always">Always</option>
-            <option value="on-hover">On Hover</option>
-            <option value="never">Never</option>
+        <select bind:value={animate_photos}>
+            {#each Object.values(AnimatePhotos) as value}
+                <option {value}>{LABELS_ANIMATE_PHOTOS[value]}</option>
+            {/each}
         </select>
 
         <p>Away after (minutes)</p>
-        <input name="away-time" type="number" placeholder="10"/>
+        <input name="away-time" type="number" min="0" step="any" bind:value={away_minutes}/>
+
+        <button class="full-row" onclick={savePreferences}>Save Changes</button>
       </div>
   {:else if current_tab == 2}
 

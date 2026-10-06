@@ -41,6 +41,9 @@ impl From<File> for FileResponse {
     }
 }
 
+/// Header carrying a downloaded file's MIME type.
+pub const FILE_MIME_HEADER: HeaderName = HeaderName::from_static("x-file-mime");
+
 // Routing Methods //
 
 /// Stores an uploaded file.
@@ -111,7 +114,7 @@ pub async fn download(
         (header::CONTENT_LENGTH, file.byte_size.to_string()),
         (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
         (header::CACHE_CONTROL, "private, max-age=31536000, immutable".to_string()),
-        (HeaderName::from_static("x-file-mime"), file.mime.clone())
+        (FILE_MIME_HEADER, file.mime.clone())
     ];
 
     // Send response
