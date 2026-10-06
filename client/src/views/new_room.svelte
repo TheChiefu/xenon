@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Permission, Visibility } from "@/bindings/types";
+  import { Permission, Visibility } from "@/bindings/shared";
   import { DESCRIPTIONS_VISIBILITY, LABELS_PERMISSION, LABELS_VISIBILITY } from "@/lib/labels";
   import { dialogFly } from "@/lib/transitions";
   import { getError, isPending, submit } from "@/lib/rooms/creation.svelte";
@@ -13,9 +13,9 @@
 
   // Room Properties
   let name = $state("");
-  let visibility = $state<Visibility>(Visibility.Public);
+  let visibility = $state<Visibility>(Visibility.public);
   let claim_all = $state(true);
-  let granted = $state<Permission[]>([Permission.Post, Permission.Attach, Permission.Invite]);
+  let granted = $state<Permission[]>([Permission.post, Permission.attach, Permission.invite]);
 
   $effect(() => {
     dialog?.showModal();

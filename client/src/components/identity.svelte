@@ -3,7 +3,7 @@
   import { getProfile } from "@/lib/profile.svelte";
   import { getStatus, setStatus } from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
-  import { Status } from "@/bindings/types";
+  import { Status } from "@/bindings/shared";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
   import { animatePhoto } from "@/lib/settings.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";

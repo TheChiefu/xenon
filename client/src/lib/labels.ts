@@ -1,13 +1,13 @@
 // Text the client shows for each value
 
-import { GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/types";
+import { GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/shared";
 import { AnimatePhotos } from "@/lib/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
 
 export const ICONS_PLATFORM: Record<Platform, string> = {
-  [Platform.Xbox]: icon_xbox,
-  [Platform.Steam]: icon_steam,
+  [Platform.xbox]: icon_xbox,
+  [Platform.steam]: icon_steam,
 };
 
 export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {
@@ -17,49 +17,49 @@ export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {
 };
 
 export const LABELS_PERMISSION: Record<Permission, string> = {
-  [Permission.Post]: "Send messages",
-  [Permission.Attach]: "Attach files",
-  [Permission.Commands]: "Use commands",
-  [Permission.DeleteMsg]: "Delete others' messages",
-  [Permission.Invite]: "Create invites",
-  [Permission.Rename]: "Edit name and visibility",
-  [Permission.Ban]: "Remove members",
-  [Permission.Grant]: "Set members' permissions",
-  [Permission.DeleteRoom]: "Delete the room",
-  [Permission.Connect]: "Join voice",
-  [Permission.Speak]: "Speak in voice",
-  [Permission.Mute]: "Mute others",
-  [Permission.Video]: "Show video",
-  [Permission.Screenshare]: "Share screen",
+  [Permission.post]: "Send messages",
+  [Permission.attach]: "Attach files",
+  [Permission.commands]: "Use commands",
+  [Permission.delete_msg]: "Delete others' messages",
+  [Permission.invite]: "Create invites",
+  [Permission.rename]: "Edit name and visibility",
+  [Permission.ban]: "Remove members",
+  [Permission.grant]: "Set members' permissions",
+  [Permission.delete_room]: "Delete the room",
+  [Permission.connect]: "Join voice",
+  [Permission.speak]: "Speak in voice",
+  [Permission.mute]: "Mute others",
+  [Permission.video]: "Show video",
+  [Permission.screenshare]: "Share screen",
 };
 
 export const LABELS_PLATFORM: Record<Platform, string> = {
-  [Platform.Xbox]: "Xbox",
-  [Platform.Steam]: "Steam",
+  [Platform.xbox]: "Xbox",
+  [Platform.steam]: "Steam",
 };
 
 export const LABELS_ROLE: Record<GlobalRole, string> = {
-  [GlobalRole.Owner]: "Owner",
-  [GlobalRole.Admin]: "Admin",
-  [GlobalRole.Member]: "Member",
-  [GlobalRole.Visitor]: "Visitor",
+  [GlobalRole.owner]: "Owner",
+  [GlobalRole.admin]: "Admin",
+  [GlobalRole.member]: "Member",
+  [GlobalRole.visitor]: "Visitor",
 };
 
 export const LABELS_STATUS: Record<Status, string> = {
-  [Status.Online]: "Online",
-  [Status.Busy]: "Do Not Disturb",
-  [Status.Away]: "Away",
-  [Status.Invisible]: "Invisible",
+  [Status.online]: "Online",
+  [Status.busy]: "Do Not Disturb",
+  [Status.away]: "Away",
+  [Status.invisible]: "Invisible",
 };
 
 export const LABELS_VISIBILITY: Record<Visibility, string> = {
-  [Visibility.Public]: "Public",
-  [Visibility.Locked]: "Locked",
-  [Visibility.Hidden]: "Hidden",
+  [Visibility.public]: "Public",
+  [Visibility.locked]: "Locked",
+  [Visibility.hidden]: "Hidden",
 };
 
 export const DESCRIPTIONS_VISIBILITY: Record<Visibility, string> = {
-  [Visibility.Public]: "Listed in discovery, anyone can join",
-  [Visibility.Locked]: "Listed in discovery, joining needs an invite",
-  [Visibility.Hidden]: "Not listed, joining needs an invite",
+  [Visibility.public]: "Listed in discovery, anyone can join",
+  [Visibility.locked]: "Listed in discovery, joining needs an invite",
+  [Visibility.hidden]: "Not listed, joining needs an invite",
 };

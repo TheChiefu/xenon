@@ -1,11 +1,11 @@
 // Client Settings - Status this device presents to other users
 
-import { Status } from "@/bindings/types";
+import { Status } from "@/bindings/shared";
 import { LABELS_STATUS } from "@/lib/labels";
 import { getAwayMinutes } from "@/lib/settings.svelte";
 
 const keyStatus = "prefStatus";
-const defaultStatus: Status = Status.Online;
+const defaultStatus: Status = Status.online;
 const idleCheckMs = 15_000;
 const activityEvents = ["pointerdown", "keydown", "wheel"];
 
@@ -21,8 +21,8 @@ setInterval(checkIdle, idleCheckMs);
 
 // The status chosen on this device
 export function getStatus(): Status {
-  if (idle && currentStatus === Status.Online) {
-    return Status.Away;
+  if (idle && currentStatus === Status.online) {
+    return Status.away;
   }
 
   return currentStatus;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { LinkedAccount } from "@/bindings/shared";
-  import type { GlobalRole, Status } from "@/bindings/types";
+  import type { GlobalRole, Status } from "@/bindings/shared";
   import { ICONS_PLATFORM, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
   import icon_pencil from "@/assets/icons/pencil.svg?raw";
 

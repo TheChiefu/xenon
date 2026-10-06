@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GlobalRole, Platform, Status } from "@/bindings/types";
+  import { GlobalRole, Platform, Status } from "@/bindings/shared";
   import ProfileCard from "@/components/profile_card.svelte";
 
   // Unsaved values, drawn on the preview as they are typed
@@ -43,9 +43,9 @@
     display_name={display_name}
     username="username"
     description={description}
-    status={Status.Online}
-    role={GlobalRole.Member}
-    links={[{ platform: Platform.Xbox, handle: "My Gamertag" }, { platform: Platform.Steam, handle: "My Steam Name" }]}
+    status={Status.online}
+    role={GlobalRole.member}
+    links={[{ platform: Platform.xbox, handle: "My Gamertag" }, { platform: Platform.steam, handle: "My Steam Name" }]}
     created_at="Jan 1, 2026"
     editable
   />
