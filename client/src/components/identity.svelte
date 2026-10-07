@@ -154,11 +154,6 @@
     aria-expanded={menuOpen}
     onclick={() => menuOpen = !menuOpen}
   >
-    {#if avatar?.mime.startsWith("video/")}
-      <video class="user-avatar" {@attach animatePhoto} src={avatar.url} preload="auto" muted loop playsinline></video>
-    {:else if avatar}
-      <img class="user-avatar" src={avatar.url} alt=""/>
-    {/if}
     <span class="user-text">
       <span class="user-name">{getProfile()?.display_name ?? getActiveLogin()?.username}</span>
       <span class="user-handle">@{getActiveLogin()?.username}</span>

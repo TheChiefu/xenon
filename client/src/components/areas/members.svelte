@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Device, GameActivity } from "@/bindings/sockets/events";
+  import { Device, type GameActivity } from "@/bindings/sockets/events";
   import { Status } from "@/bindings/shared";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { getFile, loadFiles } from "@/lib/files.svelte";
@@ -47,7 +47,9 @@
           avatar_file_id: user.avatar_file_id,
           banner_file_id: user.banner_file_id,
           status: Status.offline,
-          device: null,
+
+          // TEMPORARY: stands in until the socket reports what a member is on
+          device: Device.macos,
           game: null,
         }));
 
@@ -210,19 +212,22 @@
 
   
   .device {
-    --opacity: 0.5;
-    --white: rgba(255, 255, 255, var(--opacity));
-    --black: rgba(0, 0, 0, var(--opacity));
-
     flex: none;
     margin-right: 0.5rem;
+    color: rgba(255, 255, 255, 1);
+    opacity: 0.8;
+  }
+
+  /* The artwork reaches the viewBox edges, so the stroke needs room past it */
+  .device :global(svg) {
+    overflow: visible;
+  }
+
+  .device :global(svg *) {
+    stroke: rgba(0, 0, 0, 1);
+    stroke-width: 1px;
+    paint-order: stroke;
     vector-effect: non-scaling-stroke;
-    color: rgba(255, 255, 255, 0.5);
-    filter:
-      drop-shadow(1px 0 0 var(--black))
-      drop-shadow(-1px 0 0 var(--black))
-      drop-shadow(0 1px 0 var(--black))
-      drop-shadow(0 -1px 0 var(--black));
   }
 
   /* Status Bar */
