@@ -1,6 +1,8 @@
 // Text the client shows for each value
 
-import { Device, GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/types";
+import { GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/shared";
+import { Device } from "@/bindings/sockets/events";
+import { AnimatePhotos } from "@/lib/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
 import icon_android from "@/assets/devices/android.svg?raw";
@@ -14,78 +16,84 @@ import icon_tablet from "@/assets/devices/tablet.svg?raw";
 import icon_windows from "@/assets/devices/windows.svg?raw";
 
 export const ICONS_DEVICE: Record<Device, string> = {
-  [Device.Windows]: icon_windows,
-  [Device.Macos]: icon_mac,
-  [Device.Linux]: icon_linux,
-  [Device.Android]: icon_android,
-  [Device.Ios]: icon_ios,
-  [Device.Chrome]: icon_chrome,
-  [Device.Desktop]: icon_desktop,
-  [Device.Mobile]: icon_mobile,
-  [Device.Tablet]: icon_tablet,
+  [Device.windows]: icon_windows,
+  [Device.macos]: icon_mac,
+  [Device.linux]: icon_linux,
+  [Device.android]: icon_android,
+  [Device.ios]: icon_ios,
+  [Device.chrome]: icon_chrome,
+  [Device.desktop]: icon_desktop,
+  [Device.mobile]: icon_mobile,
+  [Device.tablet]: icon_tablet,
 };
 
 export const ICONS_PLATFORM: Record<Platform, string> = {
-  [Platform.Xbox]: icon_xbox,
-  [Platform.Steam]: icon_steam,
+  [Platform.xbox]: icon_xbox,
+  [Platform.steam]: icon_steam,
+};
+
+export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {
+  [AnimatePhotos.Always]: "Always",
+  [AnimatePhotos.OnHover]: "On Hover",
+  [AnimatePhotos.Never]: "Never",
 };
 
 export const LABELS_DEVICE: Record<Device, string> = {
-  [Device.Windows]: "Windows",
-  [Device.Macos]: "Mac",
-  [Device.Linux]: "Linux",
-  [Device.Android]: "Android",
-  [Device.Ios]: "iOS",
-  [Device.Chrome]: "Chrome",
-  [Device.Desktop]: "Desktop",
-  [Device.Mobile]: "Phone",
-  [Device.Tablet]: "Tablet",
+  [Device.windows]: "Windows",
+  [Device.macos]: "Mac",
+  [Device.linux]: "Linux",
+  [Device.android]: "Android",
+  [Device.ios]: "iOS",
+  [Device.chrome]: "Chrome",
+  [Device.desktop]: "Desktop",
+  [Device.mobile]: "Phone",
+  [Device.tablet]: "Tablet",
 };
 
 export const LABELS_PERMISSION: Record<Permission, string> = {
-  [Permission.Post]: "Send messages",
-  [Permission.Attach]: "Attach files",
-  [Permission.Commands]: "Use commands",
-  [Permission.DeleteMsg]: "Delete others' messages",
-  [Permission.Invite]: "Create invites",
-  [Permission.Rename]: "Edit name and visibility",
-  [Permission.Ban]: "Remove members",
-  [Permission.Grant]: "Set members' permissions",
-  [Permission.DeleteRoom]: "Delete the room",
-  [Permission.Connect]: "Join voice",
-  [Permission.Speak]: "Speak in voice",
-  [Permission.Mute]: "Mute others",
-  [Permission.Video]: "Show video",
-  [Permission.Screenshare]: "Share screen",
+  [Permission.post]: "Send messages",
+  [Permission.attach]: "Attach files",
+  [Permission.commands]: "Use commands",
+  [Permission.delete_msg]: "Delete others' messages",
+  [Permission.invite]: "Create invites",
+  [Permission.rename]: "Edit name and visibility",
+  [Permission.ban]: "Remove members",
+  [Permission.grant]: "Set members' permissions",
+  [Permission.delete_room]: "Delete the room",
+  [Permission.connect]: "Join voice",
+  [Permission.speak]: "Speak in voice",
+  [Permission.mute]: "Mute others",
+  [Permission.video]: "Show video",
+  [Permission.screenshare]: "Share screen",
 };
 
 export const LABELS_PLATFORM: Record<Platform, string> = {
-  [Platform.Xbox]: "Xbox",
-  [Platform.Steam]: "Steam",
+  [Platform.xbox]: "Xbox",
+  [Platform.steam]: "Steam",
 };
 
 export const LABELS_ROLE: Record<GlobalRole, string> = {
-  [GlobalRole.Owner]: "Owner",
-  [GlobalRole.Admin]: "Admin",
-  [GlobalRole.Member]: "Member",
-  [GlobalRole.Visitor]: "Visitor",
+  [GlobalRole.owner]: "Owner",
+  [GlobalRole.admin]: "Admin",
+  [GlobalRole.member]: "Member",
+  [GlobalRole.visitor]: "Visitor",
 };
 
 export const LABELS_STATUS: Record<Status, string> = {
-  [Status.Online]: "Online",
-  [Status.Busy]: "Do Not Disturb",
-  [Status.Away]: "Away",
-  [Status.Offline]: "Offline",
+  [Status.online]: "Online",
+  [Status.busy]: "Do Not Disturb",
+  [Status.away]: "Away",
+  [Status.offline]: "Offline",
 };
 
 export const LABELS_VISIBILITY: Record<Visibility, string> = {
-  [Visibility.Public]: "Public",
-  [Visibility.Locked]: "Locked",
-  [Visibility.Hidden]: "Hidden",
+  [Visibility.public]: "Public",
+  [Visibility.locked]: "Locked",
+  [Visibility.hidden]: "Hidden",
 };
 
 export const DESCRIPTIONS_VISIBILITY: Record<Visibility, string> = {
-  [Visibility.Public]: "Listed in discovery, anyone can join",
-  [Visibility.Locked]: "Listed in discovery, joining needs an invite",
-  [Visibility.Hidden]: "Not listed, joining needs an invite",
+  [Visibility.public]: "Listed in discovery, anyone can join",
+  [Visibility.locked]: "Listed in discovery, joining needs an invite",
+  [Visibility.hidden]: "Not listed, joining needs an invite",
 };

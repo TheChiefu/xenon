@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Folder } from "@/bindings/shared";
-    import { Visibility } from "@/bindings/types";
+    import { Visibility } from "@/bindings/shared";
     import { LABELS_VISIBILITY } from "@/lib/labels";
     import { Section, folderToggle, getLayout, isLocked, isUnsaved, saveLayout } from "@/lib/rooms/layout.svelte";
     import { getRoomData, type RoomId, getSelectedRoom, selectRoom } from "@/lib/rooms/data.svelte";
@@ -171,10 +171,10 @@
         oncontextmenu={(event) => openMenu(event, roomCtx(roomId))}
     >
         {room?.name}
-        {#if room?.visibility === Visibility.Locked}
-            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.Locked]}>{@html icon_lock}</span>
-        {:else if room?.visibility === Visibility.Hidden}
-            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.Hidden]}>{@html icon_eye_off}</span>
+        {#if room?.visibility === Visibility.locked}
+            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.locked]}>{@html icon_lock}</span>
+        {:else if room?.visibility === Visibility.hidden}
+            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.hidden]}>{@html icon_eye_off}</span>
         {/if}
     </button>
 {/snippet}

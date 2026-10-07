@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GlobalRole, Status } from "@/bindings/types";
+  import { GlobalRole, Status } from "@/bindings/shared";
   import ProfileCard from "@/components/profile_card.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
 
@@ -87,8 +87,8 @@
       display_name={display_name}
       username="username"
       description={description}
-      status={Status.Online}
-      role={GlobalRole.Member}
+      status={Status.online}
+      role={GlobalRole.member}
       links={[]}
       created_at="Jan 1, 2026"
       editable

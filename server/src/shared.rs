@@ -13,7 +13,7 @@ use ts_rs::TS;
 
 /// A user's server-wide role
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum GlobalRole {
@@ -25,7 +25,7 @@ pub enum GlobalRole {
 
 /// How a room is discovered and entered
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum Visibility {
@@ -38,7 +38,7 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum Notify {
@@ -49,7 +49,7 @@ pub enum Notify {
 
 /// A game service an account is linked to
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum Platform {
@@ -59,7 +59,7 @@ pub enum Platform {
 
 /// How a user appears to others
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum Status {
@@ -72,7 +72,7 @@ pub enum Status {
 // Permissions //
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "snake_case")]
 pub enum Permission {
     /// Send messages

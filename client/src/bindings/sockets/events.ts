@@ -4,7 +4,12 @@ import type { Platform, Status } from "../shared";
 /**
  * What a user is connected from, for a client to show beside their status.
  */
-export type Device = "windows" | "macos" | "linux" | "android" | "ios" | "chrome" | "desktop" | "mobile" | "tablet";
+export enum Device { "windows" = "windows", "macos" = "macos", "linux" = "linux", "android" = "android", "ios" = "ios", "chrome" = "chrome", "desktop" = "desktop", "mobile" = "mobile", "tablet" = "tablet" }
+
+/**
+ * How a linked game account appears to someone sharing a room with it.
+ */
+export enum GamePresence { "Online" = "Online", "Offline" = "Offline", "Away" = "Away" }
 
 /**
  * What a linked account last reported about the user who owns it.
@@ -18,11 +23,6 @@ title: string | null,
  * What the game says they are doing
  */
 activity: string | null, };
-
-/**
- * How a linked game account appears to someone sharing a room with it.
- */
-export type GamePresence = "Online" | "Offline" | "Away";
 
 /**
  * One browser a push message is sent to.

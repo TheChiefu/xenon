@@ -5,7 +5,7 @@ import lightUrl from "@/styles/themes/light.css?url";
 import sporeUrl from "@/styles/themes/spore.css?url";
 
 // THEMES //
-const keyTheme = "theme";
+const keyTheme = "prefTheme";
 const defaultTheme = "dark";
 const themeStylesheetId = "theme-stylesheet";
 
@@ -48,4 +48,93 @@ export function setTheme(theme: string): void {
   currentTheme = theme;
   localStorage.setItem(keyTheme, theme);
   applyTheme(theme);
+}
+
+// ANIMATE PHOTOS //
+export enum AnimatePhotos {
+  Always = "always",
+  OnHover = "on-hover",
+  Never = "never",
+}
+
+const keyAnimatePhotos = "prefAnimatePhotos";
+const defaultAnimatePhotos: AnimatePhotos = AnimatePhotos.Always;
+
+let currentAnimatePhotos: AnimatePhotos = $state(readAnimatePhotos());
+
+export function getAnimatePhotos(): AnimatePhotos {
+  return currentAnimatePhotos;
+}
+
+export function setAnimatePhotos(value: AnimatePhotos): void {
+  currentAnimatePhotos = value;
+  localStorage.setItem(keyAnimatePhotos, value);
+}
+
+// Attachment: plays or pauses a video to match the setting
+export function animatePhoto(video: HTMLVideoElement): () => void {
+  const play = () => { video.play().catch(() => {}); };  // Rejects when paused before starting
+  const pause = () => { video.pause(); };
+
+  if (currentAnimatePhotos === AnimatePhotos.Always) {
+    play();
+  } else {
+    pause();
+  }
+
+  if (currentAnimatePhotos === AnimatePhotos.OnHover) {
+    video.addEventListener("pointerenter", play);
+    video.addEventListener("pointerleave", pause);
+  }
+
+  return () => {
+    video.removeEventListener("pointerenter", play);
+    video.removeEventListener("pointerleave", pause);
+  };
+}
+
+function readAnimatePhotos(): AnimatePhotos {
+  const stored = localStorage.getItem(keyAnimatePhotos);
+  const values: string[] = Object.values(AnimatePhotos);
+
+  // Fallback on unknown
+  if (stored === null || !values.includes(stored)) {
+    return defaultAnimatePhotos;
+  }
+
+  return stored as AnimatePhotos;
+}
+
+// AWAY TIMER //
+const keyAwayMinutes = "prefAwayMinutes";
+const defaultAwayMinutes = 10;
+
+let currentAwayMinutes: number = $state(readAwayMinutes());
+
+export function getAwayMinutes(): number {
+  return currentAwayMinutes;
+}
+
+export function setAwayMinutes(minutes: number): void {
+  if (!isValidAwayMinutes(minutes)) {
+    return;
+  }
+
+  currentAwayMinutes = minutes;
+  localStorage.setItem(keyAwayMinutes, String(minutes));
+}
+
+function isValidAwayMinutes(minutes: number): boolean {
+  return Number.isFinite(minutes) && minutes >= 0;
+}
+
+function readAwayMinutes(): number {
+  const stored = Number(localStorage.getItem(keyAwayMinutes) ?? defaultAwayMinutes);
+
+  // Fallback on invalid
+  if (!isValidAwayMinutes(stored)) {
+    return defaultAwayMinutes;
+  }
+
+  return stored;
 }

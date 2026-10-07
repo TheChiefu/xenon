@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { GameActivity } from "@/bindings/sockets/events";
-  import { Device, Platform, Status } from "@/bindings/types";
+  import type { Device, GameActivity } from "@/bindings/sockets/events";
+  import { Status } from "@/bindings/shared";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { getFile, loadFiles } from "@/lib/files.svelte";
   import { listMembers } from "@/lib/api/rooms";
@@ -46,7 +46,7 @@
           display_name: user.display_name,
           avatar_file_id: user.avatar_file_id,
           banner_file_id: user.banner_file_id,
-          status: Status.Offline,
+          status: Status.offline,
           device: null,
           game: null,
         }));
@@ -74,10 +74,10 @@
 
   // Where each status sits in the list
   const ORDER_STATUS: Record<Status, number> = {
-    [Status.Online]: 0,
-    [Status.Busy]: 1,
-    [Status.Away]: 2,
-    [Status.Offline]: 3,
+    [Status.online]: 0,
+    [Status.busy]: 1,
+    [Status.away]: 2,
+    [Status.offline]: 3,
   };
 
   // Status first, then alphabetical within it, redone as members come and go

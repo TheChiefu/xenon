@@ -17,7 +17,7 @@ use crate::state::AppState;
 
 /// What a user is connected from, for a client to show beside their status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 pub enum Device {
     Windows,

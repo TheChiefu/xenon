@@ -23,7 +23,7 @@ pub enum ClientEvent {
 /// How a linked game account appears to someone sharing a room with it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts", repr(enum = name)))]
 pub enum GamePresence {
     Online,
     Offline,
