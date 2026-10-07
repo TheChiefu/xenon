@@ -1,40 +1,57 @@
 <script lang="ts">
   import type { LinkedAccount } from "@/bindings/shared";
   import type { GlobalRole, Status } from "@/bindings/shared";
-  import { ICONS_PLATFORM, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
-  import icon_pencil from "@/assets/icons/pencil.svg?raw";
+  import { Platform } from "@/bindings/shared";
+  import type { Device, GameActivity } from "@/bindings/sockets/events";
+  import { ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
+  import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
+  import { animatePhoto } from "@/lib/settings.svelte";
 
   interface Props {
     id: string;
     display_name: string;
     username: string;
     description: string;
-    status: Status;
+    status?: Status | null;
+    device?: Device | null;
+    game?: GameActivity | null;
     role: GlobalRole;
     links: LinkedAccount[];
     created_at: string;
     deleted_at?: string | null;
-    avatar_url?: string | null;
-    banner_url?: string | null;
-
-    // Shows the edit buttons on the banner and avatar
-    editable?: boolean;
+    avatar_file_id?: string | null;
+    banner_file_id?: string | null;
   }
   let {
     id,
     display_name,
     username,
     description,
-    status,
+    status = null,
+    device = null,
+    game = null,
     role,
     links,
     created_at,
     deleted_at = null,
-    avatar_url = null,
-    banner_url = null,
-    editable = false,
+    avatar_file_id = null,
+    banner_file_id = null,
   }: Props = $props();
 
+  let avatar = $state<FetchedFile | null>(null);
+  let banner = $state<FetchedFile | null>(null);
+
+  loadPictures();
+
+  async function loadPictures() {
+    if (avatar_file_id !== null) {
+      avatar = await fetchFileBlob(avatar_file_id);
+    }
+
+    if (banner_file_id !== null) {
+      banner = await fetchFileBlob(banner_file_id);
+    }
+  }
 </script>
 
 <style>
@@ -48,8 +65,8 @@
 
   .banner {
     position: relative;
-    height: 6rem;
-    background: var(--border) center / cover no-repeat;
+    height: 3rem;
+    background: var(--border);
   }
 
   .avatar {
@@ -59,20 +76,15 @@
     width: 5rem;
     height: 5rem;
     border: 3px solid var(--component);
-    border-radius: 50%;
-    background: var(--background) center / cover no-repeat;
+    background: var(--background);
   }
 
-  .edit-banner {
+  .media {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-  }
-
-  .edit-avatar {
-    position: absolute;
-    right: -0.25rem;
-    bottom: -0.25rem;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .body {
@@ -136,18 +148,22 @@
 </style>
 
 <div class="card">
-  <div class="banner" style:background-image={banner_url ? `url("${banner_url}")` : null}>
-    {#if editable}
-      <button class="icon-btn edit-banner" aria-label="Edit banner">
-        <span class="icon" aria-hidden="true">{@html icon_pencil}</span>
-      </button>
+  <div class="banner">
+    {#if banner !== null}
+      {#if banner.mime.startsWith("video/")}
+        <video class="media" src={banner.url} {@attach animatePhoto} muted loop playsinline></video>
+      {:else}
+        <img class="media" src={banner.url} alt=""/>
+      {/if}
     {/if}
 
-    <div class="avatar" style:background-image={avatar_url ? `url("${avatar_url}")` : null}>
-      {#if editable}
-        <button class="icon-btn edit-avatar" aria-label="Edit avatar">
-          <span class="icon" aria-hidden="true">{@html icon_pencil}</span>
-        </button>
+    <div class="avatar">
+      {#if avatar !== null}
+        {#if avatar.mime.startsWith("video/")}
+          <video class="media" src={avatar.url} {@attach animatePhoto} muted loop playsinline></video>
+        {:else}
+          <img class="media" src={avatar.url} alt=""/>
+        {/if}
       {/if}
     </div>
   </div>
@@ -162,11 +178,22 @@
     {/if}
 
     <dl class="meta">
-      <dt>Status</dt>
-      <dd>{LABELS_STATUS[status]}</dd>
-      <dt>Role</dt>
+      {#if status !== null}
+        <dt>Status</dt>
+        <dd>{LABELS_STATUS[status]}{device === null ? "" : ` · ${LABELS_DEVICE[device]}`}</dd>
+      {/if}
+
+      {#if game !== null}
+        <dt>Game Activity</dt>
+        <dd class="link">
+          <span class="icon" title={LABELS_PLATFORM[game.platform]}>{@html ICONS_PLATFORM[game.platform]}</span>
+          {game.title ?? game.activity ?? game.status}
+        </dd>
+      {/if}
+
+      <dt>Global Role</dt>
       <dd>{LABELS_ROLE[role]}</dd>
-      <dt>Linked</dt>
+      <dt>Linked Accounts</dt>
       <dd>
         {#each links as link}
           <p class="link">

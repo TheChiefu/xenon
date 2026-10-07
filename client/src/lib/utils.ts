@@ -35,17 +35,20 @@ export async function request(path: string, method?: Method, body?: unknown): Pr
     }
 
     const headers: Record<string, string> = { "Authorization": `Bearer ${token}` };
+    let payload: string | FormData | undefined = undefined;
 
-    // Default headers to JSON
-    if (body !== undefined) {
+    if (body instanceof FormData) {
+        payload = body;
+    } else if (body !== undefined) {
         headers["Content-Type"] = "application/json";
+        payload = JSON.stringify(body);
     }
 
     // An undefined method is a GET (fetch's default)
     const response = await fetch(`${url}${path}`, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: payload,
     });
 
     // Failure throws error message from server

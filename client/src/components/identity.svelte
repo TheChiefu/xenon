@@ -5,9 +5,7 @@
   import { LABELS_STATUS } from "@/lib/labels";
   import { Status } from "@/bindings/shared";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
-  import { animatePhoto } from "@/lib/settings.svelte";
   import { confirmDialog } from "@/lib/confirm.svelte";
-  import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { dialogFly } from "@/lib/transitions";
   import Settings from "@/views/settings.svelte";
 
@@ -18,7 +16,6 @@
   import icon_mic from "@/assets/icons/mic.svg?raw";
   import icon_mic_muted from "@/assets/icons/mic-muted.svg?raw";
 
-  let avatar = $state<FetchedFile | null>(null);
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
 
@@ -43,34 +40,20 @@
 
     setStatus(event.target.value as Status);
   }
-
-  $effect(() => {
-    const fileId = getProfile()?.avatar_file_id;
-    if (fileId == null) {
-      avatar = null;
-      return;
-    }
-
-    fetchFileBlob(fileId).then((file) => { avatar = file; });
-
-    return () => {
-      if (avatar) URL.revokeObjectURL(avatar.url);
-    };
-  });
 </script>
 
 <style>
   .user {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
+    display: grid;
+    align-content: center;
+    width: 6rem;
     height: 100%;
-    padding: 0 1.125rem;
+    padding-right: 0.5rem;
     border: 0;
     background: var(--component-raised);
     color: var(--text);
     font: inherit;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
   }
 
@@ -78,19 +61,6 @@
   .status-busy      { box-shadow: inset var(--status-bar-width) 0 0 var(--status-busy); }
   .status-away      { box-shadow: inset var(--status-bar-width) 0 0 var(--status-away); }
   .status-offline   { box-shadow: inset var(--status-bar-width) 0 0 var(--status-offline); }
-
-  .user-avatar {
-    width: 2rem;
-    height: 2rem;
-    flex: none;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .user-text {
-    display: grid;
-    min-width: 0;
-  }
 
   .user-name, .user-handle {
     white-space: nowrap;
@@ -111,7 +81,6 @@
     position: relative;
     height: 100%;
     border-left: 1px solid var(--border);
-    min-width: 6rem;
   }
 
   .menu-clip {
@@ -154,10 +123,8 @@
     aria-expanded={menuOpen}
     onclick={() => menuOpen = !menuOpen}
   >
-    <span class="user-text">
-      <span class="user-name">{getProfile()?.display_name ?? getActiveLogin()?.username}</span>
-      <span class="user-handle">@{getActiveLogin()?.username}</span>
-    </span>
+    <span class="user-name">{getProfile()?.display_name ?? ""}</span>
+    <span class="user-handle">@{getActiveLogin()?.username}</span>
   </button>
 
   {#if menuOpen}

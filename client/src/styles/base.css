@@ -59,6 +59,14 @@ label {
   height: 100%;
 }
 
+.text-outline {
+  filter:
+    drop-shadow(1px 0 0 rgba(0, 0, 0, 0.5))
+    drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.5))
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5))
+    drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.5));
+}
+
 .icon-btn {
   width: 2.125rem;
   height: 2.125rem;

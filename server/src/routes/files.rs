@@ -9,6 +9,8 @@ use futures_util::TryStreamExt;
 use serde::Serialize;
 use sqlx::SqlitePool;
 use tokio_util::io::{ReaderStream, StreamReader};
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::api::files::Stored;
@@ -23,6 +25,7 @@ use crate::{api, config, db, validate};
 
 /// A stored file, as sent to clients.
 #[derive(Clone, Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/files.ts"))]
 pub struct FileResponse {
     pub id: Uuid,
     pub filename: String,

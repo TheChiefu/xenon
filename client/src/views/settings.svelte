@@ -78,6 +78,10 @@
 
   // Closes on Escape with the fade out
   function cancel(event: Event) {
+    if (event.target !== dialog) {
+      return;
+    }
+
     event.preventDefault();
     onClose();
   }

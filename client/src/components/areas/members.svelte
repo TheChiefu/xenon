@@ -2,7 +2,7 @@
   import { Device, type GameActivity } from "@/bindings/sockets/events";
   import { Status } from "@/bindings/shared";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
-  import { getFile, loadFiles } from "@/lib/files.svelte";
+  import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
   import { getSelectedRoom } from "@/lib/rooms/data.svelte";
   import { getUser, loadUsers } from "@/lib/users.svelte";
@@ -13,6 +13,8 @@
     display_name: string;
     avatar_file_id: string | null;
     banner_file_id: string | null;
+    avatar: FetchedFile | null;
+    banner: FetchedFile | null;
     status: Status;
     device: Device | null;
     game: GameActivity | null;
@@ -46,6 +48,8 @@
           display_name: user.display_name,
           avatar_file_id: user.avatar_file_id,
           banner_file_id: user.banner_file_id,
+          avatar: null,
+          banner: null,
           status: Status.offline,
 
           // TEMPORARY: stands in until the socket reports what a member is on
@@ -55,19 +59,16 @@
 
       failure = null;
 
-      // Collect avatar and banner of every member, then fetch them together
-      const fileIds: string[] = [];
+      // Fetch the avatar and banner of every member
       for (const member of members) {
         if (member.avatar_file_id !== null) {
-          fileIds.push(member.avatar_file_id);
+          member.avatar = await fetchFileBlob(member.avatar_file_id);
         }
 
         if (member.banner_file_id !== null) {
-          fileIds.push(member.banner_file_id);
+          member.banner = await fetchFileBlob(member.banner_file_id);
         }
       }
-
-      await loadFiles(fileIds);
     } catch (error) {
       members = [];
       failure = error instanceof Error ? error.message : String(error);
@@ -187,11 +188,6 @@
     flex: 1;
     min-width: 0;
     padding: 0 0.5rem;
-    filter:
-      drop-shadow(1px 0 0 rgba(0, 0, 0, 0.5))
-      drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.5))
-      drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5))
-      drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.5));
   }
 
   .name, .game {
@@ -260,10 +256,10 @@
   <!-- Member List -->
   <div class="list">
     {#each ordered as member (member.id)}
-      {@const avatar = member.avatar_file_id === null ? undefined : getFile(member.avatar_file_id)}
-      {@const banner = member.banner_file_id === null ? undefined : getFile(member.banner_file_id)}
+      {@const avatar = member.avatar}
+      {@const banner = member.banner}
       <button class="member">
-        {#if banner !== undefined}
+        {#if banner !== null}
           {#if banner.mime.startsWith("video/")}
             <video class="banner" src={banner.url} autoplay muted loop playsinline></video>
           {:else}
@@ -271,7 +267,7 @@
           {/if}
         {/if}
 
-        {#if avatar === undefined}
+        {#if avatar === null}
           <span class="avatar"></span>
         {:else if avatar.mime.startsWith("video/")}
           <video class="avatar" src={avatar.url} autoplay muted loop playsinline></video>
@@ -279,7 +275,7 @@
           <img class="avatar" src={avatar.url} alt=""/>
         {/if}
 
-        <span class="text">
+        <span class="text text-outline">
           <span class="name">{member.display_name}</span>
 
           {#if member.game !== null}
