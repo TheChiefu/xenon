@@ -23,8 +23,8 @@ pub async fn on_report(
         None => None
     };
 
-    // Invisible users have no game presence, remove entry
-    if declared == Some(Status::Invisible) {
+    // Offline users have no game presence, remove entry
+    if declared == Some(Status::Offline) {
         write_map(state).remove(&user_id);
         return;
     }

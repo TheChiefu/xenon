@@ -76,7 +76,7 @@
   .status-online    { box-shadow: inset var(--status-bar-width) 0 0 var(--status-online); }
   .status-busy      { box-shadow: inset var(--status-bar-width) 0 0 var(--status-busy); }
   .status-away      { box-shadow: inset var(--status-bar-width) 0 0 var(--status-away); }
-  .status-invisible { box-shadow: inset var(--status-bar-width) 0 0 var(--status-invisible); }
+  .status-offline   { box-shadow: inset var(--status-bar-width) 0 0 var(--status-offline); }
 
   .user-avatar {
     width: 2rem;

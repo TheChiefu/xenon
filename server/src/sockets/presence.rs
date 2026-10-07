@@ -4,6 +4,9 @@ use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::db;
 use crate::error::Result;
 use crate::shared::Status;
@@ -12,19 +15,9 @@ use crate::sockets::game_presence;
 use crate::sockets::registry;
 use crate::state::AppState;
 
-/// How a user appears to a viewer, from their [`Status`] and whether
-/// they have a connection (Invisible appears as Offline).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Presence {
-    Offline,
-    Online,
-    Busy,
-    Away
-}
-
-/// What a user is connected from, for a client to show beside their presence.
+/// What a user is connected from, for a client to show beside their status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 #[serde(rename_all = "lowercase")]
 pub enum Device {
     Windows,
@@ -32,7 +25,10 @@ pub enum Device {
     Linux,
     Android,
     Ios,
-    Xbox
+    Chrome,
+    Desktop,
+    Mobile,
+    Tablet
 }
 
 /// Builds the presence list a connecting user is sent. It contains everyone
@@ -48,37 +44,20 @@ pub async fn snapshot(
 
     let mut users = Vec::new();
     for declared in registry::statuses_of(state, &members) {
-        let presence = from_status(Some(declared.status));
 
-        // An Invisible member is left out, the same as one holding no connection
-        if presence == Presence::Offline {
+        // An Offline member is left out, the same as one holding no connection
+        if declared.status == Status::Offline {
             continue;
         }
 
         users.push(UserPresence {
             user_id: declared.user_id,
-            presence,
+            status: declared.status,
             device: declared.device
         });
     }
 
     Ok(users)
-}
-
-/// The presence a viewer sees for a given status.
-///
-/// # Arguments
-///
-/// * `status` - Status the user's connection declares, or `None` when they
-///   hold no connection.
-pub fn from_status(status: Option<Status>) -> Presence {
-    match status {
-        Some(Status::Online) => Presence::Online,
-        Some(Status::Busy) => Presence::Busy,
-        Some(Status::Away) => Presence::Away,
-        Some(Status::Invisible) | None => Presence::Offline
-    }
-
 }
 
 /// Sends the new member's presence to the room
@@ -118,14 +97,14 @@ pub async fn on_change(
     before: Option<Status>,
     after: Option<Status>,
 ) {
-    // Invisible users have no game presence
-    if after == Some(Status::Invisible) && before != Some(Status::Invisible) {
+    // Offline users have no game presence
+    if after == Some(Status::Offline) && before != Some(Status::Offline) {
         game_presence::clear(state, user_id).await;
     }
 
-    // An Invisible user connecting or leaving is not a change to a viewer
-    let presence = from_status(after);
-    if presence == from_status(before) {
+    // An Offline user connecting or leaving is not a change to a viewer
+    let status = after.unwrap_or(Status::Offline);
+    if status == before.unwrap_or(Status::Offline) {
         return;
     }
 
@@ -135,6 +114,6 @@ pub async fn on_change(
         None => None
     };
 
-    let event = ServerEvent::PresenceUpdated { user_id, presence, device };
+    let event = ServerEvent::PresenceUpdated { user_id, status, device };
     registry::inform_shared_members(state, user_id, event).await;
 }

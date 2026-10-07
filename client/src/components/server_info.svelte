@@ -1,18 +1,7 @@
 <script lang="ts">
-  import type { ServerInfo } from "@/bindings/routes/server";
-  import { getUrl } from "@/lib/session.svelte";
-  import { getServerInfo } from "@/lib/api/server";
+  import { getServerInfo } from "@/lib/server.svelte";
 
-  let info = $state<ServerInfo | null>(null);
-
-  $effect(() => {
-    const url = getUrl();
-    if (url === null) return;
-
-    getServerInfo(url)
-      .then((data) => { info = data; })
-      .catch(() => { info = null; });
-  });
+  const info = $derived(getServerInfo());
 </script>
 
 <style>

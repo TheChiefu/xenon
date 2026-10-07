@@ -29,14 +29,14 @@ export type Permission = "post" | "attach" | "commands" | "delete_msg" | "invite
 export type Platform = "xbox" | "steam";
 
 /**
- * One entry in a user's room list layout
+ * One entry in a user's room list layout, room ID and possible folder it's in
  */
 export type RoomListItem = string | Folder;
 
 /**
- * What a user asks to appear as while connected
+ * How a user appears to others
  */
-export type Status = "online" | "busy" | "away" | "invisible";
+export type Status = "online" | "busy" | "away" | "offline";
 
 /**
  * How a room is discovered and entered

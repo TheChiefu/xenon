@@ -21,12 +21,22 @@ export function addRoomData(room: RoomResponse): void {
 }
 
 // Room Selection
-let selectedRoom: RoomId | null = $state(null);
+const keySelectedRoom = "prefSelectedRoom";
+
+let selectedRoom: RoomId | null = $state(localStorage.getItem(keySelectedRoom));
 
 export function getSelectedRoom(): RoomId | null {
   return selectedRoom;
 }
 
-export function selectRoom(id: RoomId): void {
+export function selectRoom(id: RoomId | null): void {
   selectedRoom = id;
+  console.log(id);
+
+  if (id === null) {
+    localStorage.removeItem(keySelectedRoom);
+    return;
+  }
+
+  localStorage.setItem(keySelectedRoom, id);
 }

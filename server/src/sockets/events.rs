@@ -10,7 +10,7 @@ use ts_rs::TS;
 
 use crate::shared::{Platform, Status};
 use crate::routes::messages::MessageResponse;
-use crate::sockets::presence::{Device, Presence};
+use crate::sockets::presence::Device;
 
 /// What a client sends over its socket.
 #[derive(Deserialize)]
@@ -23,6 +23,7 @@ pub enum ClientEvent {
 /// How a linked game account appears to someone sharing a room with it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 pub enum GamePresence {
     Online,
     Offline,
@@ -31,6 +32,7 @@ pub enum GamePresence {
 
 /// What a linked account last reported about the user who owns it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 pub struct GameActivity {
     pub platform: Platform,
     pub status: GamePresence,
@@ -96,6 +98,7 @@ pub enum SidecarEvent {
 
 /// A user and the linked account they are on.
 #[derive(Serialize, Clone)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 pub struct UserGamePresence {
     pub user_id: Uuid,
 
@@ -105,9 +108,10 @@ pub struct UserGamePresence {
 
 /// A user and what the reader is told to show for them.
 #[derive(Serialize, Clone)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 pub struct UserPresence {
     pub user_id: Uuid,
-    pub presence: Presence,
+    pub status: Status,
 
     /// Unset until the user's client declares one
     pub device: Option<Device>
@@ -165,7 +169,7 @@ pub enum ServerEvent {
     },
     PresenceUpdated {
         user_id: Uuid,
-        presence: Presence,
+        status: Status,
         device: Option<Device>
     },
     PresenceSnapshot {

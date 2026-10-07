@@ -12,7 +12,7 @@
   --status-online: rgba(46, 140, 75, 1);
   --status-busy: rgba(190, 0, 0, 1);
   --status-away: rgba(214, 140, 30, 1);
-  --status-invisible: rgba(92, 101, 114, 1);
+  --status-offline: rgba(92, 101, 114, 1);
   color-scheme: light;
 }
 

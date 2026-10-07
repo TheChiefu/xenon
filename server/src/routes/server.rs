@@ -12,7 +12,7 @@ use crate::error::Result;
 
 // Data Structs //
 
-/// Name, version, kind, and description of this server.
+/// General server information and limits clients need to know about
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/server.ts"))]
 pub struct ServerInfo {
@@ -20,6 +20,9 @@ pub struct ServerInfo {
     pub version: String,
     pub kind: String,
     pub description: String,
+
+    /// Ids one user lookup may carry
+    pub limit_users_lookup: usize,
 }
 
 // Routing Methods //
@@ -32,6 +35,7 @@ pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
         version: env!("CARGO_PKG_VERSION").to_string(),
         kind: config::get().info.kind.clone(),
         description: config::get().info.description.clone(),
+        limit_users_lookup: config::get().limits.users_lookup,
     };
 
     Ok((StatusCode::OK, Json(info)))

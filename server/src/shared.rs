@@ -57,7 +57,7 @@ pub enum Platform {
     Steam,
 }
 
-/// What a user asks to appear as while connected
+/// How a user appears to others
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 #[serde(rename_all = "lowercase")]
@@ -66,7 +66,7 @@ pub enum Status {
     Online,
     Busy,
     Away,
-    Invisible,
+    Offline,
 }
 
 // Permissions //

@@ -57,8 +57,10 @@
 
     .list {
         flex: 1;
+        min-height: 0;
         display: flex;
         flex-direction: column;
+        overflow-y: auto;
     }
 
     .list.moving {
@@ -221,6 +223,10 @@
     style="width: {getWidth()}px"
     style:--handle-width="{HANDLE_WIDTH}px"
     oncontextmenu={(event) => openMenu(event, paneCtx())}
+    onclick={(event) => {
+        if (!(event.target as HTMLElement).closest("button"))
+        selectRoom(null);
+    }}
     role="presentation"
     bind:this={pane}
 >

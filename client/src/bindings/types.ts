@@ -8,6 +8,20 @@ import type {
   Status as SharedStatus,
   Visibility as SharedVisibility,
 } from "./shared";
+import type { Device as SharedDevice } from "./sockets/events";
+
+export const Device = {
+  Windows: "windows",
+  Macos: "macos",
+  Linux: "linux",
+  Android: "android",
+  Ios: "ios",
+  Chrome: "chrome",
+  Desktop: "desktop",
+  Mobile: "mobile",
+  Tablet: "tablet",
+} as const satisfies Record<string, SharedDevice>;
+export type Device = SharedDevice;
 
 export const GlobalRole = {
   Owner: "owner",
@@ -52,7 +66,7 @@ export const Status = {
   Online: "online",
   Busy: "busy",
   Away: "away",
-  Invisible: "invisible",
+  Offline: "offline",
 } as const satisfies Record<string, SharedStatus>;
 export type Status = SharedStatus;
 

@@ -3,18 +3,23 @@
   import Toolbar from "./components/areas/toolbar.svelte";
   import Popup from "./views/popup.svelte";
   import Rooms from "./components/areas/rooms.svelte";
+  import Members from "./components/areas/members.svelte";
   import ContextMenu from "./components/context_menu.svelte";
   import { getToken } from "./lib/session.svelte";
   import { isConfirmVisible, getConfirmMessage, resolveConfirm } from "./lib/confirm.svelte";
   import { loadProfile } from "./lib/profile.svelte";
+  import { loadServerInfo } from "./lib/server.svelte";
   import { loadPreferences } from "./lib/preferences.svelte";
   import { loadRooms } from "./lib/rooms/layout.svelte";
+  import { getSelectedRoom } from "./lib/rooms/data.svelte";
 
   $effect(() => {
     if (getToken() === null) return;
 
-    loadProfile();
-    loadPreferences().then(loadRooms);
+    loadServerInfo()
+      .then(loadProfile)
+      .then(loadPreferences)
+      .then(loadRooms);
   });
 </script>
 
@@ -24,6 +29,7 @@
     <Toolbar/>
     <div class="panes">
       <Rooms/>
+      <Members/>
     </div>
   </div>
 {:else}
