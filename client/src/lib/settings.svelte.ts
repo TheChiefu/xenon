@@ -72,24 +72,41 @@ export function setAnimatePhotos(value: AnimatePhotos): void {
 }
 
 // Attachment: plays or pauses a video to match the setting
-export function animatePhoto(video: HTMLVideoElement): () => void {
-  const play = () => { video.play().catch(() => {}); };  // Rejects when paused before starting
-  const pause = () => { video.pause(); };
+export function animatePhoto(video: HTMLVideoElement): void {
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.disablePictureInPicture = true;
+  video.style.pointerEvents = "none";
 
   if (currentAnimatePhotos === AnimatePhotos.Always) {
-    play();
+    video.play().catch(() => {});  // Rejects when paused before starting
   } else {
-    pause();
+    video.pause();
   }
+}
+
+export function playOnHover(element: HTMLElement): () => void {
+  const play = () => {
+    element.querySelectorAll("video").forEach((video) => {
+      video.play().catch(() => {});
+    });
+  };
+
+  const pause = () => {
+    element.querySelectorAll("video").forEach((video) => {
+      video.pause();
+    });
+  };
 
   if (currentAnimatePhotos === AnimatePhotos.OnHover) {
-    video.addEventListener("pointerenter", play);
-    video.addEventListener("pointerleave", pause);
+    element.addEventListener("pointerenter", play);
+    element.addEventListener("pointerleave", pause);
   }
 
   return () => {
-    video.removeEventListener("pointerenter", play);
-    video.removeEventListener("pointerleave", pause);
+    element.removeEventListener("pointerenter", play);
+    element.removeEventListener("pointerleave", pause);
   };
 }
 

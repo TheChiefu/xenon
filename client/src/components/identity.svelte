@@ -43,25 +43,55 @@
 </script>
 
 <style>
-  .user {
-    display: grid;
-    align-content: center;
-    width: 6rem;
+  .card {
+    --point: 35px;
+
+    display: flex;
+    width: calc(6rem + var(--point));
     height: 100%;
-    padding-right: 0.5rem;
-    border: 0;
+    clip-path: polygon(
+      0 0,                  /* Top Left */
+      100% 0,               /* Top Right */
+      100% 100%,            /* Bottom Right */
+      0 100%,               /* Bottom Left */
+      var(--point) 50%      /* Notch */
+    );
     background: var(--component-raised);
     color: var(--text);
+  }
+
+  .card:hover {
+    background-color: var(--component-hover);
+  }
+
+  .user,
+  .user:hover {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
     font: inherit;
-    text-align: center;
     cursor: pointer;
   }
 
-  .status-online    { box-shadow: inset var(--status-bar-width) 0 0 var(--status-online); }
-  .status-busy      { box-shadow: inset var(--status-bar-width) 0 0 var(--status-busy); }
-  .status-away      { box-shadow: inset var(--status-bar-width) 0 0 var(--status-away); }
-  .status-offline   { box-shadow: inset var(--status-bar-width) 0 0 var(--status-offline); }
+  .text {
+    display: grid;
+    padding: 0 0.5rem 0 var(--point);
+    text-align: center;
+  }
 
+  .frame {
+    height: 100%;
+    filter: drop-shadow(calc(-1 * var(--status-bar-width)) 0 0 var(--status-color));
+  }
+
+  .status-online    { --status-color: var(--status-online); }
+  .status-busy      { --status-color: var(--status-busy); }
+  .status-away      { --status-color: var(--status-away); }
+  .status-offline   { --status-color: var(--status-offline); }
+  
   .user-name, .user-handle {
     white-space: nowrap;
     overflow: hidden;
@@ -80,7 +110,6 @@
   .identity {
     position: relative;
     height: 100%;
-    border-left: 1px solid var(--border);
   }
 
   .menu-clip {
@@ -118,14 +147,20 @@
 </style>
 
 <div class="identity">
-  <button
-    class="user status-{getStatus()}"
-    aria-expanded={menuOpen}
-    onclick={() => menuOpen = !menuOpen}
-  >
-    <span class="user-name">{getProfile()?.display_name ?? ""}</span>
-    <span class="user-handle">@{getActiveLogin()?.username}</span>
-  </button>
+  <div class="frame status-{getStatus()}">
+    <div class="card">
+      <button
+        class="user"
+        aria-expanded={menuOpen}
+        onclick={() => menuOpen = !menuOpen}
+      >
+        <span class="text">
+          <span class="user-name">{getProfile()?.display_name ?? ""}</span>
+          <span class="user-handle">@{getActiveLogin()?.username}</span>
+        </span>
+      </button>
+    </div>
+  </div>
 
   {#if menuOpen}
     <div class="menu-clip">

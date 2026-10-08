@@ -6,6 +6,7 @@
   import { listMembers } from "@/lib/api/rooms";
   import { getSelectedRoom } from "@/lib/rooms/data.svelte";
   import { getUser, loadUsers } from "@/lib/users.svelte";
+  import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
 
   // What one row shows of a member
   interface Member {
@@ -258,10 +259,10 @@
     {#each ordered as member (member.id)}
       {@const avatar = member.avatar}
       {@const banner = member.banner}
-      <button class="member">
+      <button class="member" {@attach playOnHover}>
         {#if banner !== null}
           {#if banner.mime.startsWith("video/")}
-            <video class="banner" src={banner.url} autoplay muted loop playsinline></video>
+            <video class="banner" src={banner.url} {@attach animatePhoto}></video>
           {:else}
             <img class="banner" src={banner.url} alt=""/>
           {/if}
@@ -270,7 +271,7 @@
         {#if avatar === null}
           <span class="avatar"></span>
         {:else if avatar.mime.startsWith("video/")}
-          <video class="avatar" src={avatar.url} autoplay muted loop playsinline></video>
+          <video class="avatar" src={avatar.url} {@attach animatePhoto}></video>
         {:else}
           <img class="avatar" src={avatar.url} alt=""/>
         {/if}

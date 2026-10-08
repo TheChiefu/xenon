@@ -134,6 +134,7 @@ export function isLocked(): boolean {
 // Unlocks a locked layout, or locks an unlocked one
 export function toggleLock(): void {
   locked = !locked;
+  if (locked && isUnsaved()) saveLayout();
 }
 
 // Helper Methods //

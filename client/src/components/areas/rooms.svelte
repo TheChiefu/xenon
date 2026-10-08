@@ -2,7 +2,7 @@
     import type { Folder } from "@/bindings/shared";
     import { Visibility } from "@/bindings/shared";
     import { LABELS_VISIBILITY } from "@/lib/labels";
-    import { Section, folderToggle, getLayout, isLocked, isUnsaved, saveLayout } from "@/lib/rooms/layout.svelte";
+    import { Section, folderToggle, getLayout, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
     import { getRoomData, type RoomId, getSelectedRoom, selectRoom } from "@/lib/rooms/data.svelte";
     import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
     import { resizeStop, getWidth, HANDLE_WIDTH, isResizing, reset, resize, resizeStart } from "@/lib/rooms/resize.svelte";
@@ -11,11 +11,11 @@
     import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
     import { close, isOpen } from "@/lib/rooms/creation.svelte";
     import NewRoom from "@/views/new_room.svelte";
-    import icon_save from "@/assets/icons/save.svg?raw";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
     import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
     import icon_folder from "@/assets/icons/folder.svg?raw";
+    import icon_back from "@/assets/icons/back.svg?raw";
     import icon_arrow_down from "@/assets/icons/arrow-down.svg?raw";
     import icon_arrow_right from "@/assets/icons/arrow-right.svg?raw";
 
@@ -223,10 +223,6 @@
     style="width: {getWidth()}px"
     style:--handle-width="{HANDLE_WIDTH}px"
     oncontextmenu={(event) => openMenu(event, paneCtx())}
-    onclick={(event) => {
-        if (!(event.target as HTMLElement).closest("button"))
-        selectRoom(null);
-    }}
     role="presentation"
     bind:this={pane}
 >
@@ -234,18 +230,24 @@
     <!-- Display Header and related buttons -->
     <div class="header">
         <h3>Rooms</h3>
+        {#if getSelectedRoom() !== null}
+            <button
+                class="icon-btn"
+                aria-label="Close room"
+                title="Close room"
+                onclick={() => selectRoom(null)}
+            >
+                <span class="icon" aria-hidden="true">{@html icon_back}</span>
+            </button>
+        {/if}
         <button
             class="icon-btn"
-            style:visibility={isUnsaved() ? "visible" : "hidden"}
-            aria-label="Save layout"
-            title="Save layout"
-            onclick={saveLayout}
+            aria-label={isLocked() ? "Unlock layout" : "Lock layout"}
+            title={isLocked() ? "Unlock layout" : "Lock layout"}
+            onclick={toggleLock}
         >
-            <span class="icon" aria-hidden="true">{@html icon_save}</span>
+            <span class="icon" aria-hidden="true">{@html isLocked() ? icon_lock : icon_lock_open}</span>
         </button>
-        {#if !isLocked()}
-            <span class="icon" aria-hidden="true">{@html icon_lock_open}</span>
-        {/if}
     </div>
 
     <!-- Room List -->
