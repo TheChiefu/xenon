@@ -1,5 +1,5 @@
 // Room panel width
-const KEY_USER_ROOM_WIDTH: string = "prefRoomWidth";
+const KEY_USER_ROOM_WIDTH: string = "room_panel_width";
 const DEFAULT_WIDTH: number = 300;
 export const HANDLE_WIDTH: number = 8;
 

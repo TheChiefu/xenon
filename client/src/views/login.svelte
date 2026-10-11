@@ -1,6 +1,6 @@
 <script lang="ts">
   import { login, register } from "@/lib/api/auth";
-  import { addLogin, getLogins, resumeLogin, removeLogin } from "@/lib/session.svelte";
+  import { addAccount, getAccounts, setCurrentLogin, removeAccount } from "@/lib/session.svelte";
   import iconX from "@/assets/icons/x.svg?raw";
 
   // Matches Bind::default() in: server/src/config.rs
@@ -20,7 +20,7 @@
 
   // Whether any login has ever been saved
   function hasSavedLogins(): boolean {
-    return Object.keys(getLogins()).length > 0;
+    return Object.keys(getAccounts()).length > 0;
   }
 
   // Attempt to login
@@ -35,7 +35,7 @@
 
       // Attempt to fetch via cleaned URL
       const token = await login(username, password, clean_url);
-      addLogin(username, clean_url, token);
+      addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
@@ -56,7 +56,7 @@
 
       // Attempt to fetch via cleaned URL
       const token = await register(username, password, display_name, registration_code, clean_url);
-      addLogin(username, clean_url, token);
+      addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
@@ -78,7 +78,7 @@
   // Prompt before removing a saved login
   function confirmRemoveLogin(key: string, username: string) {
     if (confirm(`Remove ${username}?`)) {
-      removeLogin(key);
+      removeAccount(key);
     }
   }
 
@@ -152,6 +152,7 @@
   .login-form-panel {
     width: 100%;
     border: 1px solid var(--border);
+    background-color: var(--background);
     margin-top: 1rem;
   }
 
@@ -265,9 +266,9 @@
             <!-- Saved logins -->
             <div class="saved">
                 <div class="login-entries">
-                    {#each Object.entries(getLogins()) as [key, entry]}
+                    {#each Object.entries(getAccounts()) as [key, entry]}
                         <div class="login-entry">
-                            <button class="is-entry login-entry-main" onclick={() => resumeLogin(key)}>
+                            <button class="is-entry login-entry-main" onclick={() => setCurrentLogin(key)}>
                                 @{entry.username}<br/>{entry.url}
                             </button>
                             <button class="inherit is-danger is-entry" aria-label="Remove {entry.username}" onclick={() => confirmRemoveLogin(key, entry.username)}>

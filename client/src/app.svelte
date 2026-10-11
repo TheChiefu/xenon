@@ -11,7 +11,7 @@
   import { loadServerInfo } from "./lib/server.svelte";
   import { loadPreferences } from "./lib/preferences.svelte";
   import { loadRooms } from "./lib/rooms/layout.svelte";
-  import { getSelectedRoom } from "./lib/rooms/data.svelte";
+  import { getSelectedRoom } from "./lib/session.svelte";
 
   $effect(() => {
     if (getToken() === null) return;

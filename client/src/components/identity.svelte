@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getActiveLogin, signOut } from "@/lib/session.svelte";
+  import { getLoggedInAccount, removeLoggedInAccount, clearCurrentLogin } from "@/lib/session.svelte";
   import { getProfile } from "@/lib/profile.svelte";
   import { getStatus, setStatus } from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
@@ -31,7 +31,7 @@
   async function doSignout() {
     const result = await confirmDialog(msg_sign_out);
     if (result) {
-      signOut();
+      removeLoggedInAccount();
     }
   }
 
@@ -40,6 +40,13 @@
 
     setStatus(event.target.value as Status);
   }
+
+  function pressAway(event: PointerEvent) {
+  if (event.target instanceof Element && !event.target.closest(".identity")) {
+    menuOpen = false;
+  }
+
+}
 </script>
 
 <style>
@@ -146,6 +153,8 @@
 
 </style>
 
+<svelte:window onpointerdown={pressAway}/>
+
 <div class="identity">
   <div class="frame status-{getStatus()}">
     <div class="card">
@@ -156,7 +165,7 @@
       >
         <span class="text">
           <span class="user-name">{getProfile()?.display_name ?? ""}</span>
-          <span class="user-handle">@{getActiveLogin()?.username}</span>
+          <span class="user-handle">@{getLoggedInAccount()?.username}</span>
         </span>
       </button>
     </div>
@@ -205,7 +214,7 @@
 
       <hr/>
 
-      <button>Switch Account</button>
+      <button onclick={clearCurrentLogin}>Switch Account</button>
       <button class="is-danger" onclick={doSignout}>Sign Out</button>
     </div>
     </div>

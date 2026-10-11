@@ -3,7 +3,8 @@
     import { Visibility } from "@/bindings/shared";
     import { LABELS_VISIBILITY } from "@/lib/labels";
     import { Section, folderToggle, getLayout, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
-    import { getRoomData, type RoomId, getSelectedRoom, selectRoom } from "@/lib/rooms/data.svelte";
+    import { getRoomData, type RoomId } from "@/lib/rooms/data.svelte";
+    import { getSelectedRoom, selectRoom } from "@/lib/session.svelte";
     import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
     import { resizeStop, getWidth, HANDLE_WIDTH, isResizing, reset, resize, resizeStart } from "@/lib/rooms/resize.svelte";
     import { openMenu } from "@/lib/menu.svelte";

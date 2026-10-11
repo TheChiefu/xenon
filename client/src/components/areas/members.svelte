@@ -4,7 +4,7 @@
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
-  import { getSelectedRoom } from "@/lib/rooms/data.svelte";
+  import { getSelectedRoom } from "@/lib/session.svelte";
   import { getUser, loadUsers } from "@/lib/users.svelte";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
 
@@ -54,7 +54,7 @@
           status: Status.offline,
 
           // TEMPORARY: stands in until the socket reports what a member is on
-          device: Device.macos,
+          device: Device.linux,
           game: null,
         }));
 

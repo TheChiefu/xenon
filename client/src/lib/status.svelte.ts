@@ -4,7 +4,7 @@ import { Status } from "@/bindings/shared";
 import { LABELS_STATUS } from "@/lib/labels";
 import { getAwayMinutes } from "@/lib/settings.svelte";
 
-const keyStatus = "prefStatus";
+const keyStatus = "default_status";
 const defaultStatus: Status = Status.online;
 const idleCheckMs = 15_000;
 const activityEvents = ["pointerdown", "keydown", "wheel"];

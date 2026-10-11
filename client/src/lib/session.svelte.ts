@@ -1,91 +1,105 @@
-export interface Login {
+export interface Account {
   username: string;
   url: string;
   token: string;
+  room: string | null;
 }
 
-const keyLogins = "logins";
-const keyActiveKey = "activeLoginKey";
+// STORAGE //
 
-const storedLogins = localStorage.getItem(keyLogins);
-let logins: Record<string, Login> = $state(storedLogins ? JSON.parse(storedLogins) : {});
-let activeKey: string | null = $state(localStorage.getItem(keyActiveKey));
+const key_accounts = "accounts";
+const key_logged_in = "logged_in";
 
-function loginKey(username: string, url: string): string {
-  return `${username}@${url}`;
+const accounts_json = localStorage.getItem(key_accounts);
+let accounts: Record<string, Account> = $state(accounts_json ? JSON.parse(accounts_json) : {});
+let current_login: string | null = $state(localStorage.getItem(key_logged_in));
+
+// ACCOUNTS //
+function save(): void {
+  localStorage.setItem(key_accounts, JSON.stringify(accounts));
 }
 
-// The active login entry, or null if nothing is active
-export function getActiveLogin(): Login | null {
-  if (activeKey === null) return null;
-  return logins[activeKey] ?? null;
+export function getAccounts(): Record<string, Account> {
+  return accounts;
 }
 
-// The token currently in use, or null if nothing is active
+export function addAccount(username: string, url: string, token: string): void {
+  const key = `${username}@${url}`;
+  let room: string | null = null;
+
+  if (accounts[key] !== undefined) {
+    room = accounts[key].room;
+  }
+
+  accounts[key] = { username, url, token, room };
+
+  save();
+  setCurrentLogin(key);
+}
+
+export function removeAccount(key: string): void {
+  delete accounts[key];
+  save();
+
+  if (current_login === key) {
+    clearCurrentLogin();
+  }
+}
+
+export function removeLoggedInAccount(): void {
+  if (current_login !== null) {
+    removeAccount(current_login);
+  }
+}
+
+// LOGIN //
+
+export function getLoggedInKey(): string | null {
+  return current_login;
+}
+
+// The current account logged in
+export function getLoggedInAccount(): Account | null {
+  if (current_login === null) { return null; }
+  return accounts[current_login] ?? null;
+}
+
+export function setCurrentLogin(key: string): void {
+  current_login = key;
+  localStorage.setItem(key_logged_in, key);
+}
+
+export function clearCurrentLogin(): void {
+  current_login = null;
+  localStorage.removeItem(key_logged_in);
+}
+
+// REQUESTS //
+
+// Token that requests are sent with
 export function getToken(): string | null {
-  if (activeKey === null) {
-    return null;
-  }
-
-  const login = logins[activeKey];
-  if (login === undefined) {
-    return null;
-  }
-
-  return login.token;
+  const account = getLoggedInAccount();
+  if (account === null) { return null; }
+  return account.token;
 }
 
-// The URL the active login belongs to, or null if nothing is active
 export function getUrl(): string | null {
-  if (activeKey === null) {
-    return null;
-  }
-
-  const login = logins[activeKey];
-  if (login === undefined) {
-    return null;
-  }
-
-  return login.url;
+  const account = getLoggedInAccount();
+  if (account === null) { return null; }
+  return account.url;
 }
 
-// Every saved login
-export function getLogins(): Record<string, Login> {
-  return logins;
+// ROOM SELECTION //
+
+export function getSelectedRoom(): string | null {
+  const account = getLoggedInAccount();
+  if (account === null) { return null;}
+  return account.room ?? null;
 }
 
-// Save a login and make it the active one, replacing any existing entry for
-// the same username and URL
-export function addLogin(username: string, url: string, token: string): void {
-  const key = loginKey(username, url);
-  logins[key] = { username, url, token };
-  activeKey = key;
-
-  localStorage.setItem(keyLogins, JSON.stringify(logins));
-  localStorage.setItem(keyActiveKey, activeKey);
-}
-
-// Make keyed login the active one
-export function resumeLogin(key: string): void {
-  activeKey = key;
-  localStorage.setItem(keyActiveKey, key);
-}
-
-// Remove a saved login
-// Local only, nothing is revoked server-side (no endpoint for it exists yet)
-export function removeLogin(key: string): void {
-  delete logins[key];
-  localStorage.setItem(keyLogins, JSON.stringify(logins));
-
-  if (activeKey === key) {
-    activeKey = null;
-    localStorage.removeItem(keyActiveKey);
-  }
-}
-
-// Sign out of the active login
-// Local only, nothing is revoked server-side (no endpoint for it exists yet)
-export function signOut(): void {
-  activeKey = null;
-  localStorage.removeItem(keyActiveKey);
+export function selectRoom(id: string | null): void {
+  const account = getLoggedInAccount();
+  if (account === null) { return;}
+  account.room = id;
+  save();
 }

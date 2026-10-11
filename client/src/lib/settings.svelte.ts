@@ -1,18 +1,14 @@
 // Client Settings - Adjustable by user
 
 import darkUrl from "@/styles/themes/dark.css?url";
-import lightUrl from "@/styles/themes/light.css?url";
-import sporeUrl from "@/styles/themes/spore.css?url";
 
 // THEMES //
-const keyTheme = "prefTheme";
+const keyTheme = "theme";
 const defaultTheme = "dark";
 const themeStylesheetId = "theme-stylesheet";
 
 const builtinThemes: Record<string, string> = {
   dark: darkUrl,
-  light: lightUrl,
-  spore: sporeUrl
 };
 
 let currentTheme: string = $state(localStorage.getItem(keyTheme) ?? defaultTheme);
@@ -57,7 +53,7 @@ export enum AnimatePhotos {
   Never = "never",
 }
 
-const keyAnimatePhotos = "prefAnimatePhotos";
+const keyAnimatePhotos = "animate_photos";
 const defaultAnimatePhotos: AnimatePhotos = AnimatePhotos.Always;
 
 let currentAnimatePhotos: AnimatePhotos = $state(readAnimatePhotos());
@@ -123,7 +119,7 @@ function readAnimatePhotos(): AnimatePhotos {
 }
 
 // AWAY TIMER //
-const keyAwayMinutes = "prefAwayMinutes";
+const keyAwayMinutes = "away_timer_min";
 const defaultAwayMinutes = 10;
 
 let currentAwayMinutes: number = $state(readAwayMinutes());
