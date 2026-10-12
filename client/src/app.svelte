@@ -12,14 +12,20 @@
   import { loadPreferences } from "./lib/preferences.svelte";
   import { loadRooms } from "./lib/rooms/layout.svelte";
   import { getSelectedRoom } from "./lib/session.svelte";
+  import { close, connect } from "./lib/socket.svelte";
 
   $effect(() => {
     if (getToken() === null) return;
 
+    connect(); // Connect to server's websocket
+
+    // Load server elements sequentially
     loadServerInfo()
       .then(loadProfile)
       .then(loadPreferences)
       .then(loadRooms);
+
+    return close;
   });
 </script>
 

@@ -187,7 +187,7 @@
         <dt>Game Activity</dt>
         <dd class="link">
           <span class="icon" title={LABELS_PLATFORM[game.platform]}>{@html ICONS_PLATFORM[game.platform]}</span>
-          {game.title ?? game.activity ?? game.status}
+          {game.title ?? game.detail ?? game.status}
         </dd>
       {/if}
 

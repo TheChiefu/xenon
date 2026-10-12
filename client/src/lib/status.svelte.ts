@@ -1,60 +1,68 @@
 // Client Settings - Status this device presents to other users
 
 import { Status } from "@/bindings/shared";
-import { LABELS_STATUS } from "@/lib/labels";
 import { getAwayMinutes } from "@/lib/settings.svelte";
+import { send } from "@/lib/socket.svelte";
 
 const keyStatus = "default_status";
 const defaultStatus: Status = Status.online;
-const idleCheckMs = 15_000;
+const idleCheckDelayMS = 15_000;
 const activityEvents = ["pointerdown", "keydown", "wheel"];
 
-let currentStatus: Status = $state(readStored());
-let idle = $state(false);
-let lastActivity = Date.now();
+let currentStatus: Status = $state(readPreferedStatus());
+let isIdle = $state(false);
+let lastActiveTime = Date.now();
 
+// Check for user activity on listener, check activity every set interval time
 for (const event of activityEvents) {
   window.addEventListener(event, onActivity, { passive: true });
 }
+setInterval(checkIdle, idleCheckDelayMS);
 
-setInterval(checkIdle, idleCheckMs);
+// STATUS //
 
-// The status chosen on this device
+// The preferred status on this device
 export function getStatus(): Status {
-  if (idle && currentStatus === Status.online) {
+  if (isIdle && currentStatus === Status.online) {
     return Status.away;
   }
-
   return currentStatus;
 }
 
-// Set the status and remember it on this device
 export function setStatus(status: Status): void {
   currentStatus = status;
-  localStorage.setItem(keyStatus, status);
-
-  // Telling the server needs the socket, which the client does not have yet
+  localStorage.setItem(keyStatus, status); // Set status preference on client
+  send({ type: "status", status: getStatus() }); // Send server event about status
 }
 
+// IDLE //
+
+// Updates when the last user interaction was made (for idle timer)
 function onActivity(): void {
-  lastActivity = Date.now();
-  idle = false;
+  lastActiveTime = Date.now();
 }
 
 function checkIdle(): void {
   const minutes = getAwayMinutes();
+  const elapsed = Date.now() - lastActiveTime;
 
-  // 0 never goes away
-  idle = minutes > 0 && Date.now() - lastActivity >= minutes * 60_000;
+  // Check if user is away (0 means never idle)
+  const timePassed = (minutes > 0) && (elapsed >= minutes * 60_000);
+
+  // If the state changed since last activity, update idle check and send server event
+  if (timePassed !== isIdle) {
+    isIdle = timePassed;
+    send({ type: "status", status: getStatus() });
+  }
 }
 
-function readStored(): Status {
-  const stored = localStorage.getItem(keyStatus);
+// STORAGE //
 
-  // Anything can be written into storage, so an unknown name falls back
-  if (stored === null || !(stored in LABELS_STATUS)) {
+function readPreferedStatus(): Status {
+  const stored = localStorage.getItem(keyStatus);
+  const statuses: string[] = Object.values(Status);
+  if (stored === null || !statuses.includes(stored)) {
     return defaultStatus;
   }
-
   return stored as Status;
 }

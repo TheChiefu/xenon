@@ -77,7 +77,7 @@ pub async fn clear(state: &AppState, user_id: Uuid) {
             platform: game.platform,
             status: GamePresence::Offline,
             title: None,
-            activity: None
+            detail: None
         }
     };
     registry::inform_shared_members(state, user_id, event).await;

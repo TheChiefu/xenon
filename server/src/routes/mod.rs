@@ -177,7 +177,7 @@ pub fn router(state: AppState) -> Router {
             post(links::start)
             .delete(links::unlink)
         )
-        .route("/links/callback", get(links::callback))
+        .route("/links", get(links::callback))
 
         // Other
         .route("/ws", get(connection::ws_handler))

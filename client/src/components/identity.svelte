@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getLoggedInAccount, removeLoggedInAccount, clearCurrentLogin } from "@/lib/session.svelte";
   import { getProfile } from "@/lib/profile.svelte";
+  import { getPresenceOfUser } from "@/lib/users.svelte";
   import { getStatus, setStatus } from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { Status } from "@/bindings/shared";
@@ -18,6 +19,8 @@
 
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
+
+  const presence = $derived(getPresenceOfUser(getProfile()?.id ?? ""));
 
   // Messages
   const msg_sign_out = "Are you sure you want to sign out?";
@@ -156,7 +159,7 @@
 <svelte:window onpointerdown={pressAway}/>
 
 <div class="identity">
-  <div class="frame status-{getStatus()}">
+  <div class="frame status-{presence.status}">
     <div class="card">
       <button
         class="user"

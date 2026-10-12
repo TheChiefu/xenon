@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { Device, type GameActivity } from "@/bindings/sockets/events";
   import { Status } from "@/bindings/shared";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
   import { getSelectedRoom } from "@/lib/session.svelte";
-  import { getUser, loadUsers } from "@/lib/users.svelte";
+  import { getActivityOfUser, getPresenceOfUser, getUser, loadUsers } from "@/lib/users.svelte";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
 
   // What one row shows of a member
@@ -16,9 +15,6 @@
     banner_file_id: string | null;
     avatar: FetchedFile | null;
     banner: FetchedFile | null;
-    status: Status;
-    device: Device | null;
-    game: GameActivity | null;
   }
 
   let members: Member[] = $state([]);
@@ -51,11 +47,6 @@
           banner_file_id: user.banner_file_id,
           avatar: null,
           banner: null,
-          status: Status.offline,
-
-          // TEMPORARY: stands in until the socket reports what a member is on
-          device: Device.linux,
-          game: null,
         }));
 
       failure = null;
@@ -86,7 +77,7 @@
 
   // Status first, then alphabetical within it, redone as members come and go
   const ordered: Member[] = $derived([...members].sort((a, b) =>
-    ORDER_STATUS[a.status] - ORDER_STATUS[b.status]
+    ORDER_STATUS[getPresenceOfUser(a.id).status] - ORDER_STATUS[getPresenceOfUser(b.id).status]
     || a.display_name.localeCompare(b.display_name)
   ));
 </script>
@@ -259,6 +250,8 @@
     {#each ordered as member (member.id)}
       {@const avatar = member.avatar}
       {@const banner = member.banner}
+      {@const presence = getPresenceOfUser(member.id)}
+      {@const activity = getActivityOfUser(member.id)}
       <button class="member" {@attach playOnHover}>
         {#if banner !== null}
           {#if banner.mime.startsWith("video/")}
@@ -279,23 +272,23 @@
         <span class="text text-outline">
           <span class="name">{member.display_name}</span>
 
-          {#if member.game !== null}
+          {#if activity !== undefined}
             <span class="game">
-              <span class="icon" aria-hidden="true" title={LABELS_PLATFORM[member.game.platform]}>
-                {@html ICONS_PLATFORM[member.game.platform]}
+              <span class="icon" aria-hidden="true" title={LABELS_PLATFORM[activity.platform]}>
+                {@html ICONS_PLATFORM[activity.platform]}
               </span>
-              {member.game.title ?? member.game.activity}
+              {activity.title ?? activity.detail}
             </span>
           {/if}
         </span>
 
-        {#if member.device !== null}
-          <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[member.device]}>
-            {@html ICONS_DEVICE[member.device]}
+        {#if presence.device !== null}
+          <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[presence.device]}>
+            {@html ICONS_DEVICE[presence.device]}
           </span>
         {/if}
 
-        <span class="status {member.status}"></span>
+        <span class="status {presence.status}"></span>
       </button>
     {/each}
   </div>

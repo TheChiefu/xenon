@@ -15,6 +15,7 @@ use crate::sockets::presence::Device;
 /// What a client sends over its socket.
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 pub enum ClientEvent {
     /// The status this connection declares
     Status { status: Status }
@@ -41,7 +42,7 @@ pub struct GameActivity {
     pub title: Option<String>,
 
     /// What the game says they are doing
-    pub activity: Option<String>
+    pub detail: Option<String>
 }
 
 /// How one link attempt ended.
@@ -128,6 +129,7 @@ pub struct Subscription {
 
 #[derive(Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
 pub enum ServerEvent {
     Message {
         room_id: Uuid,

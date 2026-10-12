@@ -86,7 +86,7 @@
     <h3 class="full-row">Linked Accounts</h3>
 
     <span class="icon" title={LABELS_PLATFORM[Platform.xbox]}>{@html ICONS_PLATFORM[Platform.xbox]}</span>
-    <p class="handle">{account_linked_xbox ? account_gamertag : "Unlinked"}</p>
+    <p class="handle">{account_linked_xbox ? account_gamertag : "Not Linked"}</p>
     <button
       class="icon-btn {account_linked_xbox ? 'is-danger' : ''}"
       aria-label={account_linked_xbox ? "Unlink Xbox" : "Link Xbox"}
@@ -95,10 +95,11 @@
     </button>
 
     <span class="icon" title={LABELS_PLATFORM[Platform.steam]}>{@html ICONS_PLATFORM[Platform.steam]}</span>
-    <p class="handle">{account_linked_steam ? account_steam_user : "Unlinked"}</p>
+    <p class="handle">{account_linked_steam ? account_steam_user : "Not Linked"}</p>
     <button
       class="icon-btn {account_linked_steam ? 'is-danger' : ''}"
       aria-label={account_linked_steam ? "Unlink Steam" : "Link Steam"}
+      disabled
     >
       <span class="icon" aria-hidden="true">{@html account_linked_steam ? icon_link_broken : icon_link}</span>
     </button>

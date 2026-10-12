@@ -9,6 +9,9 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::api;
 use crate::error::{AppError, Result};
 use crate::shared::Platform;
@@ -20,18 +23,13 @@ use crate::state::AppState;
 /// What the browser is left on after a platform redirects to it. This page is
 /// sent before the exchange has run, so it names no outcome: whether the link
 /// was made is told to the tab that started it, over that tab's own socket.
-const CALLBACK_PAGE: &str = "<!doctype html>
-<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
-<title>Xenon</title>
-<body style=\"font: 16px system-ui; margin: 3rem; text-align: center\">
-<p>You can close this tab and return to Xenon.</p>
-<script>setTimeout(() => window.close(), 2000)</script>
-";
+const CALLBACK_PAGE: &str = "<!doctype html>";
 
 // Data Structs //
 
-/// One of the caller's linked accounts.
+/// One of the caller's linked accounts
 #[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/links.ts"))]
 pub struct LinkResponse {
     pub platform: Platform,
 

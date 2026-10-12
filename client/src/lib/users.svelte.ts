@@ -1,11 +1,24 @@
-// Summaries of users the client has looked up
+// What the client stores for each user
 
 import { SvelteMap } from "svelte/reactivity";
 import type { UserSummaryResponse } from "@/bindings/routes/users";
+import { Status } from "@/bindings/shared";
+import type { Device, GameActivity } from "@/bindings/sockets/events";
 import { lookupUsers } from "@/lib/api/users";
 import { getServerInfo } from "@/lib/server.svelte";
 
+// A user's status and what they are connected from
+export interface Presence {
+  status: Status;
+  device: Device | null;
+}
+
+// Maps containing a user ID per type (summary, their status/presence, game activity)
 const summaries: SvelteMap<string, UserSummaryResponse> = new SvelteMap();
+const presences: SvelteMap<string, Presence> = new SvelteMap();
+const activities: SvelteMap<string, GameActivity> = new SvelteMap();
+
+// SUMMARIES //
 
 // What is held for a user, or undefined until a lookup fills it
 export function getUser(id: string): UserSummaryResponse | undefined {
@@ -34,4 +47,38 @@ export async function loadUsers(ids: string[]): Promise<void> {
 // Replaces what is held, for a profile change the server reports
 export function setUser(user: UserSummaryResponse): void {
   summaries.set(user.id, user);
+}
+
+// PRESENCE //
+
+export function getPresenceOfUser(id: string): Presence {
+  return presences.get(id) ?? { status: Status.offline, device: null };
+}
+
+export function setPresenceForUser(id: string, status: Status, device: Device | null): void {
+  presences.set(id, { status, device });
+}
+
+export function clearAllPresences(): void {
+  presences.clear();
+}
+
+// GAMES //
+
+export function getActivityOfUser(id: string): GameActivity | undefined {
+  const gameActivity = activities.get(id);
+
+  if (gameActivity?.title === null && gameActivity.detail === null) {
+    return undefined;
+  }
+
+  return gameActivity;
+}
+
+export function setActivityForUser(id: string, game: GameActivity): void {
+  activities.set(id, game);
+}
+
+export function clearAllActivities(): void {
+  activities.clear();
 }

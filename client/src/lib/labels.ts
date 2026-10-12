@@ -6,7 +6,6 @@ import { AnimatePhotos } from "@/lib/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
 import icon_android from "@/assets/devices/android.svg?raw";
-import icon_chrome from "@/assets/devices/chrome.svg?raw";
 import icon_desktop from "@/assets/devices/desktop.svg?raw";
 import icon_ios from "@/assets/devices/ios.svg?raw";
 import icon_linux from "@/assets/devices/linux.svg?raw";
@@ -21,7 +20,6 @@ export const ICONS_DEVICE: Record<Device, string> = {
   [Device.linux]: icon_linux,
   [Device.android]: icon_android,
   [Device.ios]: icon_ios,
-  [Device.chrome]: icon_chrome,
   [Device.desktop]: icon_desktop,
   [Device.mobile]: icon_mobile,
   [Device.tablet]: icon_tablet,
