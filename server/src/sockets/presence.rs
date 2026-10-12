@@ -25,7 +25,6 @@ pub enum Device {
     Linux,
     Android,
     Ios,
-    Chrome,
     Desktop,
     Mobile,
     Tablet

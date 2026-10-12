@@ -25,7 +25,7 @@ pub struct Config {
     pub database: Database,
     pub logging: Logging,
     pub session: Session,
-    pub sidecar: Sidecar,
+    pub push: Option<Push>,
     pub limits: Limits,
 }
 
@@ -39,7 +39,7 @@ impl Default for Config {
             database: Database::default(),
             logging: Logging::default(),
             session: Session::default(),
-            sidecar: Sidecar::default(),
+            push: None,
             limits: Limits::default(),
         }
     }
@@ -145,6 +145,12 @@ impl Config {
         // Equal values leave no renewal window, so sessions never extend
         if self.session.renew_after_days_elapsed >= self.session.lifetime_days {
             return Err("session.renew_after_days_elapsed must be less than session.lifetime_days".to_string());
+        }
+
+        if let Some(push) = &self.push {
+            if !push.subject.starts_with("mailto:") && !push.subject.starts_with("https://") {
+                return Err("push.subject must start with mailto: or https://".to_string());
+            }
         }
 
         if self.limits.username_min < 1 || self.limits.username_max < self.limits.username_min {
@@ -398,17 +404,19 @@ impl Default for Session {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
-pub struct Sidecar {
-    /// What the sidecar sends to connect, authenticating the one connection
-    /// that carries push, Xbox linking and OAuth. Empty refuses every
-    /// connection
-    pub secret: String
+pub struct Push {
+    /// Where a push service reaches the operator, a mailto: or https:// address
+    pub subject: String,
+
+    /// Seconds a push service stores a message for a device that is switched off
+    pub ttl: u32
 }
 
-impl Default for Sidecar {
+impl Default for Push {
     fn default() -> Self {
-        Sidecar {
-            secret: String::new()
+        Push {
+            subject: String::new(),
+            ttl: 86400
         }
     }
 }

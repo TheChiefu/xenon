@@ -5,7 +5,7 @@ import type { Platform, Status } from "../shared";
 /**
  * What a user is connected from, for a client to show beside their status.
  */
-export enum Device { "windows" = "windows", "macos" = "macos", "linux" = "linux", "android" = "android", "ios" = "ios", "chrome" = "chrome", "desktop" = "desktop", "mobile" = "mobile", "tablet" = "tablet" }
+export enum Device { "windows" = "windows", "macos" = "macos", "linux" = "linux", "android" = "android", "ios" = "ios", "desktop" = "desktop", "mobile" = "mobile", "tablet" = "tablet" }
 
 /**
  * How a linked game account appears to someone sharing a room with it.
@@ -30,7 +30,7 @@ title: string | null,
  */
 detail: string | null, };
 
-export type ServerEvent = { "type": "message", room_id: string, message: MessageResponse, } | { "type": "message_deleted", room_id: string, message_id: string, } | { "type": "message_edited", room_id: string, message_id: string, body: string | null, edited_at: number, } | { "type": "invited", room_id: string, invited_by: string, } | { "type": "invite_revoked", room_id: string, } | { "type": "banned", room_id: string, } | { "type": "member_joined", room_id: string, user_id: string, } | { "type": "member_left", room_id: string, user_id: string, } | { "type": "room_deleted", room_id: string, } | { "type": "room_updated", room_id: string, } | { "type": "presence_updated", user_id: string, status: Status, device: Device | null, } | { "type": "presence_snapshot", users: Array<UserPresence>, } | { "type": "game_presence_snapshot", users: Array<UserGamePresence>, } | { "type": "profile_updated", user_id: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, } | { "type": "resync" } | { "type": "notification", room_id: string, room_name: string, author: string, body: string, } | { "type": "push", room_id: string, room_name: string, author: string, body: string, renotify: boolean, user_ids: Array<string>, } | { "type": "subscribe", user_id: string, subscription: Subscription, } | { "type": "unsubscribe", user_id: string, endpoint: string, } | { "type": "link_requested", user_id: string, platform: Platform, } | { "type": "link_callback", params: { [key in string]: string }, } | { "type": "linked_accounts", user_ids: Array<string>, } | { "type": "link_url", platform: Platform, authorize_url: string, } | { "type": "account_linked", user_id: string, platform: Platform, handle: string, } | { "type": "account_unlinked", user_id: string, platform: Platform, } | { "type": "link_failed", user_id: string, platform: Platform, message: string, } | { "type": "link_needs_reauth", user_id: string, platform: Platform, } | { "type": "game_presence_updated", user_id: string, platform: Platform, status: GamePresence, 
+export type ServerEvent = { "type": "message", room_id: string, message: MessageResponse, } | { "type": "message_deleted", room_id: string, message_id: string, } | { "type": "message_edited", room_id: string, message_id: string, body: string | null, edited_at: number, } | { "type": "invited", room_id: string, invited_by: string, } | { "type": "invite_revoked", room_id: string, } | { "type": "banned", room_id: string, } | { "type": "member_joined", room_id: string, user_id: string, } | { "type": "member_left", room_id: string, user_id: string, } | { "type": "room_deleted", room_id: string, } | { "type": "room_updated", room_id: string, } | { "type": "presence_updated", user_id: string, status: Status, device: Device | null, } | { "type": "presence_snapshot", users: Array<UserPresence>, } | { "type": "game_presence_snapshot", users: Array<UserGamePresence>, } | { "type": "profile_updated", user_id: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, } | { "type": "resync" } | { "type": "notification", room_id: string, room_name: string, author: string, body: string, } | { "type": "game_presence_updated", user_id: string, platform: Platform, status: GamePresence, 
 /**
  * Name of the game
  */
@@ -39,11 +39,6 @@ title: string | null,
  * What the game says they are doing
  */
 detail: string | null, };
-
-/**
- * One browser a push message is sent to.
- */
-export type Subscription = { endpoint: string, p256dh: Array<number>, auth: Array<number>, };
 
 /**
  * A user and the linked account they are on.

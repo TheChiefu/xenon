@@ -6,37 +6,9 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::Result;
-use crate::shared::Status;
 use crate::sockets::events::{GameActivity, GamePresence, ServerEvent, UserGamePresence};
 use crate::sockets::registry;
 use crate::state::AppState;
-
-/// Stores what a linked account reported and sends it to everyone sharing a
-/// room with its owner.
-pub async fn on_report(
-    state: &AppState,
-    user_id: Uuid,
-    game: GameActivity,
-) {
-    let declared = match registry::status_of(state, user_id) {
-        Some(entry) => Some(entry.status),
-        None => None
-    };
-
-    // Offline users have no game presence, remove entry
-    if declared == Some(Status::Offline) {
-        write_map(state).remove(&user_id);
-        return;
-    }
-
-    match game.status {
-        GamePresence::Offline => write_map(state).remove(&user_id),
-        _ => write_map(state).insert(user_id, game.clone())
-    };
-
-    let event = ServerEvent::GamePresenceUpdated { user_id, game };
-    registry::inform_shared_members(state, user_id, event).await;
-}
 
 /// Builds the game presence list a connecting user is sent. It contains
 /// everyone they share a room with who is on a linked account.
@@ -81,11 +53,6 @@ pub async fn clear(state: &AppState, user_id: Uuid) {
         }
     };
     registry::inform_shared_members(state, user_id, event).await;
-}
-
-/// Empties what every linked account last reported.
-pub fn clear_all(state: &AppState) {
-    write_map(state).clear();
 }
 
 // Helper Methods //

@@ -273,10 +273,6 @@ pub async fn update(
 /// * `user_id` - Account being closed.
 /// * `anonymize` - Whether the names are replaced and the username released.
 /// * `delete_history` - Whether every message the account wrote is tombstoned.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the account holds Owner.
 pub async fn delete(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
@@ -313,8 +309,8 @@ pub async fn delete(
 ///
 /// # Errors
 ///
-/// Returns `AppError::Forbidden` if the caller is Admin, if
-/// an Admin targets another Admin, or if the target holds Owner.
+/// Returns `AppError::Forbidden` if the caller is not Admin, or if an Admin
+/// targets another Admin.
 pub async fn delete_other(
     pool: &sqlx::SqlitePool,
     caller_id: Uuid,
@@ -351,9 +347,8 @@ pub async fn delete_other(
 ///
 /// # Errors
 ///
-/// Returns `AppError::Forbidden` if the new role is Owner, if the caller is
-/// neither Owner nor Admin, if the target is the Owner, or if an Admin targets
-/// another Admin; and `AppError::NotFound` if the target does not exist.
+/// Returns `AppError::Forbidden` if the caller is not Admin, or if an Admin
+/// targets another Admin; and `AppError::NotFound` if the target does not exist.
 pub async fn set_role(
     pool: &sqlx::SqlitePool,
     caller_id: Uuid,

@@ -35,6 +35,7 @@ pub enum AppError {
     Hash(argon2::password_hash::Error),
     Validation(String),
     Io(std::io::Error),
+    Http(reqwest::Error),
 }
 
 impl fmt::Display for AppError {
@@ -49,6 +50,7 @@ impl fmt::Display for AppError {
             AppError::Forbidden => write!(f,"action not allowed"),
             AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
             AppError::Io(e) => write!(f, "i/o error: {e}"),
+            AppError::Http(e) => write!(f, "http error: {e}"),
             AppError::NotFound => write!(f, "not found"),
         }
     }
@@ -60,6 +62,7 @@ impl std::error::Error for AppError {
             AppError::Db(e) => Some(e),
             AppError::Hash(e) => Some(e),
             AppError::Io(e) => Some(e),
+            AppError::Http(e) => Some(e),
             _ => None
         }
     }
@@ -86,6 +89,12 @@ impl From<sqlx::migrate::MigrateError> for AppError {
 impl From<std::io::Error> for AppError {
     fn from(e: std::io::Error) -> Self {
         AppError::Io(e)
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(e: reqwest::Error) -> Self {
+        AppError::Http(e)
     }
 }
 
@@ -126,7 +135,7 @@ impl IntoResponse for AppError {
             },
 
             // Never reaches client
-            AppError::Hash(_) => self.internal_error(),
+            AppError::Hash(_) | AppError::Http(_) => self.internal_error(),
         };
 
         (status, Json(ErrorResponse { error: message })).into_response()

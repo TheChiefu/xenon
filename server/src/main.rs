@@ -5,6 +5,7 @@ mod db;
 mod error;
 mod routes;
 mod serve;
+mod services;
 mod shared;
 mod sockets;
 mod state;
@@ -19,7 +20,7 @@ use sqlx::SqlitePool;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
 use crate::shared::GlobalRole;
 use crate::state::AppState;
 
@@ -65,6 +66,9 @@ async fn main() -> Result<()> {
 
     // Ensure bootstrap account is created with admin access
     ensure_account(&pool).await?;
+
+    // Ensure VAPID keys exist for browsers to subscribe against
+    services::push::send::ensure_keypair(&pool).await?;
 
     // Server server
     let app_state = AppState::new(pool);

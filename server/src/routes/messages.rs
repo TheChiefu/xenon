@@ -17,6 +17,8 @@ use crate::api::messages::attachments::{Attached, Incoming};
 use crate::api::rooms::access::NotifyUserPair;
 use crate::error::{AppError, Result};
 use crate::api::messages::Message;
+use crate::services::push::send;
+use crate::services::push::send::Payload;
 use crate::shared::Notify;
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
@@ -88,7 +90,6 @@ pub struct EditMessageResponse {
 /// What a notification shows
 #[derive(Clone)]
 struct Announcement {
-    room_id: Uuid,
     room_name: String,
     author: String,
     body: String
@@ -337,7 +338,15 @@ async fn notify_users(
 
     // Push notifications to offline users
     let offline = registry::offline_users(app_state, &recipients);
-    push_offline(app_state, announcement, offline);
+    let payload = Payload {
+        room_id,
+        room: announcement.room_name,
+        author: announcement.author,
+        body: announcement.body,
+        renotify: false
+    };
+
+    send::notify_offline(app_state, payload, offline);
 
     Ok(())
 
@@ -372,7 +381,6 @@ async fn announce(
     let names = api::users::display_names(&app_state.pool, mentioned).await?;
 
     Ok(Announcement {
-        room_id,
         room_name: room.name,
         author: author.display_name,
         body: name_mentions(body, &names)
@@ -418,39 +426,6 @@ fn recipients(
     }
 
     found
-}
-
-/// Sends one push event naming the recipients with no socket. The sidecar
-/// resolves which of them have a push subscription.
-///
-/// # Arguments
-///
-/// * `app_state` - Push channel.
-/// * `announcement` - What the notification shows.
-/// * `offline` - Recipients with no socket.
-fn push_offline(
-    app_state: &AppState,
-    announcement: Announcement,
-    offline: Vec<Uuid>,
-) {
-    if offline.is_empty() {
-        return;
-    }
-
-    let push = ServerEvent::Push {
-        room_id: announcement.room_id,
-        room_name: announcement.room_name,
-        author: announcement.author,
-        body: announcement.body,
-        renotify: true,
-        user_ids: offline
-    };
-
-    // Dropped when the push sidecar is not connected
-    match serde_json::to_string(&push) {
-        Ok(payload) => { let _ = app_state.to_sidecar.send(payload); }
-        Err(e) => tracing::error!("failed to serialize push event: {e}")
-    }
 }
 
 /// Collects the accounts a message body mentions, each account once.

@@ -2,9 +2,7 @@
 
 mod auth;
 mod files;
-mod links;
 pub mod messages;
-mod push;
 mod rooms;
 mod server;
 mod users;
@@ -16,7 +14,7 @@ use axum::http;
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::request::Parts;
 use axum::http::Method;
-use axum::routing::{delete, get, patch, post, put};
+use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use sqlx::SqlitePool;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -25,7 +23,6 @@ use uuid::Uuid;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::sockets;
 use crate::sockets::connection;
 use crate::state::AppState;
 use crate::utils;
@@ -162,26 +159,13 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/users/{id}/role", patch(users::set_role))
 
-        // Push
-        .route("/push/vapid", get(push::vapid_key))
-        .route("/me/push",
-            post(push::subscribe)
-            .delete(push::unsubscribe)
-        )
-
-        // Linked game accounts
-        .route("/me/links/{platform}",
-            post(links::start)
-            .delete(links::unlink)
-        )
-        .route("/links", get(links::redirect))
-
         // Other
         .route("/ws", get(connection::ws_handler))
         .route("/server", get(server::info))
         .route("/server/version", get(server::version))
         .route("/server/type", get(server::kind))
         .route("/health", get(server::health_check))
+        .merge(crate::services::push::router())
         .with_state(state)
         .layer(cors_layer())
 }

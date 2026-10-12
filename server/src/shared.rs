@@ -123,23 +123,6 @@ impl Permission {
         Self::Screenshare,
     ];
 
-    /// Reports whether the permission is aimed at a member, and so cannot be
-    /// used against someone who also holds it
-    #[must_use]
-    pub const fn member_directed(self) -> bool {
-        matches!(self, Self::Ban | Self::Grant | Self::Mute)
-    }
-}
-
-/// A `linked_accounts` row.
-#[derive(sqlx::FromRow, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
-pub struct LinkedAccount {
-    // Platform's name (ie. Xbox)
-    pub platform: Platform,
-
-    /// Name shown for the account
-    pub handle: String,
 }
 
 /// A named group of rooms in a user's room list layout

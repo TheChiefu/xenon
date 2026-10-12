@@ -18,21 +18,12 @@ export enum Platform { "xbox" = "xbox", "steam" = "steam" }
 /**
  * A user's server-wide role
  */
-export enum GlobalRole { "owner" = "owner", "admin" = "admin", "member" = "member", "visitor" = "visitor" }
+export enum GlobalRole { "admin" = "admin", "member" = "member", "visitor" = "visitor" }
 
 /**
  * A named group of rooms in a user's room list layout
  */
 export type Folder = { name: string, rooms: Array<string>, collapsed: boolean, };
-
-/**
- * A `linked_accounts` row.
- */
-export type LinkedAccount = { platform: Platform, 
-/**
- * Name shown for the account
- */
-handle: string, };
 
 /**
  * One entry in a user's room list layout, room ID and possible folder it's in

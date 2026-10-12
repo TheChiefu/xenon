@@ -1,7 +1,5 @@
 //! What the server pushes to a connected client, and what one may send back.
 
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -45,60 +43,6 @@ pub struct GameActivity {
     pub detail: Option<String>
 }
 
-/// How one link attempt ended.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum LinkOutcome {
-    Linked {
-        user_id: Uuid,
-        platform: Platform,
-        handle: String
-    },
-    Error {
-        user_id: Uuid,
-        platform: Platform,
-        message: String
-    }
-}
-
-/// What the sidecar sends over its socket.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum SidecarEvent {
-    /// The key browsers subscribe against, 65 bytes
-    VapidKey { public_key: Vec<u8> },
-
-    XboxAuthorizeUrl { url: String },
-
-    /// Where to send someone to sign in with the platform
-    LinkUrl {
-        user_id: Uuid,
-        platform: Platform,
-        authorize_url: String
-    },
-
-    /// How a link attempt ended
-    LinkResult { outcome: LinkOutcome },
-
-    /// This user's link stopped renewing and has to be made again
-    NeedsReauth {
-        user_id: Uuid,
-        platform: Platform
-    },
-
-    /// Sent when a linked account's presence changes
-    Presence {
-        user_id: Uuid,
-
-        #[serde(flatten)]
-        game: GameActivity
-    },
-
-    /// Asks for every user Xenon lists as linked. The sidecar drops the
-    /// credentials of anyone missing from the answer
-    GetLinkedAccounts
-}
-
 /// A user and the linked account they are on.
 #[derive(Serialize, Clone)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
@@ -118,15 +62,6 @@ pub struct UserPresence {
 
     /// Unset until the user's client declares one
     pub device: Option<Device>
-}
-
-/// One browser a push message is sent to.
-#[derive(Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/events.ts"))]
-pub struct Subscription {
-    pub endpoint: String,
-    pub p256dh: Vec<u8>,
-    pub auth: Vec<u8>
 }
 
 #[derive(Serialize, Clone)]
@@ -195,56 +130,6 @@ pub enum ServerEvent {
         room_name: String,
         author: String,
         body: String
-    },
-    Push {
-        room_id: Uuid,
-        room_name: String,
-        author: String,
-        body: String,
-        renotify: bool,
-        user_ids: Vec<Uuid>
-    },
-    Subscribe {
-        user_id: Uuid,
-        subscription: Subscription
-    },
-    Unsubscribe {
-        user_id: Uuid,
-        endpoint: String
-    },
-    LinkRequested {
-        user_id: Uuid,
-        platform: Platform
-    },
-
-    /// The callback's query string, passed on unread
-    LinkCallback {
-        params: HashMap<String, String>
-    },
-    LinkedAccounts {
-        user_ids: Vec<Uuid>
-    },
-    LinkUrl {
-        platform: Platform,
-        authorize_url: String
-    },
-    AccountLinked {
-        user_id: Uuid,
-        platform: Platform,
-        handle: String
-    },
-    AccountUnlinked {
-        user_id: Uuid,
-        platform: Platform
-    },
-    LinkFailed {
-        user_id: Uuid,
-        platform: Platform,
-        message: String
-    },
-    LinkNeedsReauth {
-        user_id: Uuid,
-        platform: Platform
     },
     GamePresenceUpdated {
         user_id: Uuid,

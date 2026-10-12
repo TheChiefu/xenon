@@ -42,7 +42,6 @@ export const LABELS_DEVICE: Record<Device, string> = {
   [Device.linux]: "Linux",
   [Device.android]: "Android",
   [Device.ios]: "iOS",
-  [Device.chrome]: "Chrome",
   [Device.desktop]: "Desktop",
   [Device.mobile]: "Phone",
   [Device.tablet]: "Tablet",
@@ -71,7 +70,6 @@ export const LABELS_PLATFORM: Record<Platform, string> = {
 };
 
 export const LABELS_ROLE: Record<GlobalRole, string> = {
-  [GlobalRole.owner]: "Owner",
   [GlobalRole.admin]: "Admin",
   [GlobalRole.member]: "Member",
   [GlobalRole.visitor]: "Visitor",

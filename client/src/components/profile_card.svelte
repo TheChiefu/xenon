@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { LinkedAccount } from "@/bindings/shared";
   import type { GlobalRole, Status } from "@/bindings/shared";
   import { Platform } from "@/bindings/shared";
   import type { Device, GameActivity } from "@/bindings/sockets/events";
@@ -16,7 +15,7 @@
     device?: Device | null;
     game?: GameActivity | null;
     role: GlobalRole;
-    links: LinkedAccount[];
+    links: { platform: Platform; handle: string }[];
     created_at: string;
     deleted_at?: string | null;
     avatar_file_id?: string | null;

@@ -10,12 +10,11 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::api::linked_accounts;
 use crate::api::users::UserSummary;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::shared::{GlobalRole, LinkedAccount};
+use crate::shared::{GlobalRole};
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{registry};
 use crate::state::AppState;
@@ -38,7 +37,6 @@ pub struct UserProfileResponse {
     pub global_role: GlobalRole,
     pub created_at: i64,
     pub deleted_at: Option<i64>,
-    pub links: Vec<LinkedAccount>,
 }
 
 /// What a member row or search result shows of a user
@@ -99,15 +97,6 @@ pub struct PasswordRequest {
     /// Revokes every session but the one making the request
     #[serde(default)]
     pub revoke_others: bool,
-}
-
-/// PUT body for handing the server to another account.
-#[derive(Deserialize)]
-pub struct TransferOwnershipRequest {
-    pub user_id: Uuid,
-
-    /// Role the outgoing Owner keeps
-    pub demote_to: GlobalRole,
 }
 
 /// DELETE body for closing your own account.
@@ -233,7 +222,6 @@ pub async fn get_me(
 /// Returns `AppError::NotFound` if no such user exists.
 async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileResponse> {
     let row = api::users::get(pool, user_id).await?;
-    let links = linked_accounts::list(pool, user_id).await?;
 
     Ok(UserProfileResponse {
         id: row.id,
@@ -245,7 +233,6 @@ async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileRe
         global_role: row.global_role,
         created_at: row.created_at,
         deleted_at: row.deleted_at,
-        links,
     })
 }
 

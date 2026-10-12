@@ -1,5 +1,6 @@
 // Client Settings - Notifications
 
+import type { VapidKeyResponse } from "@/bindings/services/push";
 import { getUrl } from "@/lib/session.svelte";
 import { request } from "@/lib/utils";
 
@@ -30,7 +31,7 @@ async function fetchVAPID(url: string): Promise<Uint8Array<ArrayBuffer>> {
     throw new Error(data.error);
   }
 
-  return new Uint8Array(data as number[]);
+  return new Uint8Array((data as VapidKeyResponse).public_key);
 }
 
 // Check for an existing push subscription
