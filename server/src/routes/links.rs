@@ -17,7 +17,7 @@ use crate::error::{AppError, Result};
 use crate::shared::Platform;
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
-use crate::sockets::{links, registry, sidecar};
+use crate::sockets::{links, registry};
 use crate::state::AppState;
 
 /// What the browser is left on after a platform redirects to it. This page is
@@ -92,8 +92,6 @@ pub async fn start(
         return Err(AppError::Validation("account linking is unavailable".into()));
     }
 
-    sidecar::send(&state, ServerEvent::LinkRequested { user_id, platform });
-
     Ok(StatusCode::ACCEPTED)
 }
 
@@ -126,12 +124,10 @@ pub async fn unlink(
 ///
 /// * `state` - Pool and socket registry.
 /// * `params` - Query string the platform redirected with.
-pub async fn callback(
+pub async fn redirect(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Response {
-
-    sidecar::send(&state, ServerEvent::LinkCallback { params });
 
     Html(CALLBACK_PAGE).into_response()
 }

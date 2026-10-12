@@ -1,5 +1,13 @@
 # Sidecar
 
+DO NOT USE THIS CODE!!!
+IT IS ENTIRELY AI GENERATED AND IS DEPRECATED.
+USE FOR REFERENCE ONLY
+
+IS NOT USED IN DEPLOYMENT OR DEV
+SERVER SHOULD NEVER USE THIS CODE EVER
+
+
 The sidecar is a Node service that connects to the server and handles the work
 the server does not do itself. It sends web push notifications and polls Xbox for
 account linking and presence. It reads the server's [config.toml](../server/config.md)

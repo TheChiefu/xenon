@@ -286,11 +286,6 @@ pub async fn delete(
 
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
-    // one_owner needs a live owner, so the server is handed over first
-    if db::global_role(&mut tx, user_id).await? == GlobalRole::Owner {
-        return Err(AppError::Forbidden);
-    }
-
     if delete_history {
         tombstone_messages(&mut tx, user_id).await?;
     }
@@ -318,7 +313,7 @@ pub async fn delete(
 ///
 /// # Errors
 ///
-/// Returns `AppError::Forbidden` if the caller is neither Owner nor Admin, if
+/// Returns `AppError::Forbidden` if the caller is Admin, if
 /// an Admin targets another Admin, or if the target holds Owner.
 pub async fn delete_other(
     pool: &sqlx::SqlitePool,
@@ -331,7 +326,7 @@ pub async fn delete_other(
 
     // Is the caller ranked high enough to close another account
     let caller_role = db::global_role(&mut conn, caller_id).await?;
-    let permissible_roles = [GlobalRole::Owner, GlobalRole::Admin];
+    let permissible_roles = [GlobalRole::Admin];
     if !permissible_roles.contains(&caller_role) {
         return Err(AppError::Forbidden);
     }
@@ -343,54 +338,6 @@ pub async fn delete_other(
     }
 
     delete(pool, target_id, anonymize, false).await
-}
-
-/// Hands the server to another account, setting the caller to `demote_to`.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `caller_id` - The Owner giving the server away.
-/// * `target_id` - Account receiving Owner.
-/// * `demote_to` - Role the caller keeps.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller is not the Owner or `demote_to`
-/// is Owner, and `AppError::NotFound` if the target does not exist or is
-/// tombstoned.
-pub async fn transfer_ownership(
-    pool: &sqlx::SqlitePool,
-    caller_id: Uuid,
-    target_id: Uuid,
-    demote_to: GlobalRole,
-) -> Result<()> {
-
-    // Deny "demoting" target user to owner (ie. two owners, not allowed)
-    if demote_to == GlobalRole::Owner {
-        return Err(AppError::Forbidden);
-    }
-
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-
-    // User who isn't owner cannot transfer ownership
-    if db::global_role(&mut tx, caller_id).await? != GlobalRole::Owner {
-        return Err(AppError::Forbidden);
-    }
-
-    // The caller is demoted first
-    if !db::set_global_role(&mut tx, caller_id, demote_to).await? {
-        return Err(AppError::NotFound);
-    }
-
-    // Target is promoted second
-    if !db::set_global_role(&mut tx, target_id, GlobalRole::Owner).await? {
-        return Err(AppError::NotFound);
-    }
-
-    tx.commit().await?;
-
-    Ok(())
 }
 
 /// Changes a user's server-wide role.
@@ -414,29 +361,19 @@ pub async fn set_role(
     role: GlobalRole,
 ) -> Result<()> {
 
-    // Ownership is not transferable through this path
-    if role == GlobalRole::Owner {
-        return Err(AppError::Forbidden);
-    }
-
     // Start transaction
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     let caller_role = db::global_role(&mut tx, caller_id).await?;
 
     // Is the caller ranked high enough to change other's roles
-    let permissible_roles = [GlobalRole::Owner, GlobalRole::Admin];
+    let permissible_roles = [GlobalRole::Admin];
     if !permissible_roles.contains(&caller_role) {
         return Err(AppError::Forbidden);
     }
 
-    // Can't change owner's role
-    let target_role = db::global_role(&mut tx, target_id).await?;
-    if target_role == GlobalRole::Owner {
-        return Err(AppError::Forbidden);
-    }
-
     // Admins can't change each other's roles
+    let target_role = db::global_role(&mut tx, target_id).await?;
     if caller_role == GlobalRole::Admin && target_role == GlobalRole::Admin {
         return Err(AppError::Forbidden);
     }

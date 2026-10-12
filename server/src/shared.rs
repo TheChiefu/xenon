@@ -17,7 +17,6 @@ use ts_rs::TS;
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum GlobalRole {
-    Owner,
     Admin,
     Member,
     Visitor,

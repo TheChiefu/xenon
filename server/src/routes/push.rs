@@ -13,7 +13,6 @@ use crate::api;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
 use crate::sockets::events::{ServerEvent, Subscription};
-use crate::sockets::sidecar;
 use crate::state::AppState;
 
 // Data Structs //
@@ -55,8 +54,6 @@ pub async fn subscribe(
     Json(subscription): Json<Subscription>,
 ) -> Result<StatusCode> {
 
-    sidecar::send(&state, ServerEvent::Subscribe { user_id, subscription });
-
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -74,8 +71,6 @@ pub async fn unsubscribe(
     State(state): State<AppState>,
     Json(request): Json<UnsubscribeRequest>,
 ) -> Result<StatusCode> {
-
-    sidecar::send(&state, ServerEvent::Unsubscribe { user_id, endpoint: request.endpoint });
 
     Ok(StatusCode::NO_CONTENT)
 }

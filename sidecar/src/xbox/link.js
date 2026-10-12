@@ -13,6 +13,19 @@ const PLATFORM = 'xbox';
 const AUTHORIZE_URL = 'https://login.live.com/oauth20_authorize.srf';
 const SCOPE = 'XboxLive.signin XboxLive.offline_access';
 
+// Default authorization URL given to main server to reuse per user requesting Microsoft authorization
+export function authorizeUrl(config) {
+  const url = new URL(AUTHORIZE_URL);
+  url.search = new URLSearchParams({
+    client_id: config.xbox.client_id,
+    response_type: 'code',
+    redirect_uri: config.xbox.redirect_uri,
+    scope: SCOPE,
+    state: '',
+  });
+  return url.toString();
+}
+
 /// Records which account is linking and answers with the address to sign in
 /// at. The `state` in that address is what identifies the attempt when the
 /// callback arrives.

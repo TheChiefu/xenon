@@ -9,13 +9,12 @@ use crate::api;
 use crate::shared::Platform;
 use crate::sockets::events::{LinkOutcome, ServerEvent};
 use crate::sockets::registry;
-use crate::sockets::sidecar;
 use crate::state::AppState;
 
 /// Sends the sidecar the id of every user with a link
 pub async fn send_linked_users(state: &AppState) {
     match api::linked_accounts::list_users(&state.pool, Platform::Xbox).await {
-        Ok(user_ids) => sidecar::send(state, ServerEvent::LinkedAccounts { user_ids }),
+        Ok(user_ids) => (),
         Err(e) => tracing::error!("could not read who has a link: {e}")
     }
 }

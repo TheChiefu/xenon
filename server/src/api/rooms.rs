@@ -174,7 +174,7 @@ pub async fn create(
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Check if user can create a room
-    let allowed = [GlobalRole::Owner, GlobalRole::Admin, GlobalRole::Member];
+    let allowed = [GlobalRole::Admin, GlobalRole::Member];
     db::require_role(&mut tx, caller_id, &allowed).await?;
 
     // Create room

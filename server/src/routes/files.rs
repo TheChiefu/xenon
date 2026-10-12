@@ -64,7 +64,7 @@ pub async fn upload(
 
     // Reject unallowed roles to upload
     let mut conn = pool.acquire().await?;
-    let allowed = [GlobalRole::Owner, GlobalRole::Admin, GlobalRole::Member];
+    let allowed = [GlobalRole::Admin, GlobalRole::Member];
     db::require_role(&mut conn, caller_id, &allowed).await?;
     drop(conn);
 

@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
         .create_if_missing(true)
         .foreign_keys(true)
         .journal_mode(SqliteJournalMode::Wal) // Write-Ahead Logging
-        .synchronous(SqliteSynchronous::Normal)
+        .synchronous(SqliteSynchronous::Full)
         .busy_timeout(Duration::from_secs(database.busy_timeout_seconds))
         .pragma("secure_delete", "ON");
 
@@ -63,8 +63,8 @@ async fn main() -> Result<()> {
     sqlx::migrate!().run(&pool).await?;
     tracing::info!("connected to database: {db_path}");
 
-    // Ensure owner bootstrap account is created for owner access
-    ensure_owner(&pool).await?;
+    // Ensure bootstrap account is created with admin access
+    ensure_account(&pool).await?;
 
     // Server server
     let app_state = AppState::new(pool);
@@ -81,7 +81,7 @@ async fn main() -> Result<()> {
 
 }
 
-/// Creates the bootstrap owner account, printing its generated password once.
+/// Creates the bootstrap account, printing its generated password once.
 ///
 /// # Arguments
 ///
@@ -90,15 +90,23 @@ async fn main() -> Result<()> {
 /// # Errors
 ///
 /// Returns `AppError::Hash` if the password cannot be hashed, and
-/// `AppError::Db` if the insert fails for any reason but an owner existing.
-async fn ensure_owner(pool: &SqlitePool) -> Result<()> {
+async fn ensure_account(pool: &SqlitePool) -> Result<()> {
     let password = utils::generate_code();
     let hash = utils::hash_password(&password)?;
-    let username = "owner";
-    let display_name = "Owner";
+    let username = "admin";
+    let display_name = "Admin";
     let id = Uuid::now_v7();
 
-    // Attempt to create owner account
+    // Check if any account exists on the server, if none do create one
+    let mut conn = pool.acquire().await?;
+    let count = db::get_user_count(&mut conn).await?;
+
+    // Skip if accounts already exist
+    if count > 0 {
+        return Ok(());
+    }
+
+    // Attempt to create account
     let mut conn = pool.acquire().await?;
     let result = db::insert_user(
         &mut conn,
@@ -106,20 +114,19 @@ async fn ensure_owner(pool: &SqlitePool) -> Result<()> {
         username,
         display_name,
         &hash,
-        GlobalRole::Owner
+        GlobalRole::Admin
     ).await;
 
     match result {
         Ok(()) => {
             // Printed, never logged. This is the only time the password is shown
-            println!("+-------- Owner account created --------+");
+            println!("+-------- Admin account created --------+");
             println!("           Username:\t{username}         ");
             println!("           Password:\t{password}         ");
             println!("  Save credentials (this is NOT logged)  ");
             println!("+---------------------------------------+");
             Ok(())
         }
-        Err(AppError::OwnerExists) => Ok(()),
         Err(e) => Err(e),
     }
 }

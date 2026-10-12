@@ -42,6 +42,7 @@ run(config, {
     // no browser can subscribe and no job is ever composed.
     if (pushEnabled) send({ type: 'vapid_key', public_key: push.publicKeyBytes() });
     if (xboxEnabled) {
+      send({ type: 'xbox_authorize_url', url: xboxLink.authorizeUrl(config) });
       send({ type: 'get_linked_accounts' });
       // Xenon may have just started, holding no presence at all
       xboxPoll.clearCache();

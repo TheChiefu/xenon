@@ -28,7 +28,6 @@ pub enum AppError {
     InvalidCredentials,
     InvalidRegistrationCode,
     UsernameTaken,
-    OwnerExists,
     Forbidden,
     NotFound,
     TooLarge(ByteSize),
@@ -47,7 +46,6 @@ impl fmt::Display for AppError {
             AppError::Db(e) => write!(f, "database error: {e}"),
             AppError::Hash(e) => write!(f, "password hashing error: {e}"),
             AppError::Validation(msg) => write!(f, "{msg}"),
-            AppError::OwnerExists => write!(f, "server owner already exists"),
             AppError::Forbidden => write!(f,"action not allowed"),
             AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
             AppError::Io(e) => write!(f, "i/o error: {e}"),
@@ -128,7 +126,6 @@ impl IntoResponse for AppError {
             },
 
             // Never reaches client
-            AppError::OwnerExists |
             AppError::Hash(_) => self.internal_error(),
         };
 
@@ -150,8 +147,6 @@ pub fn unique_violation(e: sqlx::Error) -> AppError {
             let msg = db.message();
             if msg.contains("users.username") {
                 Some(AppError::UsernameTaken)
-            } else if msg.contains("users.global_role") {
-                Some(AppError::OwnerExists)   // one_owner; bootstrap only
             } else {
                 None
             }

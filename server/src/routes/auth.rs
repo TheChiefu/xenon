@@ -122,7 +122,7 @@ pub async fn create_registration_code(
     let mut conn = pool.acquire().await?;
 
     // Check if user has permission to create a registration code
-    let allowed = [GlobalRole::Owner, GlobalRole::Admin];
+    let allowed = [GlobalRole::Admin];
     db::require_role(&mut conn, caller_id, &allowed).await?;
 
     // Create registration code
@@ -143,7 +143,7 @@ pub async fn revoke_registration_code(
 
     let mut conn = pool.acquire().await?;
 
-    let allowed = [GlobalRole::Owner, GlobalRole::Admin];
+    let allowed = [GlobalRole::Admin];
     db::require_role(&mut conn, caller_id, &allowed).await?;
 
     if !db::revoke_registration_code(&mut conn, &body.code.trim().to_ascii_uppercase()).await? {

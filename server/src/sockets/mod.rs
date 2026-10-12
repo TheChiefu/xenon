@@ -7,4 +7,3 @@ pub mod game_presence;
 pub mod presence;
 pub mod links;
 pub mod registry;
-pub mod sidecar;

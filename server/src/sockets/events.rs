@@ -68,6 +68,8 @@ pub enum SidecarEvent {
     /// The key browsers subscribe against, 65 bytes
     VapidKey { public_key: Vec<u8> },
 
+    XboxAuthorizeUrl { url: String },
+
     /// Where to send someone to sign in with the platform
     LinkUrl {
         user_id: Uuid,

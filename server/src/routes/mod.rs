@@ -82,7 +82,6 @@ pub fn router(state: AppState) -> Router {
             post(auth::create_registration_code)
             .delete(auth::revoke_registration_code)
         )
-        .route("/owner", put(users::transfer_ownership))
 
         // Me
         .route("/me",
@@ -164,7 +163,6 @@ pub fn router(state: AppState) -> Router {
         .route("/users/{id}/role", patch(users::set_role))
 
         // Push
-        .route("/sidecar/ws", get(sockets::sidecar::handler))
         .route("/push/vapid", get(push::vapid_key))
         .route("/me/push",
             post(push::subscribe)
@@ -172,12 +170,11 @@ pub fn router(state: AppState) -> Router {
         )
 
         // Linked game accounts
-        .route("/me/links", get(links::list))
         .route("/me/links/{platform}",
             post(links::start)
             .delete(links::unlink)
         )
-        .route("/links", get(links::callback))
+        .route("/links", get(links::redirect))
 
         // Other
         .route("/ws", get(connection::ws_handler))

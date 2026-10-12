@@ -80,7 +80,6 @@ pub async fn authenticate(
 /// # Errors
 ///
 /// Returns `AppError::UsernameTaken` if the username exists, and
-/// `AppError::OwnerExists` if an owner is already bootstrapped.
 pub async fn insert_user(
     conn: &mut sqlx::SqliteConnection,
     id: Uuid,
@@ -293,7 +292,7 @@ pub async fn require_role(
     Ok(())
 }
 
-/// Reports whether a user may act on a room as server staff: Owner and Admin,
+/// Reports whether a user may act on a room as server staff: Admin,
 /// in Public rooms alone.
 ///
 /// # Arguments
@@ -307,7 +306,7 @@ pub async fn staff_over_room(
     user_id: Uuid,
 ) -> Result<bool> {
 
-    let allowed = [GlobalRole::Owner, GlobalRole::Admin];
+    let allowed = [GlobalRole::Admin];
     let role = global_role(&mut *conn, user_id).await?;
     if !allowed.contains(&role) {
         return Ok(false);
@@ -425,7 +424,6 @@ pub async fn shared_room_member_ids(
 ///
 /// # Errors
 ///
-/// Returns `AppError::OwnerExists` if the write would create a second owner.
 pub async fn set_global_role(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
@@ -446,4 +444,20 @@ pub async fn set_global_role(
     .rows_affected();
 
     Ok(updated == 1)
+}
+
+pub async fn get_user_count(
+    conn: &mut sqlx::SqliteConnection,
+) -> Result<i64> {
+
+    let count: i64 = sqlx::query_scalar(
+        "
+        SELECT COUNT(*)
+        FROM users;
+        "
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+
+    Ok(count)
 }

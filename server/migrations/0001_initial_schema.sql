@@ -30,24 +30,12 @@ CREATE TABLE users (
     deleted_at      INTEGER
 ) STRICT;
 
-CREATE UNIQUE INDEX one_owner ON users(global_role) WHERE global_role = 'owner' AND deleted_at IS NULL;
-
 -- One row per user, created alongside them
 CREATE TABLE user_preferences (
     user_id     BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     room_layout TEXT NOT NULL DEFAULT '[]'
 ) STRICT;
 
--- Not an auth path: identity and display only. No platform_user_id, no
--- credential columns, no uniqueness constraint over a platform id — this
--- table holds only "this user is linked to this platform, show this
--- handle for them," nothing more.
-CREATE TABLE linked_accounts (
-    user_id         BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    platform        TEXT NOT NULL,
-    platform_handle TEXT NOT NULL,
-    PRIMARY KEY (user_id, platform)
-) STRICT;
 
 CREATE TABLE sessions (
     token_hash  BLOB PRIMARY KEY,
@@ -58,7 +46,6 @@ CREATE TABLE sessions (
 ) STRICT;
 
 CREATE INDEX sessions_user ON sessions(user_id);
-CREATE INDEX sessions_expiry ON sessions(expires_at) WHERE revoked_at IS NULL;
 
 -- default_permissions has no DEFAULT: creation must state it. The value is
 -- copied into room_access.permissions when a member joins.
@@ -138,7 +125,6 @@ CREATE TABLE messages (
 ) STRICT;
 
 CREATE INDEX messages_room ON messages(room_id, seq);
-CREATE INDEX messages_room_live ON messages(room_id, seq) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX message_nonce ON messages(author_id, client_nonce);
 
 CREATE TRIGGER messages_author_is_member BEFORE INSERT ON messages
@@ -203,11 +189,25 @@ CREATE TABLE registration_codes (
     uses        INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
--- The VAPID public key browsers subscribe against. Browser subscriptions
--- themselves (push_subscriptions) are not Xenon's to keep: only the push
--- sidecar reads them, so they live in its own store instead.
 CREATE TABLE push_keys (
     id          INTEGER PRIMARY KEY CHECK (id = 1),
     public_key  BLOB NOT NULL,
+    private_key BLOB NOT NULL,
     created_at  INTEGER NOT NULL
 ) STRICT;
+
+CREATE TABLE push_subscriptions (
+    endpoint    TEXT PRIMARY KEY,
+    user_id     BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    p256dh      BLOB NOT NULL,
+    auth        BLOB NOT NULL
+) STRICT;
+
+CREATE TABLE xbox_accounts (
+    user_id           BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    xuid              TEXT NOT NULL,
+    gamertag          TEXT NOT NULL,
+    refresh_token     TEXT NOT NULL,
+    last_refreshed_at INTEGER NOT NULL
+) STRICT;
+

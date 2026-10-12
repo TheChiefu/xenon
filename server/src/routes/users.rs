@@ -345,23 +345,6 @@ pub async fn update_my_password(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Hands the server to another account.
-///
-/// # Arguments
-///
-/// * `caller_id` - The Owner giving the server away.
-/// * `pool` - Pool of SQL connections.
-/// * `body` - Account receiving Owner, and the role the caller keeps.
-pub async fn transfer_ownership(
-    AuthUser(caller_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-    Json(body): Json<TransferOwnershipRequest>,
-) -> Result<StatusCode> {
-    api::users::transfer_ownership(&pool, caller_id, body.user_id, body.demote_to).await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// Closes the caller's own account.
 ///
 /// # Arguments
