@@ -33,7 +33,6 @@ struct Activity {
 
 /// Where a title is shown on screen
 #[derive(Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
 enum Placement {
     Full,
     Fill,
@@ -148,7 +147,7 @@ async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
         return None;
     }
 
-    // Temporary: logs raw presence record at debug level to verify its format, remove after
+    // Reads presence record as text
     let text = match response.text().await {
         Ok(text) => text,
         Err(e) => {
@@ -157,6 +156,7 @@ async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
         }
     };
 
+    // DEBUG: Log presence record
     tracing::debug!("{xuid}: presence record: {text}");
 
     match serde_json::from_str::<Record>(&text) {
@@ -188,10 +188,10 @@ fn reported(record: Record, mappings: &Mappings) -> GameActivity {
         return game;
     }
 
-    // Uses foreground title from any device
+    // Finds game being played, skipping unnamed titles
     for device in record.devices {
         for title in device.titles {
-            if title.placement != Placement::Full {
+            if title.placement != Placement::Full || title.name.is_empty() {
                 continue;
             }
 

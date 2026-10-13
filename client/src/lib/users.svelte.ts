@@ -3,7 +3,7 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { UserSummaryResponse } from "@/bindings/routes/users";
 import { Status } from "@/bindings/shared";
-import type { Device, GameActivity } from "@/bindings/sockets/events";
+import { GamePresence, type Device, type GameActivity } from "@/bindings/sockets/events";
 import { lookupUsers } from "@/lib/api/users";
 import { getServerInfo } from "@/lib/server.svelte";
 
@@ -68,7 +68,7 @@ export function clearAllPresences(): void {
 export function getActivityOfUser(id: string): GameActivity | undefined {
   const gameActivity = activities.get(id);
 
-  if (gameActivity?.title === null && gameActivity.detail === null) {
+  if (gameActivity?.status === GamePresence.Offline) {
     return undefined;
   }
 

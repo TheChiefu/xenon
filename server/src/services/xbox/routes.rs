@@ -3,7 +3,7 @@ use std::sync::{PoisonError, RwLock};
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::response::Html;
+use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -25,8 +25,46 @@ use crate::services::xbox::auth::microsoft;
 use crate::services::xbox::auth::xsts;
 use crate::utils::{now_ms, MINUTE};
 
-/// Page served on redirect, closes sign-in window
-const CLOSE_PAGE: &str = "<!doctype html><script>window.close()</script>";
+/// Page shown after linking, in tab client opened
+const LINKED_PAGE: &str = r#"
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    p, button {
+    font-family: Noto Sans, sans-serif
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: rgba(0, 40, 100, 1);
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: sans-serif;
+    }
+    .box {
+      border: 1px solid rgba(85, 85, 85, 1);
+      border-radius: 8px;
+      background: rgba(200, 200, 200, 1);
+      padding: 24px;
+      max-width: 400px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <p>Xbox account linked</p>
+    <p>Click refresh icon on profile to update</p>
+    <button onclick="window.close()">Return to  Client</button>
+  </div>
+</body>
+</html>
+"#;
 
 /// Time before a code verifier expires
 const SIGN_IN_TIMEOUT: i64 = 10 * MINUTE;
@@ -89,10 +127,37 @@ pub async fn start(AuthUser(user_id, ..): AuthUser) -> Result<Json<LinkResponse>
 }
 
 /// Saves linked account after Microsoft redirects back
+/// - shows linked page on success
+/// - shows error as plain text on failure
 pub async fn redirect(
     State(pool): State<SqlitePool>,
     Query(query): Query<RedirectQuery>,
-) -> Result<Html<&'static str>> {
+) -> Response {
+    let user_id = query.state;
+
+    match link(&pool, query).await {
+        Ok(()) => Html(LINKED_PAGE).into_response(),
+        Err(e) => {
+            tracing::warn!("{user_id}: Xbox linking failed: {e}");
+            format!("Xbox linking failed: {e}").into_response()
+        }
+    }
+}
+
+/// Removes caller's linked account and cached header
+pub async fn unlink(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<StatusCode> {
+    accounts::remove(&pool, user_id).await?;
+    auth::remove_header(user_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// Helper Methods //
+
+/// Redeems authorization code and saves linked account
+async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
     let Some(xbox) = &config::get().xbox else {
         return Err(AppError::Validation("account linking is unavailable".into()));
     };
@@ -132,20 +197,10 @@ pub async fn redirect(
         return Err(AppError::Validation("XSTS response had no display claims".into()));
     };
 
-    accounts::save(&pool, query.state, &claims.xid, &claims.gtg, &refresh_token).await?;
+    accounts::save(pool, query.state, &claims.xid, &claims.gtg, &refresh_token).await?;
 
     // Removes cached Authorization header for this user
     auth::remove_header(query.state);
 
-    Ok(Html(CLOSE_PAGE))
-}
-
-/// Removes caller's linked account and cached header
-pub async fn unlink(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<StatusCode> {
-    accounts::remove(&pool, user_id).await?;
-    auth::remove_header(user_id);
-    Ok(StatusCode::NO_CONTENT)
+    Ok(())
 }

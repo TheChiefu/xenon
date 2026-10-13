@@ -1,7 +1,7 @@
 // Text the client shows for each value
 
 import { GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/shared";
-import { Device } from "@/bindings/sockets/events";
+import { Device, GamePresence } from "@/bindings/sockets/events";
 import { AnimatePhotos } from "@/lib/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
@@ -82,6 +82,12 @@ export const LABELS_STATUS: Record<Status, string> = {
   [Status.offline]: "Offline",
 };
 
+export const LABELS_GAME_PRESENCE: Record<GamePresence, string> = {
+  [GamePresence.Online]: "Online",
+  [GamePresence.Away]: "Away",
+  [GamePresence.Offline]: "Offline",
+};
+
 export const LABELS_VISIBILITY: Record<Visibility, string> = {
   [Visibility.public]: "Public",
   [Visibility.locked]: "Locked",
@@ -89,6 +95,7 @@ export const LABELS_VISIBILITY: Record<Visibility, string> = {
 };
 
 export const MSG_SAVED = "Changes Saved";
+export const MSG_REFRESHED = "Refreshed";
 export const MSG_ERROR = "Error: ";
 export const MSG_REMOVE_PUSH = "Are you sure you want to disable push notifications?";
 export const MSG_DISABLE_NOTIFICATION = "Browser notifications must be revoked via browser settings.";

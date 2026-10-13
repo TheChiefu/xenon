@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Status } from "@/bindings/shared";
-  import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
+  import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
   import { getSelectedRoom } from "@/lib/session.svelte";
@@ -277,7 +277,7 @@
               <span class="icon" aria-hidden="true" title={LABELS_PLATFORM[activity.platform]}>
                 {@html ICONS_PLATFORM[activity.platform]}
               </span>
-              {activity.title ?? activity.detail}
+              {activity.title ?? activity.detail ?? LABELS_GAME_PRESENCE[activity.status]}
             </span>
           {/if}
         </span>
