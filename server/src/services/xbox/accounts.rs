@@ -1,34 +1,28 @@
+// SQL DB manager for Xbox accounts
+// Sets/Gets accounts derived from Microsoft and Xbox service tokens
+
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::utils::now_ms;
 
 /// A linked Xbox account
+/// - Xbox account ID (XUID)
+/// - refresh token (replaced with one from each token response)
 #[derive(sqlx::FromRow)]
 pub struct Account {
     pub user_id: Uuid,
-
-    /// Xbox's own account id
     pub xuid: String,
-
-    /// Name shown for the account
-    pub gamertag: String,
-
-    /// Traded for an access token, rotated on every use
-    pub refresh_token: String,
-
-    /// When the refresh token was last rotated
-    pub last_refreshed_at: i64
+    pub refresh_token: String
 }
 
-/// Reads one user's linked account
-pub async fn account(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>> {
+/// Reads one user's linked gamertag
+pub async fn gamertag(pool: &SqlitePool, user_id: Uuid) -> Result<Option<String>> {
     let mut conn = pool.acquire().await?;
 
-    let row = sqlx::query_as(
+    let gamertag = sqlx::query_scalar(
         "
-        SELECT user_id, xuid, gamertag, refresh_token, last_refreshed_at
+        SELECT gamertag
         FROM xbox_accounts
         WHERE user_id = ?1
         "
@@ -37,7 +31,7 @@ pub async fn account(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>
     .fetch_optional(&mut *conn)
     .await?;
 
-    Ok(row)
+    Ok(gamertag)
 }
 
 /// Reads every linked account
@@ -46,7 +40,7 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
 
     let rows = sqlx::query_as(
         "
-        SELECT user_id, xuid, gamertag, refresh_token, last_refreshed_at
+        SELECT user_id, xuid, refresh_token
         FROM xbox_accounts
         "
     )
@@ -56,25 +50,7 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
     Ok(rows)
 }
 
-/// Reads the accounts whose refresh token was last rotated before a cutoff
-pub async fn stale(pool: &SqlitePool, cutoff: i64) -> Result<Vec<Account>> {
-    let mut conn = pool.acquire().await?;
-
-    let rows = sqlx::query_as(
-        "
-        SELECT user_id, xuid, gamertag, refresh_token, last_refreshed_at
-        FROM xbox_accounts
-        WHERE last_refreshed_at < ?1
-        "
-    )
-    .bind(cutoff)
-    .fetch_all(&mut *conn)
-    .await?;
-
-    Ok(rows)
-}
-
-/// Stores a linked account, replacing whichever one the user had
+/// Stores a linked account (replaces exising one)
 pub async fn save(
     pool: &SqlitePool,
     user_id: Uuid,
@@ -86,20 +62,18 @@ pub async fn save(
 
     sqlx::query(
         "
-        INSERT INTO xbox_accounts (user_id, xuid, gamertag, refresh_token, last_refreshed_at)
-        VALUES (?1, ?2, ?3, ?4, ?5)
+        INSERT INTO xbox_accounts (user_id, xuid, gamertag, refresh_token)
+        VALUES (?1, ?2, ?3, ?4)
         ON CONFLICT(user_id) DO UPDATE SET
             xuid = ?2,
             gamertag = ?3,
-            refresh_token = ?4,
-            last_refreshed_at = ?5
+            refresh_token = ?4
         "
     )
     .bind(user_id)
     .bind(xuid)
     .bind(gamertag)
     .bind(refresh_token)
-    .bind(now_ms())
     .execute(&mut *conn)
     .await?;
 
@@ -117,20 +91,19 @@ pub async fn set_refresh_token(
     sqlx::query(
         "
         UPDATE xbox_accounts
-        SET refresh_token = ?2, last_refreshed_at = ?3
+        SET refresh_token = ?2
         WHERE user_id = ?1
         "
     )
     .bind(user_id)
     .bind(refresh_token)
-    .bind(now_ms())
     .execute(&mut *conn)
     .await?;
 
     Ok(())
 }
 
-/// Removes a user's linked account
+/// Removes a user's linked account from Database
 pub async fn remove(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
     let mut conn = pool.acquire().await?;
 

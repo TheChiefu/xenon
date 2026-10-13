@@ -1,3 +1,11 @@
+// Xbox Live presence polling for linked accounts
+// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-presencerecord
+// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-devicerecord
+// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-titlerecord
+// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-activityrecord
+
+pub mod mappings;
+
 use reqwest::StatusCode;
 use serde::Deserialize;
 
@@ -5,9 +13,8 @@ use crate::config;
 use crate::services::CLIENT;
 use crate::services::xbox::accounts;
 use crate::services::xbox::accounts::Account;
-use crate::services::xbox::mappings;
-use crate::services::xbox::mappings::{Mapping, Mappings};
-use crate::services::xbox::session;
+use crate::services::xbox::auth;
+use crate::services::xbox::presence::mappings::{Mapping, Mappings};
 use crate::shared::Platform;
 use crate::sockets::events::{GameActivity, GamePresence};
 use crate::sockets::game_presence;
@@ -17,36 +24,56 @@ const PRESENCE_URL: &str = "https://userpresence.xboxlive.com/users";
 
 // Data Types //
 
-/// Rich presence a title reports
+/// Fields read from title activity
 #[derive(Deserialize)]
 struct Activity {
     #[serde(rename = "richPresence")]
     rich_presence: Option<String>
 }
 
-/// One title a device reports
+/// Where a title is shown on screen
+#[derive(Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum Placement {
+    Full,
+    Fill,
+    Snapped,
+    Background,
+
+    #[serde(other)]
+    Unknown
+}
+
+/// Fields read from device title
 #[derive(Deserialize)]
 struct Title {
     name: String,
-
-    /// Full for whichever title is in the foreground
-    placement: String,
-
+    placement: Placement,
     activity: Option<Activity>
 }
 
-/// One device an account appears on
+/// Fields read from presence device
 #[derive(Deserialize)]
 struct Device {
     #[serde(default)]
     titles: Vec<Title>
 }
 
-/// What Xbox reports about an account
+/// User's activity on Xbox Live
+#[derive(Deserialize)]
+enum PresenceState {
+    Online,
+    Away,
+    Offline,
+
+    #[serde(other)]
+    Unknown
+}
+
+/// Fields read from presence record
 #[derive(Deserialize)]
 struct Record {
-    /// Online, Away or Offline, in Xbox's own words
-    state: String,
+    state: PresenceState,
 
     #[serde(default)]
     devices: Vec<Device>
@@ -54,7 +81,7 @@ struct Record {
 
 // Public Methods //
 
-/// Read presence for every linked account and announce it
+/// Polls and reports presence for every linked account
 pub async fn poll(
     state: &AppState,
     xbox: &config::Xbox,
@@ -69,33 +96,26 @@ pub async fn poll(
     };
 
     for account in linked {
-        poll_one(state, &account, xbox, mappings).await;
+        // Skips account if no Authorization header is available
+        let Some(authorization) = auth::get_header(&state.pool, &account, xbox).await else {
+            continue;
+        };
+
+        // Skips account if presence request fails
+        let Some(record) = fetch(&account, &authorization).await else {
+            continue;
+        };
+
+        let game = reported(record, mappings);
+        game_presence::on_report(state, account.user_id, game).await;
     }
 }
 
 // Helper Methods //
 
-/// Read presence for one account
-async fn poll_one(
-    state: &AppState,
-    account: &Account,
-    xbox: &config::Xbox,
-    mappings: &Mappings,
-) {
-    let Some(authorization) = session::authorization(&state.pool, account, xbox).await else {
-        return;
-    };
-
-    let Some(record) = fetch(&account.xuid, &authorization).await else {
-        return;
-    };
-
-    let game = reported(record, mappings);
-    game_presence::on_report(state, account.user_id, game).await;
-}
-
-/// Request one account's presence record
-async fn fetch(xuid: &str, authorization: &str) -> Option<Record> {
+/// Requests presence record for one linked account
+async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
+    let xuid = &account.xuid;
     let url = format!("{PRESENCE_URL}/xuid({xuid})?level=all");
 
     let sent = CLIENT
@@ -115,8 +135,10 @@ async fn fetch(xuid: &str, authorization: &str) -> Option<Record> {
         }
     };
 
+    // If Authorization header is refused, remove it from cache
     if response.status() == StatusCode::UNAUTHORIZED {
         tracing::info!("{xuid}: presence header was refused");
+        auth::remove_header(account.user_id);
         return None;
     }
 
@@ -126,7 +148,18 @@ async fn fetch(xuid: &str, authorization: &str) -> Option<Record> {
         return None;
     }
 
-    match response.json::<Record>().await {
+    // Temporary: logs raw presence record at debug level to verify its format, remove after
+    let text = match response.text().await {
+        Ok(text) => text,
+        Err(e) => {
+            tracing::warn!("{xuid}: presence record was unreadable: {e}");
+            return None;
+        }
+    };
+
+    tracing::debug!("{xuid}: presence record: {text}");
+
+    match serde_json::from_str::<Record>(&text) {
         Ok(record) => Some(record),
         Err(e) => {
             tracing::warn!("{xuid}: presence record was unreadable: {e}");
@@ -135,12 +168,12 @@ async fn fetch(xuid: &str, authorization: &str) -> Option<Record> {
     }
 }
 
-/// What a presence record shows, with listed names replacing reported ones
+/// Converts presence record to game activity, applying game mappings
 fn reported(record: Record, mappings: &Mappings) -> GameActivity {
-    let status = match record.state.as_str() {
-        "Online" => GamePresence::Online,
-        "Away" => GamePresence::Away,
-        _ => GamePresence::Offline
+    let status = match record.state {
+        PresenceState::Online => GamePresence::Online,
+        PresenceState::Away => GamePresence::Away,
+        PresenceState::Offline | PresenceState::Unknown => GamePresence::Offline
     };
 
     let mut game = GameActivity {
@@ -150,22 +183,27 @@ fn reported(record: Record, mappings: &Mappings) -> GameActivity {
         detail: None
     };
 
-    // Only an online account is in a game
+    // Returns without title if user is not online
     if status != GamePresence::Online {
         return game;
     }
 
-    // An account appears on several devices at once, and the title in the
-    // foreground is the game, the rest being the shell and the mobile app
+    // Uses foreground title from any device
     for device in record.devices {
         for title in device.titles {
-            if title.placement != "Full" {
+            if title.placement != Placement::Full {
                 continue;
             }
 
             let mapping = mappings.get(&mappings::lookup_key(&title.name));
             game.detail = detail(title.activity, mapping);
-            game.title = Some(name(&title.name, mapping));
+
+            // Uses mapped title name, or reported name with symbols removed
+            game.title = Some(match mapping {
+                Some(mapping) => mapping.name.clone(),
+                None => mappings::remove_excessive(&title.name)
+            });
+
             return game;
         }
     }
@@ -173,15 +211,7 @@ fn reported(record: Record, mappings: &Mappings) -> GameActivity {
     game
 }
 
-/// Name shown for a title
-fn name(reported: &str, mapping: Option<&Mapping>) -> String {
-    match mapping {
-        Some(mapping) => mapping.name.clone(),
-        None => mappings::remove_excessive(reported)
-    }
-}
-
-/// Rich presence shown for a title, when it reports one
+/// Returns rich presence with mapped prefix, if title reports one
 fn detail(activity: Option<Activity>, mapping: Option<&Mapping>) -> Option<String> {
     let rich_presence = activity?.rich_presence?;
 

@@ -3656,6 +3656,7 @@ dependencies = [
  "argon2",
  "axum",
  "axum-server",
+ "base64",
  "futures-util",
  "hex",
  "infer",

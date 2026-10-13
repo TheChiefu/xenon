@@ -1,15 +1,19 @@
+// Xbox Live half of Xbox linking
+// - Requests a user token, then an XSTS token, starting from a Microsoft access token
+// https://minecraft.wiki/w/Microsoft_authentication
+// https://github.com/OpenXbox/xbox-webapi-python/blob/master/xbox/webapi/authentication/manager.py
+
 use serde::Deserialize;
 
 use crate::services::CLIENT;
-use crate::services::xbox::Failure;
+use crate::services::xbox::auth::Failure;
 
 const USER_AUTH_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
 const XSTS_AUTH_URL: &str = "https://xsts.auth.xboxlive.com/xsts/authorize";
 
 // Data Types //
 
-
-/// Xbox's own account id, its gamertag, and the hash sent beside the token
+/// Xbox account ID, gamertag, and user hash
 #[derive(Deserialize)]
 pub struct Claims {
     pub xid: String,
@@ -17,7 +21,7 @@ pub struct Claims {
     pub uhs: String
 }
 
-/// One set of claims per signed-in account
+/// One set of display claims per signed-in user
 #[derive(Deserialize)]
 pub struct DisplayClaims {
     pub xui: Vec<Claims>
@@ -29,17 +33,26 @@ struct UserAuthBody {
     user_token: String
 }
 
-/// What Xbox answers the XSTS call with
+/// Fields read from XSTS token response
+
 #[derive(Deserialize)]
 pub struct XstsBody {
     #[serde(rename = "Token")]
     pub token: String,
 
+    /// An expiry (RFC 3339 time)
     #[serde(rename = "NotAfter")]
     pub not_after: String,
 
     #[serde(rename = "DisplayClaims")]
     pub display_claims: DisplayClaims
+}
+
+impl XstsBody {
+    /// Returns display claims if present
+    pub fn get_display_claims(&self) -> Option<&Claims> {
+        self.display_claims.xui.first()
+    }
 }
 
 #[derive(Deserialize)]
@@ -50,46 +63,8 @@ struct ErrorBody {
 
 // Public Methods //
 
-/// Send an access token to Xbox for a user token, then that for an XSTS token
-pub async fn session(access_token: &str) -> Result<XstsBody, Failure> {
-    let user_token = fetch_user_token(access_token).await?;
-
-    let body = serde_json::json!({
-        "RelyingParty": "http://xboxlive.com",
-        "TokenType": "JWT",
-        "Properties": {
-            "SandboxId": "RETAIL",
-            "UserTokens": [user_token]
-        }
-    });
-
-    let sent = CLIENT
-        .post(XSTS_AUTH_URL)
-        .header("x-xbl-contract-version", "1")
-        .json(&body)
-        .send()
-        .await;
-
-    let response = match sent {
-        Ok(response) => response,
-        Err(e) => return Err(Failure::Retry(format!("XSTS request failed: {e}")))
-    };
-
-    // A rejection names which account state stopped it
-    if !response.status().is_success() {
-        return Err(failure(response).await);
-    }
-
-    match response.json::<XstsBody>().await {
-        Ok(parsed) => Ok(parsed),
-        Err(e) => Err(Failure::Retry(format!("XSTS response was unreadable: {e}")))
-    }
-}
-
-// Helper Methods //
-
-/// Trades a Microsoft access token for the user token the XSTS call takes
-async fn fetch_user_token(access_token: &str) -> Result<String, Failure> {
+/// Requests a user token with a Microsoft access token
+pub async fn request_user_token(access_token: &str) -> Result<String, Failure> {
     let body = serde_json::json!({
         "RelyingParty": "http://auth.xboxlive.com",
         "TokenType": "JWT",
@@ -123,19 +98,57 @@ async fn fetch_user_token(access_token: &str) -> Result<String, Failure> {
     }
 }
 
-/// Reads whether a rejected XSTS call ends the account or is worth retrying
+/// Requests an XSTS token with a user token
+pub async fn request_xsts_token(user_token: &str) -> Result<XstsBody, Failure> {
+    let body = serde_json::json!({
+        "RelyingParty": "http://xboxlive.com",
+        "TokenType": "JWT",
+        "Properties": {
+            "SandboxId": "RETAIL",
+            "UserTokens": [user_token]
+        }
+    });
+
+    let sent = CLIENT
+        .post(XSTS_AUTH_URL)
+        .header("x-xbl-contract-version", "1")
+        .json(&body)
+        .send()
+        .await;
+
+    let response = match sent {
+        Ok(response) => response,
+        Err(e) => return Err(Failure::Retry(format!("XSTS request failed: {e}")))
+    };
+
+    // If XSTS request is rejected, read XErr code
+    if !response.status().is_success() {
+        return Err(failure(response).await);
+    }
+
+    match response.json::<XstsBody>().await {
+        Ok(parsed) => Ok(parsed),
+        Err(e) => Err(Failure::Retry(format!("XSTS response was unreadable: {e}")))
+    }
+}
+
+// Helper Methods //
+
+/// Reads XErr code from rejected XSTS response
 async fn failure(response: reqwest::Response) -> Failure {
     let status = response.status();
 
+    // If response has no XErr code, failure is retryable
     let body = match response.json::<ErrorBody>().await {
         Ok(body) => body,
         Err(_) => return Failure::Retry(format!("XSTS request answered {status}"))
     };
 
+    // If response has an XErr code, failure is permanent
     Failure::Dead(xerr_message(body.xerr))
 }
 
-/// What an XErr code means to the account holder
+/// What an XErr code means
 fn xerr_message(xerr: u64) -> String {
     match xerr {
         2148916227 => "account banned".to_string(),

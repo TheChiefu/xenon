@@ -227,10 +227,7 @@ pub async fn get_me(
 async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileResponse> {
     let row = api::users::get(pool, user_id).await?;
 
-    let gamertag = match xbox::accounts::account(pool, user_id).await? {
-        Some(account) => Some(account.gamertag),
-        None => None
-    };
+    let gamertag = xbox::accounts::gamertag(pool, user_id).await?;
 
     Ok(UserProfileResponse {
         id: row.id,

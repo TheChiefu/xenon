@@ -10,6 +10,9 @@ use sha2::{Digest, Sha256};
 
 use crate::error::{AppError, Result};
 
+/// One minute in milliseconds.
+pub const MINUTE: i64 = 60000;
+
 /// How many bytes a session token carries.
 const SESSION_TOKEN_BYTES: usize = 32;
 
@@ -136,7 +139,7 @@ pub fn burn_verify(password: &str) {
 /// # Arguments
 ///
 /// * `timestamp` - Timestamp in the form `2026-10-12T12:34:56.1234567Z`.
-pub fn rfc3339_ms(timestamp: &str) -> Option<i64> {
+pub fn ms_rfc3339(timestamp: &str) -> Option<i64> {
     const MONTH_START: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
 
     let (date, clock) = timestamp.split_once('T')?;

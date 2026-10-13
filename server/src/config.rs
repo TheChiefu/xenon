@@ -171,10 +171,6 @@ impl Config {
             if xbox.poll_interval_seconds < 1 {
                 return Err("xbox.poll_interval_seconds must be at least 1".to_string());
             }
-
-            if xbox.refresh_interval_seconds < 1 {
-                return Err("xbox.refresh_interval_seconds must be at least 1".to_string());
-            }
         }
 
         if self.limits.username_min < 1 || self.limits.username_max < self.limits.username_min {
@@ -461,10 +457,7 @@ pub struct Xbox {
     pub game_mappings: String,
 
     /// Seconds between presence polls
-    pub poll_interval_seconds: u64,
-
-    /// Seconds between sweeps for tokens going stale
-    pub refresh_interval_seconds: u64
+    pub poll_interval_seconds: u64
 }
 
 impl Default for Xbox {
@@ -474,8 +467,7 @@ impl Default for Xbox {
             client_secret: String::new(),
             redirect_uri: String::new(),
             game_mappings: String::new(),
-            poll_interval_seconds: 60,
-            refresh_interval_seconds: 3600
+            poll_interval_seconds: 60
         }
     }
 }

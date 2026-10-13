@@ -1,26 +1,31 @@
+// Microsoft identity platform requests, against v2.0 consumers endpoint
+// - Builds authorization request URL with user ID as state
+// - Redeems an authorization code for tokens, and refreshes tokens with a stored refresh token
+// https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
+
 use serde::Deserialize;
 
 use crate::config;
 use crate::services::CLIENT;
-use crate::services::xbox::Failure;
+use crate::services::xbox::auth::Failure;
 
-const AUTHORIZE_URL: &str = "https://login.live.com/oauth20_authorize.srf";
-const TOKEN_URL: &str = "https://login.live.com/oauth20_token.srf";
-const SCOPE: &str = "XboxLive.signin XboxLive.offline_access";
+const AUTHORIZE_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize";
+const TOKEN_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
+const SCOPE: &str = "XboxLive.signin offline_access";
 
 // Data Types //
 
-/// What Microsoft answers a token call with
+/// Fields read from Microsoft's token response
+/// - access token (short lived)
+/// - refresh token (replaces old one, needs offline_access scope)
+
 #[derive(Deserialize)]
 pub struct Tokens {
-    /// Trades for an Xbox user token, lasts about an hour
     pub access_token: String,
-
-    /// Trades for another pair of tokens, lasts months, absent when Microsoft
-    /// keeps the one that was sent
     pub refresh_token: Option<String>
 }
 
+/// Fields read from Microsoft's error response
 #[derive(Deserialize)]
 struct ErrorBody {
     error: String,
@@ -29,15 +34,16 @@ struct ErrorBody {
 
 // Public Methods //
 
-/// Builds the address a user signs in to Microsoft at, carrying the state that
-/// identifies the attempt when the browser comes back
-pub fn authorize_url(xbox: &config::Xbox, state: &str) -> String {
+/// Builds authorization request URL with state and code challenge
+pub fn authorize_url(xbox: &config::Xbox, state: &str, challenge: &str) -> String {
     let params = [
         ("client_id", xbox.client_id.as_str()),
         ("response_type", "code"),
         ("redirect_uri", xbox.redirect_uri.as_str()),
         ("scope", SCOPE),
-        ("state", state)
+        ("state", state),
+        ("code_challenge", challenge),
+        ("code_challenge_method", "S256")
     ];
 
     match reqwest::Url::parse_with_params(AUTHORIZE_URL, params) {
@@ -49,12 +55,17 @@ pub fn authorize_url(xbox: &config::Xbox, state: &str) -> String {
     }
 }
 
-/// Trades the code a sign-in returned for the first pair of tokens
-pub async fn exchange_code(code: &str, xbox: &config::Xbox) -> Result<Tokens, Failure> {
+/// Redeems an authorization code for tokens
+pub async fn redeem_code(
+    code: &str,
+    verifier: &str,
+    xbox: &config::Xbox,
+) -> Result<Tokens, Failure> {
     let form = [
         ("client_id", xbox.client_id.as_str()),
         ("client_secret", xbox.client_secret.as_str()),
         ("code", code),
+        ("code_verifier", verifier),
         ("grant_type", "authorization_code"),
         ("redirect_uri", xbox.redirect_uri.as_str()),
         ("scope", SCOPE)
@@ -63,7 +74,7 @@ pub async fn exchange_code(code: &str, xbox: &config::Xbox) -> Result<Tokens, Fa
     post(&form).await
 }
 
-/// Trades a stored refresh token for a new pair, invalidating the one sent
+/// Refreshes tokens with a stored refresh token
 pub async fn refresh_tokens(
     refresh_token: &str,
     xbox: &config::Xbox,
@@ -81,7 +92,7 @@ pub async fn refresh_tokens(
 
 // Helper Methods //
 
-/// Posts one form to the token endpoint
+/// Posts form to token endpoint
 async fn post(form: &[(&str, &str)]) -> Result<Tokens, Failure> {
     let sent = CLIENT.post(TOKEN_URL).form(form).send().await;
 
@@ -90,6 +101,7 @@ async fn post(form: &[(&str, &str)]) -> Result<Tokens, Failure> {
         Err(e) => return Err(Failure::Retry(format!("token request failed: {e}")))
     };
 
+    // If token request is rejected, read error code
     if !response.status().is_success() {
         return Err(failure(response).await);
     }
@@ -100,10 +112,11 @@ async fn post(form: &[(&str, &str)]) -> Result<Tokens, Failure> {
     }
 }
 
-/// Reads whether a rejected token call ends the account or is worth retrying
+/// Reads error code from rejected token response
 async fn failure(response: reqwest::Response) -> Failure {
     let status = response.status();
 
+    // If response has no error body, failure is retryable
     let body = match response.json::<ErrorBody>().await {
         Ok(body) => body,
         Err(_) => return Failure::Retry(format!("token request answered {status}"))
@@ -114,6 +127,7 @@ async fn failure(response: reqwest::Response) -> Failure {
         None => body.error.clone()
     };
 
+    // If grant is rejected, failure is permanent
     match body.error.as_str() {
         "invalid_grant" => Failure::Dead(message),
         _ => Failure::Retry(message)

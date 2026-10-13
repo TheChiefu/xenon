@@ -204,10 +204,9 @@ CREATE TABLE push_subscriptions (
 ) STRICT;
 
 CREATE TABLE xbox_accounts (
-    user_id           BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    xuid              TEXT NOT NULL,
-    gamertag          TEXT NOT NULL,
-    refresh_token     TEXT NOT NULL,
-    last_refreshed_at INTEGER NOT NULL
+    user_id       BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    xuid          TEXT NOT NULL,
+    gamertag      TEXT NOT NULL,
+    refresh_token TEXT NOT NULL
 ) STRICT;
 
