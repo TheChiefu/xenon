@@ -8,29 +8,25 @@
   let account_steam_user = $state("");
 </script>
 
-<style>
-  .platform {
-    grid-template-columns: auto 1fr auto;
-  }
+<div class="section platform">
+    <div class="platform-row">
+      <span class="icon" title={LABELS_PLATFORM[Platform.steam]}>{@html ICONS_PLATFORM[Platform.steam]}</span>
+      <p class="title">Steam</p>
+    </div>
 
-  .handle {
-    font-style: italic;
-    color: var(--text-dim);
-    cursor: default;
-    user-select: none;
-  }
-</style>
+    <div class="platform-row">
+      <div class="platform-text">
+        <p class="handle">{account_linked_steam ? account_steam_user : "Not Linked"}</p>
+      </div>
 
-<div class="section rows platform">
-    <h3 class="full-row">Steam</h3>
-
-    <span class="icon" title={LABELS_PLATFORM[Platform.steam]}>{@html ICONS_PLATFORM[Platform.steam]}</span>
-    <p class="handle">{account_linked_steam ? account_steam_user : "Not Linked"}</p>
-    <button
-      class="icon-btn {account_linked_steam ? 'is-danger' : ''}"
-      aria-label={account_linked_steam ? "Unlink Steam" : "Link Steam"}
-      disabled
-    >
-      <span class="icon" aria-hidden="true">{@html account_linked_steam ? icon_link_broken : icon_link}</span>
-    </button>
+      <div class="platform-buttons">
+        <button
+          class="icon-btn {account_linked_steam ? 'is-danger' : ''}"
+          aria-label={account_linked_steam ? "Unlink Steam" : "Link Steam"}
+          disabled
+        >
+          <span class="icon" aria-hidden="true">{@html account_linked_steam ? icon_link_broken : icon_link}</span>
+        </button>
+      </div>
+    </div>
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { LABELS_PLATFORM, ICONS_PLATFORM, MSG_SAVED, MSG_REFRESHED, MSG_ERROR, MSG_UNLINK_XBOX } from "@/lib/labels";
+  import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
+  import { MSG_SAVED, MSG_REFRESHED, MSG_ERROR, MSG_UNLINK_XBOX } from "@/lib/labels";
   import { confirmDialog } from "@/lib/confirm.svelte";
   import { Platform } from "@/bindings/shared";
   import type { LinkResponse, XboxResponse } from "@/bindings/services/xbox";
@@ -17,6 +18,7 @@
     loadXboxAccount();
   });
 
+  // Fetch xbox account settings from the server
   async function loadXboxAccount(): Promise<void> {
     xbox_notify = "";
 
@@ -58,6 +60,7 @@
     }
   }
 
+  // Delete xbox account entry in server
   async function unlinkXboxAccount(): Promise<void> {
     xbox_notify = "";
 
@@ -68,6 +71,7 @@
     }
 
     try {
+      // Unlink on server and remove entry from current settings page
       await unlinkXbox();
       xbox_account = null;
     } catch (failure) {
@@ -91,56 +95,18 @@
   }
 </script>
 
-<style>
-  .title {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0;
-  }
-
-  .platform {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .platform-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .platform-text {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-
-  .platform-text,
-  .platform-row label {
-    flex: 1;
-  }
-
-  .platform-buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .handle {
-    font-style: italic;
-    color: var(--text-dim);
-    cursor: default;
-    user-select: none;
-  }
-</style>
-
 <div class="section platform">
+    <div class="platform-row">
+      <span class="icon" title={LABELS_PLATFORM[Platform.xbox]}>{@html ICONS_PLATFORM[Platform.xbox]}</span>
+      <p class="title">Xbox</p>
+      <p class="message">{xbox_notify || "​"}</p>
+    </div>
+
     <div class="platform-row">
 
       <div class="platform-text">
-        <p class="title">Xbox:</p>
+        <p>Gamertag:</p>
         <p class="handle">{xbox_account?.gamertag ?? "Not Linked"}</p>
-        <p class="message">{xbox_notify || "​"}</p>
       </div>
 
       <div class="platform-buttons">
@@ -153,7 +119,6 @@
             <span class="icon" aria-hidden="true">{@html icon_link_broken}</span>
           </button>
         {/if}
-
         <button class="icon-btn" aria-label="Refresh Xbox Account" onclick={refreshXboxAccount}>
           <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
         </button>
@@ -161,9 +126,10 @@
     </div>
 
     {#if xbox_account !== null}
+      <hr/>
       <p class="title">Account Settings:</p>
-      <div class="platform-row">
-        <label for="xbox-honor-cloaked">Hide Activity While Appearing Offline</label>
+      <div class="platform-row" title="Hide Activity While Appearing Offline">
+        <label for="xbox-honor-cloaked">Honor Offline Status</label>
         <input id="xbox-honor-cloaked" type="checkbox" bind:checked={xbox_account.honor_cloaked}/>
       </div>
 
