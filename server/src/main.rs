@@ -70,6 +70,9 @@ async fn main() -> Result<()> {
     // Ensure VAPID keys exist for browsers to subscribe against
     services::push::send::ensure_keypair(&pool).await?;
 
+    // Build outbound HTTP client if any service is enabled
+    services::init();
+
     // Server server
     let app_state = AppState::new(pool);
     services::xbox::start(app_state.clone());

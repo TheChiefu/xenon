@@ -495,7 +495,8 @@ pub struct Limits {
     pub room_page: i64,
     pub users_page: i64,
     pub users_lookup: usize,
-    pub message_buffer: usize
+    pub message_buffer: usize,
+    pub request_timeout_seconds: u64
 }
 
 impl Default for Limits {
@@ -516,7 +517,8 @@ impl Default for Limits {
             room_page: 200,
             users_page: 25,
             users_lookup: 500,
-            message_buffer: 32
+            message_buffer: 32,
+            request_timeout_seconds: 30
         }
     }
 }

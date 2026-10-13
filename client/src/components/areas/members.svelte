@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Status } from "@/bindings/shared";
+  import type { GameActivity } from "@/bindings/sockets/events";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText, fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
@@ -65,6 +66,17 @@
       members = [];
       failure = failureText(error);
     }
+  }
+
+  // Game title, followed by activity when reported
+  function activityText(activity: GameActivity): string {
+    const title = activity.title ?? LABELS_GAME_PRESENCE[activity.status];
+
+    if (activity.detail === null) {
+      return title;
+    }
+
+    return `${title} · ${activity.detail}`;
   }
 
   // Where each status sits in the list
@@ -182,7 +194,7 @@
     padding: 0 0.5rem;
   }
 
-  .name, .game {
+  .name, .game, .activity {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -277,7 +289,7 @@
               <span class="icon" aria-hidden="true" title={LABELS_PLATFORM[activity.platform]}>
                 {@html ICONS_PLATFORM[activity.platform]}
               </span>
-              {activity.title ?? activity.detail ?? LABELS_GAME_PRESENCE[activity.status]}
+              <span class="activity" title={activityText(activity)}>{activityText(activity)}</span>
             </span>
           {/if}
         </span>
