@@ -258,6 +258,11 @@ impl Config {
         self.socket_addr().ip().is_loopback()
     }
 
+    /// Returns xbox section
+    pub fn xbox(&self) -> &Xbox {
+        self.xbox.as_ref().expect("xbox routes require xbox config")
+    }
+
     /// Whether a certificate and key are configured for the listener.
     pub fn tls_configured(&self) -> bool {
         self.bind.certificate.is_some() && self.bind.key.is_some()

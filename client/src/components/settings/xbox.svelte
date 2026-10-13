@@ -6,6 +6,7 @@
   import type { LinkResponse, XboxResponse } from "@/bindings/services/xbox";
   import { getXboxAccount, startXboxLink, unlinkXbox, updateXboxAccount } from "@/lib/api/xbox";
   import { failureText } from "@/lib/utils";
+  import { loadProfile } from "@/lib/profile.svelte";
   import icon_link from "@/assets/icons/link.svg?raw";
   import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
@@ -24,6 +25,7 @@
 
     try {
       xbox_account = await getXboxAccount();
+      await loadProfile();
     } catch (failure) {
       xbox_notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }
@@ -74,6 +76,7 @@
       // Unlink on server and remove entry from current settings page
       await unlinkXbox();
       xbox_account = null;
+      await loadProfile();
     } catch (failure) {
       xbox_notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }

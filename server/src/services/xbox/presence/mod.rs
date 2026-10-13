@@ -59,8 +59,8 @@ struct Device {
 }
 
 /// User's activity on Xbox Live
-#[derive(Deserialize)]
-enum PresenceState {
+#[derive(Deserialize, PartialEq)]
+pub enum PresenceState {
     Online,
     Away,
     Offline,

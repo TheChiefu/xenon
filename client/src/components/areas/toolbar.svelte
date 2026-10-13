@@ -1,6 +1,9 @@
 <script lang="ts">
   import Identity from "@/components/identity.svelte";
   import ServerInfo from "@/components/server_info.svelte";
+  import { Platform } from "@/bindings/shared";
+  import { ICONS_PLATFORM } from "@/lib/labels";
+  import { isXboxLinked, toggleXbox } from "@/lib/xbox.svelte";
 
   import icon_search from "@/assets/icons/search.svg?raw";
 </script>
@@ -37,6 +40,12 @@
   <button class="icon-btn" aria-label="Search">
     <span class="icon" aria-hidden="true">{@html icon_search}</span>
   </button>
+
+  {#if isXboxLinked()}
+    <button class="icon-btn" aria-label="Xbox" title="Xbox" onclick={toggleXbox}>
+      <span class="icon" aria-hidden="true">{@html ICONS_PLATFORM[Platform.xbox]}</span>
+    </button>
+  {/if}
 
   <div class="toolbar-user">
     <Identity/>

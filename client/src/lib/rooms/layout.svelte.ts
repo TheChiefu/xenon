@@ -3,14 +3,19 @@ import type { Folder, RoomListItem } from "@/bindings/shared";
 import { listMyRooms } from "@/lib/api/rooms";
 import { getStoredPreferences, savePreferences } from "@/lib/preferences.svelte";
 import { addRoomData, setRoomData, type RoomId } from "@/lib/rooms/data.svelte";
+import { Edge, PaneWidth } from "@/lib/resize.svelte";
 
 // Note: any bare "string" types are assumed to be room rows
+
+const KEY_USER_ROOM_WIDTH: string = "room_panel_width";
 
 export enum Section {
   Above,
   Inside,
   Below,
 }
+
+export const roomWidth = new PaneWidth(KEY_USER_ROOM_WIDTH, Edge.right);  // Pane width
 
 let layout: RoomListItem[] = $state([]);  // Rows of room and folders
 let locked: boolean = $state(true);       // Permission to change layout

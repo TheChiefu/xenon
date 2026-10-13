@@ -14,7 +14,8 @@ use crate::api::users::UserSummary;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::shared::{GlobalRole};
+use crate::services::xbox;
+use crate::shared::{GlobalRole, Platform};
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{registry};
 use crate::state::AppState;
@@ -37,6 +38,17 @@ pub struct UserProfileResponse {
     pub global_role: GlobalRole,
     pub created_at: i64,
     pub deleted_at: Option<i64>,
+    pub linked_accounts: Vec<LinkedAccountResponse>,
+}
+
+/// A user's linked account
+/// - Platform: Service the account belongs to
+/// - Handle: Name shown for the account
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
+pub struct LinkedAccountResponse {
+    pub platform: Platform,
+    pub handle: String,
 }
 
 /// What a member row or search result shows of a user
@@ -223,6 +235,12 @@ pub async fn get_me(
 async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileResponse> {
     let row = api::users::get(pool, user_id).await?;
 
+    let mut linked_accounts = Vec::new();
+
+    if let Some(xbox) = xbox::accounts::get(pool, user_id).await? {
+        linked_accounts.push(LinkedAccountResponse { platform: Platform::Xbox, handle: xbox.gamertag });
+    }
+
     Ok(UserProfileResponse {
         id: row.id,
         username: row.username,
@@ -233,6 +251,7 @@ async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileRe
         global_role: row.global_role,
         created_at: row.created_at,
         deleted_at: row.deleted_at,
+        linked_accounts,
     })
 }
 

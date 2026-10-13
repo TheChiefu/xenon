@@ -2,6 +2,7 @@
 
 pub mod accounts;
 pub mod auth;
+pub mod friends;
 pub mod presence;
 pub mod routes;
 
@@ -17,8 +18,12 @@ use crate::state::AppState;
 
 // Public Methods //
 
-/// Routes this service serves
+/// Routes this service serves, none when config has no xbox section
 pub fn router() -> Router<AppState> {
+    if config::get().xbox.is_none() {
+        return Router::new();
+    }
+
     Router::new()
         .route("/me/xbox",
             get(routes::get_account)
@@ -26,6 +31,7 @@ pub fn router() -> Router<AppState> {
             .patch(routes::update)
             .delete(routes::unlink)
         )
+        .route("/me/xbox/friends", get(routes::get_friends))
         .route("/xbox/redirect", get(routes::redirect))
 }
 

@@ -2,11 +2,11 @@
     import type { Folder } from "@/bindings/shared";
     import { Visibility } from "@/bindings/shared";
     import { LABELS_VISIBILITY } from "@/lib/labels";
-    import { Section, folderToggle, getLayout, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
+    import { Section, folderToggle, getLayout, isLocked, roomWidth, toggleLock } from "@/lib/rooms/layout.svelte";
     import { getRoomData, type RoomId } from "@/lib/rooms/data.svelte";
     import { getSelectedRoom, selectRoom } from "@/lib/session.svelte";
     import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
-    import { resizeStop, getWidth, HANDLE_WIDTH, isResizing, reset, resize, resizeStart } from "@/lib/rooms/resize.svelte";
+    import { HANDLE_WIDTH } from "@/lib/resize.svelte";
     import { openMenu } from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
@@ -221,7 +221,7 @@
 <!-- Room Pane -->
 <div
     class="rooms"
-    style="width: {getWidth()}px"
+    style="width: {roomWidth.getWidth()}px"
     style:--handle-width="{HANDLE_WIDTH}px"
     oncontextmenu={(event) => openMenu(event, paneCtx())}
     role="presentation"
@@ -290,15 +290,15 @@
     <!-- Vertical Bar for resizing room pane-->
     <div
         class="resize-handle"
-        class:dragging={isResizing()}
+        class:dragging={roomWidth.isResizing()}
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize room list"
-        onpointerdown={resizeStart}
-        onpointermove={(event) => resize(event, pane)}
-        onpointerup={resizeStop}
-        onlostpointercapture={resizeStop}
-        ondblclick={reset}
+        onpointerdown={(event) => roomWidth.resizeStart(event)}
+        onpointermove={(event) => roomWidth.resize(event, pane)}
+        onpointerup={() => roomWidth.resizeStop()}
+        onlostpointercapture={() => roomWidth.resizeStop()}
+        ondblclick={() => roomWidth.reset()}
     ></div>
 </div>
 

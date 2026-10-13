@@ -1,4 +1,4 @@
-import type { LinkResponse, XboxPatch, XboxResponse } from "@/bindings/services/xbox";
+import type { FriendResponse, LinkResponse, XboxPatch, XboxResponse } from "@/bindings/services/xbox";
 import { request } from "@/lib/utils";
 
 export async function getXboxAccount(): Promise<XboxResponse | null> {
@@ -17,4 +17,9 @@ export async function updateXboxAccount(body: XboxPatch): Promise<void> {
 
 export async function unlinkXbox(): Promise<void> {
     await request("/me/xbox", "DELETE");
+}
+
+export async function getXboxFriends(): Promise<FriendResponse[]> {
+    const response = await request("/me/xbox/friends");
+    return await response.json() as FriendResponse[];
 }

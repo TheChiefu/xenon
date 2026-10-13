@@ -6,11 +6,6 @@
 export enum Status { "online" = "online", "busy" = "busy", "away" = "away", "offline" = "offline" }
 
 /**
- * A game service an account is linked to
- */
-export enum Platform { "xbox" = "xbox", "steam" = "steam" }
-
-/**
  * How a room is discovered and entered
  */
 export enum Visibility { "public" = "public", "locked" = "locked", "hidden" = "hidden" }
@@ -19,6 +14,11 @@ export enum Visibility { "public" = "public", "locked" = "locked", "hidden" = "h
  * A user's server-wide role
  */
 export enum GlobalRole { "admin" = "admin", "member" = "member", "visitor" = "visitor" }
+
+/**
+ * A game service an account is linked to
+ */
+export enum Platform { "xbox" = "xbox", "steam" = "steam" }
 
 /**
  * A named group of rooms in a user's room list layout
@@ -30,6 +30,6 @@ export type Folder = { name: string, rooms: Array<string>, collapsed: boolean, }
  */
 export type RoomListItem = string | Folder;
 
-export enum Notify { "none" = "none", "mentions" = "mentions", "all" = "all" }
-
 export enum Permission { "post" = "post", "attach" = "attach", "commands" = "commands", "delete_msg" = "delete_msg", "invite" = "invite", "rename" = "rename", "ban" = "ban", "grant" = "grant", "delete_room" = "delete_room", "connect" = "connect", "speak" = "speak", "mute" = "mute", "video" = "video", "screenshare" = "screenshare" }
+
+export enum Notify { "none" = "none", "mentions" = "mentions", "all" = "all" }

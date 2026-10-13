@@ -23,6 +23,9 @@ use crate::services::xbox::accounts;
 use crate::services::xbox::auth;
 use crate::services::xbox::auth::microsoft;
 use crate::services::xbox::auth::xsts;
+use crate::services::xbox::auth::Failure;
+use crate::services::xbox::friends;
+use crate::services::xbox::presence::PresenceState;
 use crate::utils::{now_ms, MINUTE};
 
 /// Page shown after linking, in tab client opened
@@ -106,6 +109,22 @@ pub struct XboxResponse {
     pub honor_cloaked: bool
 }
 
+/// A friend on Xbox
+/// - Gamertag: Name shown for the account
+/// - Picture URL: Gamerpic
+/// - Online: Whether presence state is online
+/// - Presence text: Xbox status line
+/// - In party: Whether friend is in a party
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/xbox.ts"))]
+pub struct FriendResponse {
+    pub gamertag: String,
+    pub picture_url: Option<String>,
+    pub online: bool,
+    pub presence_text: String,
+    pub in_party: bool
+}
+
 /// Settings for caller's linked account
 /// - Honor cloaked: Whether activity is hidden while appearing offline on Xbox
 #[derive(Deserialize)]
@@ -118,9 +137,7 @@ pub struct XboxPatch {
 
 /// Returns authorization request URL for caller
 pub async fn start(AuthUser(user_id, ..): AuthUser) -> Result<Json<LinkResponse>> {
-    let Some(xbox) = &config::get().xbox else {
-        return Err(AppError::Validation("account linking is unavailable".into()));
-    };
+    let xbox = config::get().xbox();
 
     // Random PKCE code verifier, kept until Microsoft redirects back
     let mut bytes = [0u8; 32];
@@ -178,6 +195,39 @@ pub async fn get_account(
     Ok(Json(response))
 }
 
+/// Returns caller's Xbox friends
+pub async fn get_friends(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<FriendResponse>>> {
+    let xbox = config::get().xbox();
+
+    // Returns empty list if caller has no linked account
+    let Some(account) = accounts::get(&pool, user_id).await? else {
+        return Ok(Json(Vec::new()));
+    };
+
+    // Rejects request if Authorization header could not be built
+    let Some(authorization) = auth::get_header(&pool, &account, xbox).await else {
+        return Err(AppError::Xbox(Failure::Retry("Xbox authorization unavailable".into())));
+    };
+
+    // Requests friends list and converts each person to a friend response
+    let friends = friends::fetch(&account, &authorization)
+        .await?
+        .into_iter()
+        .map(|person| FriendResponse {
+            gamertag: person.gamertag,
+            picture_url: person.display_pic_raw,
+            online: person.presence_state == PresenceState::Online,
+            presence_text: person.presence_text,
+            in_party: person.multiplayer_summary.in_party > 0
+        })
+        .collect();
+
+    Ok(Json(friends))
+}
+
 /// Changes caller's linked account settings
 pub async fn update(
     AuthUser(user_id, ..): AuthUser,
@@ -202,9 +252,7 @@ pub async fn unlink(
 
 /// Redeems authorization code and saves linked account
 async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
-    let Some(xbox) = &config::get().xbox else {
-        return Err(AppError::Validation("account linking is unavailable".into()));
-    };
+    let xbox = config::get().xbox();
 
     // Code verifier is removed so it can't be used twice
     let verifier = VERIFIERS.write().unwrap_or_else(PoisonError::into_inner).remove(&query.state);
