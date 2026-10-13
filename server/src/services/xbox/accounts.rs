@@ -7,22 +7,26 @@ use uuid::Uuid;
 use crate::error::Result;
 
 /// A linked Xbox account
-/// - Xbox account ID (XUID)
-/// - refresh token (replaced with one from each token response)
+/// - XUID: Xbox account ID
+/// - Gamertag: Name shown for the account
+/// - Refresh token: Replaced with one from each token response
+/// - Honor cloaked: Whether activity is hidden while appearing offline on Xbox
 #[derive(sqlx::FromRow)]
 pub struct Account {
     pub user_id: Uuid,
     pub xuid: String,
-    pub refresh_token: String
+    pub gamertag: String,
+    pub refresh_token: String,
+    pub honor_cloaked: bool
 }
 
-/// Reads one user's linked gamertag
-pub async fn gamertag(pool: &SqlitePool, user_id: Uuid) -> Result<Option<String>> {
+/// Reads one user's linked account
+pub async fn get(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>> {
     let mut conn = pool.acquire().await?;
 
-    let gamertag = sqlx::query_scalar(
+    let row = sqlx::query_as(
         "
-        SELECT gamertag
+        SELECT user_id, xuid, gamertag, refresh_token, honor_cloaked
         FROM xbox_accounts
         WHERE user_id = ?1
         "
@@ -31,7 +35,7 @@ pub async fn gamertag(pool: &SqlitePool, user_id: Uuid) -> Result<Option<String>
     .fetch_optional(&mut *conn)
     .await?;
 
-    Ok(gamertag)
+    Ok(row)
 }
 
 /// Reads every linked account
@@ -40,7 +44,7 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
 
     let rows = sqlx::query_as(
         "
-        SELECT user_id, xuid, refresh_token
+        SELECT user_id, xuid, gamertag, refresh_token, honor_cloaked
         FROM xbox_accounts
         "
     )
@@ -97,6 +101,29 @@ pub async fn set_refresh_token(
     )
     .bind(user_id)
     .bind(refresh_token)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
+}
+
+/// Sets whether activity is hidden while appearing offline on Xbox
+pub async fn set_honor_cloaked(
+    pool: &SqlitePool,
+    user_id: Uuid,
+    honor_cloaked: bool,
+) -> Result<()> {
+    let mut conn = pool.acquire().await?;
+
+    sqlx::query(
+        "
+        UPDATE xbox_accounts
+        SET honor_cloaked = ?2
+        WHERE user_id = ?1
+        "
+    )
+    .bind(user_id)
+    .bind(honor_cloaked)
     .execute(&mut *conn)
     .await?;
 

@@ -96,11 +96,12 @@ export const LABELS_VISIBILITY: Record<Visibility, string> = {
 
 export const MSG_SAVED = "Changes Saved";
 export const MSG_REFRESHED = "Refreshed";
-export const MSG_ERROR = "Error: ";
+export const MSG_ERROR = "Error";
 export const MSG_REMOVE_PUSH = "Are you sure you want to disable push notifications?";
 export const MSG_DISABLE_NOTIFICATION = "Browser notifications must be revoked via browser settings.";
 export const MSG_ANONYMIZE = "Replaces your display name and releases your username for someone else to take.";
 export const MSG_DELETE_ACCOUNT = "Are you sure you want to delete your account? This cannot be undone.";
+export const MSG_UNLINK_XBOX = "Are you sure you want to unlink your Xbox account?";
 
 export const DESCRIPTIONS_VISIBILITY: Record<Visibility, string> = {
   [Visibility.public]: "Listed in discovery, anyone can join",

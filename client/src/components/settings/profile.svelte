@@ -2,7 +2,7 @@
   import { getProfile, loadProfile } from "@/lib/profile.svelte";
   import { updateProfile } from "@/lib/api/users";
   import { uploadFile } from "@/lib/api/files";
-  import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
+  import { failureText, fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
   import icon_pencil from "@/assets/icons/pencil.svg?raw";
   import icon_x from "@/assets/icons/x.svg?raw";
@@ -94,7 +94,7 @@
 
       await loadProfile();
     } catch (failure) {
-      error = failure instanceof Error ? failure.message : String(failure);
+      error = failureText(failure);
     }
   }
 </script>

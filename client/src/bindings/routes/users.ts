@@ -31,11 +31,7 @@ banner_file_id: string | null, };
 /**
  * A user's profile
  */
-export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, deleted_at: number | null, 
-/**
- * Name shown for a linked Xbox account
- */
-gamertag: string | null, };
+export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, deleted_at: number | null, };
 
 /**
  * What a member row or search result shows of a user

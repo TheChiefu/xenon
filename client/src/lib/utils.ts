@@ -24,6 +24,11 @@ export function cssTime(name: string): number {
     return value.endsWith("ms") ? number : number * 1000;
 }
 
+// Returns message of a caught failure
+export function failureText(failure: unknown): string {
+    return failure instanceof Error ? failure.message : String(failure);
+}
+
 // Attaches the active session's address and bearer token, and throws the
 // server's error message on a failing status
 export async function request(path: string, method?: Method, body?: unknown): Promise<Response> {

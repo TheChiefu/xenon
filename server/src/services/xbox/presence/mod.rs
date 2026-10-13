@@ -70,12 +70,18 @@ enum PresenceState {
 }
 
 /// Fields read from presence record
+/// - State: Overall Xbox status
+/// - Devices: What a user is on and their activity
+/// - Cloaked: Whether user appears offline to other Xbox users
 #[derive(Deserialize)]
 struct Record {
     state: PresenceState,
 
     #[serde(default)]
-    devices: Vec<Device>
+    devices: Vec<Device>,
+
+    #[serde(default)]
+    cloaked: bool
 }
 
 // Public Methods //
@@ -105,7 +111,7 @@ pub async fn poll(
             continue;
         };
 
-        let game = reported(record, mappings);
+        let game = reported(record, account.honor_cloaked, mappings);
         game_presence::on_report(state, account.user_id, game).await;
     }
 }
@@ -169,8 +175,9 @@ async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
 }
 
 /// Converts presence record to game activity, applying game mappings
-fn reported(record: Record, mappings: &Mappings) -> GameActivity {
+fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> GameActivity {
     let status = match record.state {
+        _ if record.cloaked && honor_cloaked => GamePresence::Offline,
         PresenceState::Online => GamePresence::Online,
         PresenceState::Away => GamePresence::Away,
         PresenceState::Offline | PresenceState::Unknown => GamePresence::Offline

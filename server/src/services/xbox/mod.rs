@@ -7,7 +7,7 @@ pub mod routes;
 
 use std::time::Duration;
 
-use axum::routing::{get, post};
+use axum::routing::get;
 use axum::Router;
 
 use crate::config;
@@ -21,7 +21,9 @@ use crate::state::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/me/xbox",
-            post(routes::start)
+            get(routes::get_account)
+            .post(routes::start)
+            .patch(routes::update)
             .delete(routes::unlink)
         )
         .route("/xbox/redirect", get(routes::redirect))

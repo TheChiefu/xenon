@@ -1,6 +1,7 @@
 <script lang="ts">
   import { login, register } from "@/lib/api/auth";
   import { addAccount, getAccounts, setCurrentLogin, removeAccount } from "@/lib/session.svelte";
+  import { failureText } from "@/lib/utils";
   import iconX from "@/assets/icons/x.svg?raw";
 
   // Matches Bind::default() in: server/src/config.rs
@@ -38,7 +39,7 @@
       addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      error = failureText(err);
     } finally {
       pending = false;
     }
@@ -59,7 +60,7 @@
       addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      error = failureText(err);
     } finally {
       pending = false;
     }

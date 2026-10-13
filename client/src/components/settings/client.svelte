@@ -29,7 +29,7 @@
 
   async function enableBrowser() {
     const result = await enableBrowserNotifications();
-    notifications_notify = result ? MSG_ERROR + result : MSG_SAVED;
+    notifications_notify = result ? `${MSG_ERROR}: ${result}` : MSG_SAVED;
   }
 
   // A granted permission can only be withdrawn in the browser's own settings
@@ -39,7 +39,7 @@
 
   async function subscribePush() {
     const result = await enablePush();
-    notifications_notify = result ? MSG_ERROR + result : MSG_SAVED;
+    notifications_notify = result ? `${MSG_ERROR}: ${result}` : MSG_SAVED;
   }
 
   async function unsubscribePush() {
@@ -51,7 +51,7 @@
     }
 
     const result = await disablePush();
-    notifications_notify = result ? MSG_ERROR + result : MSG_SAVED;
+    notifications_notify = result ? `${MSG_ERROR}: ${result}` : MSG_SAVED;
   }
 </script>
 

@@ -3,6 +3,7 @@
   import Profile from "@/components/settings/profile.svelte";
   import Client from "@/components/settings/client.svelte";
   import Account from "@/components/settings/account.svelte";
+  import Links from "@/components/settings/links.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
 
   interface Props {
@@ -17,6 +18,7 @@
     { label: "Profile", view: Profile },
     { label: "Client", view: Client },
     { label: "Account", view: Account },
+    { label: "Links", view: Links },
   ];
 
   const Tabs = $derived(tabs[current_tab].view);

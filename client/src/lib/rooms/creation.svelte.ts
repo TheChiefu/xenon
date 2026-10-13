@@ -1,6 +1,7 @@
 import type { CreateRoomRequest } from "@/bindings/routes/rooms";
 import { createRoom, getRoom } from "@/lib/api/rooms";
 import { roomAdd } from "@/lib/rooms/layout.svelte";
+import { failureText } from "@/lib/utils";
 
 // State //
 let visible: boolean = $state(false);     // Dialog is on screen
@@ -46,7 +47,7 @@ export async function submit(body: CreateRoomRequest): Promise<void> {
     roomAdd(await getRoom(created.id));
     visible = false;
   } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    error = failureText(err);
   } finally {
     pending = false;
   }

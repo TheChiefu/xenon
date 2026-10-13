@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Status } from "@/bindings/shared";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
-  import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
+  import { failureText, fetchFileBlob, type FetchedFile } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
   import { getSelectedRoom } from "@/lib/session.svelte";
   import { getActivityOfUser, getPresenceOfUser, getUser, loadUsers } from "@/lib/users.svelte";
@@ -63,7 +63,7 @@
       }
     } catch (error) {
       members = [];
-      failure = error instanceof Error ? error.message : String(error);
+      failure = failureText(error);
     }
   }
 

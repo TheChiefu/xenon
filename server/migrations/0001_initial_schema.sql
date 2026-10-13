@@ -207,6 +207,7 @@ CREATE TABLE xbox_accounts (
     user_id       BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     xuid          TEXT NOT NULL,
     gamertag      TEXT NOT NULL,
-    refresh_token TEXT NOT NULL
+    refresh_token TEXT NOT NULL,
+    honor_cloaked INTEGER NOT NULL DEFAULT 1
 ) STRICT;
 

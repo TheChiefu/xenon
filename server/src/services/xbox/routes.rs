@@ -96,6 +96,24 @@ pub struct RedirectQuery {
     state: Uuid
 }
 
+/// Caller's linked Xbox account
+/// - Gamertag: Name shown for the account
+/// - Honor cloaked: Whether activity is hidden while appearing offline on Xbox
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/xbox.ts"))]
+pub struct XboxResponse {
+    pub gamertag: String,
+    pub honor_cloaked: bool
+}
+
+/// Settings for caller's linked account
+/// - Honor cloaked: Whether activity is hidden while appearing offline on Xbox
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/xbox.ts"))]
+pub struct XboxPatch {
+    pub honor_cloaked: bool
+}
+
 // Public Methods //
 
 /// Returns authorization request URL for caller
@@ -142,6 +160,32 @@ pub async fn redirect(
             format!("Xbox linking failed: {e}").into_response()
         }
     }
+}
+
+/// Returns caller's linked account
+pub async fn get_account(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Option<XboxResponse>>> {
+    let response = match accounts::get(&pool, user_id).await? {
+        Some(account) => Some(XboxResponse {
+            gamertag: account.gamertag,
+            honor_cloaked: account.honor_cloaked
+        }),
+        None => None
+    };
+
+    Ok(Json(response))
+}
+
+/// Changes caller's linked account settings
+pub async fn update(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Json(body): Json<XboxPatch>,
+) -> Result<StatusCode> {
+    accounts::set_honor_cloaked(&pool, user_id, body.honor_cloaked).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Removes caller's linked account and cached header

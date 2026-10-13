@@ -2,7 +2,7 @@
 
 import type { VapidKeyResponse } from "@/bindings/services/push";
 import { getUrl } from "@/lib/session.svelte";
-import { request } from "@/lib/utils";
+import { failureText, request } from "@/lib/utils";
 
 let browserGranted: boolean = $state(checkBrowserGranted());
 let pushSubscription: PushSubscription | null = $state(null);
@@ -100,7 +100,7 @@ export async function enablePush(): Promise<string | undefined> {
     return undefined;
   } catch (err) {
     // Report any unknown errors
-    return err instanceof Error ? err.message : String(err);
+    return failureText(err);
   } finally {
     // Push can prompt for browser notifications
     // Check if user allowed them
@@ -126,6 +126,6 @@ export async function disablePush(): Promise<string | undefined> {
     return undefined;
   } catch (err) {
     // Report any unknown errors
-    return err instanceof Error ? err.message : String(err);
+    return failureText(err);
   }
 }
