@@ -166,6 +166,7 @@ pub fn router(state: AppState) -> Router {
         .route("/server/type", get(server::kind))
         .route("/health", get(server::health_check))
         .merge(crate::services::push::router())
+        .merge(crate::services::xbox::router())
         .with_state(state)
         .layer(cors_layer())
 }

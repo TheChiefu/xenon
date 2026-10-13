@@ -72,6 +72,8 @@ async fn main() -> Result<()> {
 
     // Server server
     let app_state = AppState::new(pool);
+    services::xbox::start(app_state.clone());
+
     let app: axum::Router = routes::router(app_state);
     let bind_addr = config::get().socket_addr();
 

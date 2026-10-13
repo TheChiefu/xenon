@@ -127,3 +127,49 @@ static DECOY_HASH: LazyLock<String> = LazyLock::new(|| {
 pub fn burn_verify(password: &str) {
     let _ = verify_password(password, &DECOY_HASH);
 }
+
+/// Reads an RFC 3339 timestamp in UTC as milliseconds since the Unix epoch.
+///
+/// Fractional seconds are ignored. Returns `None` when a field is missing or
+/// does not parse.
+///
+/// # Arguments
+///
+/// * `timestamp` - Timestamp in the form `2026-10-12T12:34:56.1234567Z`.
+pub fn rfc3339_ms(timestamp: &str) -> Option<i64> {
+    const MONTH_START: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+
+    let (date, clock) = timestamp.split_once('T')?;
+
+    let mut fields = date.split('-');
+    let year: i64 = fields.next()?.parse().ok()?;
+    let month: i64 = fields.next()?.parse().ok()?;
+    let day: i64 = fields.next()?.parse().ok()?;
+
+    let mut fields = clock.split(':');
+    let hour: i64 = fields.next()?.parse().ok()?;
+    let minute: i64 = fields.next()?.parse().ok()?;
+    let second: i64 = fields.next()?.get(0..2)?.parse().ok()?;
+
+    // Days into this year
+    let mut days = MONTH_START[(month - 1) as usize] + day - 1;
+
+    fn is_leap(year: i64) -> bool {
+        year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
+    }
+
+    // Add a year of days for every year since 1970
+    for past in 1970..year {
+        days += 365;
+        if is_leap(past) {
+            days += 1;
+        }
+    }
+    
+    // Add this year's leap day once February has passed
+    if month > 2 && is_leap(year) {
+        days += 1;
+    }
+
+    Some((days * 86400 + hour * 3600 + minute * 60 + second) * 1000)
+}
