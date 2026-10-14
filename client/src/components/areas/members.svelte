@@ -7,6 +7,8 @@
   import { getSelectedRoom } from "@/lib/session.svelte";
   import { getActivityOfUser, getPresenceOfUser, getUser, loadUsers } from "@/lib/users.svelte";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
+  import { Pane } from "@/lib/panes.svelte";
+  import PaneArea from "@/components/pane.svelte";
 
   // What one row shows of a member
   interface Member {
@@ -97,16 +99,6 @@
 <style>
 
   /* Pane */
-
-  .members {
-    width: 18rem;
-    display: flex;
-    flex-direction: column;
-    flex: none;
-    border-right: 1px solid var(--border);
-    background: rgba(30,30,30, 0.5);
-    overflow: hidden;
-  }
 
   /* Header */
 
@@ -238,6 +230,7 @@
     align-self: stretch;
   }
 
+
   .online  { background: var(--status-online); }
   .busy    { background: var(--status-busy); }
   .away    { background: var(--status-away); }
@@ -246,7 +239,7 @@
 </style>
 
 <!-- Member Pane -->
-<div class="members">
+<PaneArea pane={Pane.members}>
 
   <!-- Display Header -->
   <div class="header">
@@ -304,4 +297,4 @@
       </button>
     {/each}
   </div>
-</div>
+</PaneArea>

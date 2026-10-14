@@ -4,6 +4,7 @@
   import Popup from "./views/popup.svelte";
   import Rooms from "./components/areas/rooms.svelte";
   import Members from "./components/areas/members.svelte";
+  import Chat from "./components/areas/chat.svelte";
   import Xbox from "./components/areas/xbox.svelte";
   import ContextMenu from "./components/context_menu.svelte";
   import { getToken } from "./lib/session.svelte";
@@ -14,7 +15,7 @@
   import { loadRooms } from "./lib/rooms/layout.svelte";
   import { getSelectedRoom } from "./lib/session.svelte";
   import { close, connect } from "./lib/socket.svelte";
-  import { isXboxOpen } from "./lib/xbox.svelte";
+  import { Pane, isOpen } from "./lib/panes.svelte";
 
   $effect(() => {
     if (getToken() === null) return;
@@ -36,9 +37,14 @@
   <div class="app">
     <Toolbar/>
     <div class="panes">
-      <Rooms/>
-      <Members/>
-      {#if isXboxOpen()}
+      {#if isOpen(Pane.room)}
+        <Rooms/>
+      {/if}
+      {#if isOpen(Pane.members)}
+        <Members/>
+      {/if}
+      <Chat/>
+      {#if isOpen(Pane.xbox)}
         <Xbox/>
       {/if}
     </div>

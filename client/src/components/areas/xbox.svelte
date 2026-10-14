@@ -1,12 +1,13 @@
 <script lang="ts">
   import type { FriendResponse } from "@/bindings/services/xbox";
-  import { HANDLE_WIDTH } from "@/lib/resize.svelte";
+  import { Pane } from "@/lib/panes.svelte";
+  import PaneArea from "@/components/pane.svelte";
   import { failureText } from "@/lib/utils";
-  import { getFriends, isXboxLinked, loadFriends, xboxWidth } from "@/lib/xbox.svelte";
+  import { getFriends, isXboxLinked, loadFriends } from "@/lib/xbox.svelte";
+  import icon_lock from "@/assets/icons/lock.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
 
-  let pane: HTMLDivElement | undefined = $state();
   let failure: string | null = $state(null);
 
   // Loads friends when pane opens or an account is linked
@@ -43,16 +44,6 @@
 
   /* Pane */
 
-  .xbox {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    flex: none;
-    margin-left: auto;
-    border-left: 1px solid var(--border);
-    background: rgba(30,30,30, 0.5);
-    overflow: hidden;
-  }
 
   /* Header */
 
@@ -104,13 +95,18 @@
     flex: none;
     align-items: center;
     background-color: var(--component);
+    border: 0.25rem solid transparent;
+  }
+
+  .friend:hover {
+    border-color: rgba(255,255,255,0.1);
   }
 
   .picture {
     flex: none;
     width: var(--avatar-size);
     height: var(--avatar-size);
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .text {
@@ -133,47 +129,33 @@
 
   .party {
     flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-right: 0.5rem;
   }
 
-  /* Status Bar */
-
-  .status {
-    width: var(--status-bar-width);
-    flex: none;
-    align-self: stretch;
+  .count {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    line-height: 1;
+    user-select: none;
   }
 
-  .online  { background: var(--status-online); }
-  .offline { background: var(--status-offline); }
-
-  /* Resize Handle */
-
-  .resize-handle {
-    position: absolute;
-    top: 0;
-    left: calc(var(--handle-width) / -2);
-    width: var(--handle-width);
-    height: 100%;
-    z-index: 1;
-    touch-action: none;
-    background-color: var(--border);
-    cursor: col-resize;
+  .icons {
+    display: flex;
   }
 
-  .resize-handle.dragging {
-    background-color: var(--btn-action);
+  /* Status */
+  .online  {
+    background-color: color-mix(in srgb, var(--status-online), black 70%);
   }
+
 
 </style>
 
 <!-- Xbox Pane -->
-<div
-  class="xbox"
-  style="width: {xboxWidth.getWidth()}px"
-  style:--handle-width="{HANDLE_WIDTH}px"
-  bind:this={pane}
->
+<PaneArea pane={Pane.xbox} overlay>
 
   <!-- Display Header -->
   <div class="header">
@@ -192,7 +174,8 @@
   <!-- Friend List -->
   <div class="list">
     {#each ordered as friend (friend.gamertag)}
-      <div class="friend">
+      <div class="friend" class:online={friend.online} >
+
         {#if friend.picture_url === null}
           <span class="picture"></span>
         {:else}
@@ -204,30 +187,23 @@
           <span class="presence">{friend.presence_text}</span>
         </span>
 
-        {#if friend.in_party}
-          <span class="icon party" aria-label="In party" title="In party">{@html icon_users}</span>
-        {/if}
-
-        {#if friend.online}
-          <span class="status online"></span>
-        {:else}
-          <span class="status offline"></span>
+        {#if friend.in_party > 0}
+          <span
+            class="party"
+            aria-label={friend.party_locked ? "Invite Only" : "In Party"}
+            title={friend.party_locked ? "Invite Only" : "In Party"}
+          >
+            <span class="count">{friend.in_party}</span>
+            <span class="icons">
+              <span class="icon" aria-hidden="true">{@html icon_users}</span>
+              {#if friend.party_locked}
+                <span class="icon" aria-hidden="true">{@html icon_lock}</span>
+              {/if}
+            </span>
+          </span>
         {/if}
       </div>
     {/each}
   </div>
 
-  <!-- Vertical Bar for resizing Xbox pane -->
-  <div
-    class="resize-handle"
-    class:dragging={xboxWidth.isResizing()}
-    role="separator"
-    aria-orientation="vertical"
-    aria-label="Resize Xbox pane"
-    onpointerdown={(event) => xboxWidth.resizeStart(event)}
-    onpointermove={(event) => xboxWidth.resize(event, pane)}
-    onpointerup={() => xboxWidth.resizeStop()}
-    onlostpointercapture={() => xboxWidth.resizeStop()}
-    ondblclick={() => xboxWidth.reset()}
-  ></div>
-</div>
+</PaneArea>

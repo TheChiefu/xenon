@@ -2,11 +2,12 @@
     import type { Folder } from "@/bindings/shared";
     import { Visibility } from "@/bindings/shared";
     import { LABELS_VISIBILITY } from "@/lib/labels";
-    import { Section, folderToggle, getLayout, isLocked, roomWidth, toggleLock } from "@/lib/rooms/layout.svelte";
+    import { Section, folderToggle, getLayout, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
     import { getRoomData, type RoomId } from "@/lib/rooms/data.svelte";
     import { getSelectedRoom, selectRoom } from "@/lib/session.svelte";
     import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
-    import { HANDLE_WIDTH } from "@/lib/resize.svelte";
+    import { Pane } from "@/lib/panes.svelte";
+    import PaneArea from "@/components/pane.svelte";
     import { openMenu } from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
@@ -20,24 +21,9 @@
     import icon_arrow_down from "@/assets/icons/arrow-down.svg?raw";
     import icon_arrow_right from "@/assets/icons/arrow-right.svg?raw";
 
-    let pane: HTMLDivElement | undefined = $state();
-
 </script>
 
 <style>
-
-    /* Pane */
-
-    .rooms {
-        --indent: 2rem;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        flex: none;
-        border-right: 1px solid var(--border);
-        background: rgba(30,30,30, 0.5);
-        overflow: hidden;
-    }
 
     /* Header */
 
@@ -57,6 +43,7 @@
     /* List */
 
     .list {
+        --indent: 2rem;
         flex: 1;
         min-height: 0;
         display: flex;
@@ -136,23 +123,6 @@
         outline-offset: -2px;
     }
 
-    /* Resize Handle */
-
-    .resize-handle {
-        position: absolute;
-        top: 0;
-        right: calc(var(--handle-width) / -2);
-        width: var(--handle-width);
-        height: 100%;
-        z-index: 1;
-        touch-action: none;
-        background-color: var(--border);
-        cursor: col-resize;
-    }
-
-    .resize-handle.dragging {
-        background-color: var(--btn-action);
-    }
 
 </style>
 
@@ -219,14 +189,7 @@
 <svelte:window onpointerup={dragRelease} onpointercancel={dragStateReset}/>
 
 <!-- Room Pane -->
-<div
-    class="rooms"
-    style="width: {roomWidth.getWidth()}px"
-    style:--handle-width="{HANDLE_WIDTH}px"
-    oncontextmenu={(event) => openMenu(event, paneCtx())}
-    role="presentation"
-    bind:this={pane}
->
+<PaneArea pane={Pane.room}>
 
     <!-- Display Header and related buttons -->
     <div class="header">
@@ -255,6 +218,7 @@
     <div
         class="list"
         class:moving={isDragging()}
+        oncontextmenu={(event) => openMenu(event, paneCtx())}
         role="presentation"
     >
         {#each getLayout() as entry}
@@ -287,20 +251,7 @@
         {/if}
     </div>
 
-    <!-- Vertical Bar for resizing room pane-->
-    <div
-        class="resize-handle"
-        class:dragging={roomWidth.isResizing()}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize room list"
-        onpointerdown={(event) => roomWidth.resizeStart(event)}
-        onpointermove={(event) => roomWidth.resize(event, pane)}
-        onpointerup={() => roomWidth.resizeStop()}
-        onlostpointercapture={() => roomWidth.resizeStop()}
-        ondblclick={() => roomWidth.reset()}
-    ></div>
-</div>
+</PaneArea>
 
 <!-- Room creation dialog, opened from the pane's context menu -->
 {#if isOpen()}

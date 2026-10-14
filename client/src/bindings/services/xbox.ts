@@ -6,9 +6,10 @@
  * - Picture URL: Gamerpic
  * - Online: Whether presence state is online
  * - Presence text: Xbox status line
- * - In party: Whether friend is in a party
+ * - In party: Number of people in the party
+ * - Party locked: Whether the party is invite only
  */
-export type FriendResponse = { gamertag: string, picture_url: string | null, online: boolean, presence_text: string, in_party: boolean, };
+export type FriendResponse = { gamertag: string, picture_url: string | null, online: boolean, presence_text: string, in_party: number, party_locked: boolean, };
 
 /**
  * Authorization request URL sent to client

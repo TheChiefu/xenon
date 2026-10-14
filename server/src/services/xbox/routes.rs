@@ -114,7 +114,8 @@ pub struct XboxResponse {
 /// - Picture URL: Gamerpic
 /// - Online: Whether presence state is online
 /// - Presence text: Xbox status line
-/// - In party: Whether friend is in a party
+/// - In party: Number of people in the party
+/// - Party locked: Whether the party is invite only
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/xbox.ts"))]
 pub struct FriendResponse {
@@ -122,7 +123,8 @@ pub struct FriendResponse {
     pub picture_url: Option<String>,
     pub online: bool,
     pub presence_text: String,
-    pub in_party: bool
+    pub in_party: u32,
+    pub party_locked: bool
 }
 
 /// Settings for caller's linked account
@@ -221,7 +223,8 @@ pub async fn get_friends(
             picture_url: person.display_pic_raw,
             online: person.presence_state == PresenceState::Online,
             presence_text: person.presence_text,
-            in_party: person.multiplayer_summary.in_party > 0
+            in_party: person.multiplayer_summary.in_party,
+            party_locked: person.multiplayer_summary.invite_only()
         })
         .collect();
 

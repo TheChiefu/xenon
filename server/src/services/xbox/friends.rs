@@ -13,12 +13,46 @@ const FRIENDS_URL: &str = "https://peoplehub.xboxlive.com/users/me/people/friend
 
 // Data Types //
 
+/// Details about party joinability
+/// - none - Joinable by anyone
+/// - followed - Joinable
+/// - local - Invite Only
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum JoinRestriction {
+    None,
+    Local,
+    Followed,
+
+    #[serde(other)]
+    Unknown
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PartyDetails {
+    join_restriction: JoinRestriction
+}
+
 /// Fields read from multiplayer summary
-/// - In party: Number of parties a person is in
+/// - In party: Number of people in the party
+/// - Party details: One entry per party, empty when not in a party
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct MultiplayerSummary {
-    pub in_party: u32
+    pub in_party: u32,
+
+    #[serde(default)]
+    party_details: Vec<PartyDetails>
+}
+
+impl MultiplayerSummary {
+    pub fn invite_only(&self) -> bool {
+        matches!(
+            self.party_details.first(),
+            Some(party) if matches!(party.join_restriction, JoinRestriction::Local)
+        )
+    }
 }
 
 /// Fields read from person
