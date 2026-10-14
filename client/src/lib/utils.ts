@@ -4,6 +4,7 @@ import { getToken, getUrl } from "@/lib/session.svelte";
 // Types / Interfaces //
 
 export interface FetchedFile {
+    id?: string;
     url: string;
     mime: string;
 }
@@ -71,7 +72,7 @@ export async function fetchFileBlob(fileId: string): Promise<FetchedFile> {
     const mime = response.headers.get("x-file-mime") ?? "application/octet-stream";
     const bytes = await response.arrayBuffer();
     const blob = new Blob([bytes], { type: mime });
-    return { url: URL.createObjectURL(blob), mime };
+    return { id: fileId, url: URL.createObjectURL(blob), mime };
 }
 
 

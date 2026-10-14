@@ -2,37 +2,46 @@
   import { Status } from "@/bindings/shared";
   import type { GameActivity } from "@/bindings/sockets/events";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
-  import { failureText, fetchFileBlob, type FetchedFile } from "@/lib/utils";
+  import { failureText } from "@/lib/utils";
   import { listMembers } from "@/lib/api/rooms";
   import { getSelectedRoom } from "@/lib/session.svelte";
-  import { getActivityOfUser, getPresenceOfUser, getUser, loadUsers } from "@/lib/users.svelte";
+  import { getActivityOfUser, getAvatarOfUser, getBannerOfUser, getDisplayNameOfUser, getPresenceOfUser, getUser, loadProfileFilesOfUser, loadUsers } from "@/lib/users.svelte";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
   import { Pane } from "@/lib/panes.svelte";
   import PaneArea from "@/components/pane.svelte";
 
-  // What one row shows of a member
-  interface Member {
-    id: string;
-    display_name: string;
-    avatar_file_id: string | null;
-    banner_file_id: string | null;
-    avatar: FetchedFile | null;
-    banner: FetchedFile | null;
-  }
+  // Order in list of status in terms of position
+  const ORDER_STATUS: Record<Status, number> = {
+    [Status.online]: 0,
+    [Status.busy]: 1,
+    [Status.away]: 2,
+    [Status.offline]: 3,
+  };
 
-  let members: Member[] = $state([]);
+  let member_ids: string[] = $state([]);
+  const ordered_ids: string[] = $derived(member_ids.toSorted(compareMembers));
   let failure: string | null = $state(null);
 
+  // Loads members of a selected room
   $effect(() => {
     const roomId = getSelectedRoom();
+    
+    // Clear member list if no room is selected
     if (roomId === null) {
-      members = [];
+      member_ids = [];
       return;
     }
 
     load(roomId);
   });
 
+  $effect(() => {
+    for (const id of member_ids) {
+      loadProfileFilesOfUser(id);
+    }
+  });
+
+  // Gets room members IDs
   async function load(roomId: string): Promise<void> {
     try {
       const entries = await listMembers(roomId);
@@ -40,32 +49,16 @@
 
       await loadUsers(ids);
 
-      members = ids
-        .map((id) => getUser(id))
-        .filter((user) => user !== undefined)
-        .map((user) => ({
-          id: user.id,
-          display_name: user.display_name,
-          avatar_file_id: user.avatar_file_id,
-          banner_file_id: user.banner_file_id,
-          avatar: null,
-          banner: null,
-        }));
-
-      failure = null;
-
-      // Fetch the avatar and banner of every member
-      for (const member of members) {
-        if (member.avatar_file_id !== null) {
-          member.avatar = await fetchFileBlob(member.avatar_file_id);
-        }
-
-        if (member.banner_file_id !== null) {
-          member.banner = await fetchFileBlob(member.banner_file_id);
+      member_ids = [];
+      for (const id of ids) {
+        if (getUser(id) !== undefined) {
+          member_ids.push(id);
         }
       }
+
+      failure = null;
     } catch (error) {
-      members = [];
+      member_ids = [];
       failure = failureText(error);
     }
   }
@@ -81,19 +74,22 @@
     return `${title} · ${activity.detail}`;
   }
 
-  // Where each status sits in the list
-  const ORDER_STATUS: Record<Status, number> = {
-    [Status.online]: 0,
-    [Status.busy]: 1,
-    [Status.away]: 2,
-    [Status.offline]: 3,
-  };
+  // Compare to members to see who is before or after the other
+  function compareMembers(a: string, b: string): number {
 
-  // Status first, then alphabetical within it, redone as members come and go
-  const ordered: Member[] = $derived([...members].sort((a, b) =>
-    ORDER_STATUS[getPresenceOfUser(a.id).status] - ORDER_STATUS[getPresenceOfUser(b.id).status]
-    || a.display_name.localeCompare(b.display_name)
-  ));
+    // Determine state difference
+    const status_a = ORDER_STATUS[getPresenceOfUser(a).status];
+    const status_b = ORDER_STATUS[getPresenceOfUser(b).status];
+    if (status_a !== status_b) {
+      return status_a - status_b;
+    }
+
+    // Sort by display name
+    const name_a = getDisplayNameOfUser(a);
+    const name_b = getDisplayNameOfUser(b);
+    return name_a.localeCompare(name_b);
+  }
+
 </script>
 
 <style>
@@ -243,7 +239,7 @@
 
   <!-- Display Header -->
   <div class="header">
-    <h3>Members: {members.length}</h3>
+    <h3>Members: {member_ids.length}</h3>
   </div>
 
   {#if failure !== null}
@@ -252,13 +248,13 @@
 
   <!-- Member List -->
   <div class="list">
-    {#each ordered as member (member.id)}
-      {@const avatar = member.avatar}
-      {@const banner = member.banner}
-      {@const presence = getPresenceOfUser(member.id)}
-      {@const activity = getActivityOfUser(member.id)}
+    {#each ordered_ids as id (id)}
+      {@const avatar = getAvatarOfUser(id)}
+      {@const banner = getBannerOfUser(id)}
+      {@const presence = getPresenceOfUser(id)}
+      {@const activity = getActivityOfUser(id)}
       <button class="member" {@attach playOnHover}>
-        {#if banner !== null}
+        {#if banner !== undefined}
           {#if banner.mime.startsWith("video/")}
             <video class="banner" src={banner.url} {@attach animatePhoto}></video>
           {:else}
@@ -266,7 +262,7 @@
           {/if}
         {/if}
 
-        {#if avatar === null}
+        {#if avatar === undefined}
           <span class="avatar"></span>
         {:else if avatar.mime.startsWith("video/")}
           <video class="avatar" src={avatar.url} {@attach animatePhoto}></video>
@@ -275,7 +271,7 @@
         {/if}
 
         <span class="text text-outline">
-          <span class="name">{member.display_name}</span>
+          <span class="name">{getDisplayNameOfUser(id)}</span>
 
           {#if activity !== undefined}
             <span class="game">
