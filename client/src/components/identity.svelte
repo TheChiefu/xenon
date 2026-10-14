@@ -2,7 +2,7 @@
   import { getLoggedInAccount, removeLoggedInAccount, clearCurrentLogin } from "@/lib/session.svelte";
   import { getProfile } from "@/lib/profile.svelte";
   import { getPresenceOfUser } from "@/lib/users.svelte";
-  import { getStatus, setStatus } from "@/lib/status.svelte";
+  import { getPreferedStatus, setStatus } from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { Status } from "@/bindings/shared";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
@@ -207,7 +207,7 @@
       <select
         id="status"
         title="How you are shown to others when using the client"
-        value={getStatus()}
+        value={getPreferedStatus()}
         onchange={onStatusChange}
       >
         {#each Object.values(Status) as value}

@@ -6,30 +6,35 @@ import { send } from "@/lib/socket.svelte";
 
 const keyStatus = "default_status";
 const defaultStatus: Status = Status.online;
-const idleCheckDelayMS = 15_000;
 const activityEvents = ["pointerdown", "keydown", "wheel"];
 
 let currentStatus: Status = $state(readPreferedStatus());
-let isIdle = $state(false);
-let lastActiveTime = Date.now();
+let isAutoAway = $state(false);
+let awayTimer: number | undefined;
 
-// Check for user activity on listener, check activity every set interval time
+// Check for user activity on listener
 for (const event of activityEvents) {
   window.addEventListener(event, onActivity, { passive: true });
 }
-setInterval(checkIdle, idleCheckDelayMS);
+document.addEventListener("visibilitychange", onVisible);
+scheduleAway();
 
 // STATUS //
 
-// The preferred status on this device
 export function getStatus(): Status {
-  if (isIdle && currentStatus === Status.online) {
+  if (isAutoAway && currentStatus === Status.online) {
     return Status.away;
   }
   return currentStatus;
 }
 
+// The preferred status on this device
+export function getPreferedStatus(): Status {
+  return currentStatus;
+}
+
 export function setStatus(status: Status): void {
+  isAutoAway = false;
   currentStatus = status;
   localStorage.setItem(keyStatus, status); // Set status preference on client
   send({ type: "status", status: getStatus() }); // Send server event about status
@@ -37,23 +42,41 @@ export function setStatus(status: Status): void {
 
 // IDLE //
 
-// Updates when the last user interaction was made (for idle timer)
 function onActivity(): void {
-  lastActiveTime = Date.now();
-}
-
-function checkIdle(): void {
-  const minutes = getAwayMinutes();
-  const elapsed = Date.now() - lastActiveTime;
-
-  // Check if user is away (0 means never idle)
-  const timePassed = (minutes > 0) && (elapsed >= minutes * 60_000);
-
-  // If the state changed since last activity, update idle check and send server event
-  if (timePassed !== isIdle) {
-    isIdle = timePassed;
+  if (isAutoAway) {
+    isAutoAway = false;
     send({ type: "status", status: getStatus() });
   }
+
+  scheduleAway();
+}
+
+function onVisible(): void {
+  if (!document.hidden) {
+    onActivity();
+  }
+}
+
+function scheduleAway(): void {
+  clearTimeout(awayTimer);
+
+  // Check if user is away (0 means never idle)
+  const minutes = getAwayMinutes();
+  if (minutes <= 0) {
+    awayTimer = undefined;
+    return;
+  }
+
+  awayTimer = setTimeout(onAway, minutes * 60_000);
+}
+
+function onAway(): void {
+  if (currentStatus !== Status.online) {
+    return;
+  }
+
+  isAutoAway = true;
+  send({ type: "status", status: getStatus() });
 }
 
 // STORAGE //

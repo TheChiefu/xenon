@@ -146,6 +146,7 @@ function readAwayMinutes(): number {
 
   // Fallback on invalid
   if (!isValidAwayMinutes(stored)) {
+    console.log("Invalid away timer value, falling back to default");
     return defaultAwayMinutes;
   }
 
