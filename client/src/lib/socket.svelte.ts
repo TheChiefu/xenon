@@ -1,5 +1,6 @@
 import { Device, type ClientEvent, type ServerEvent } from "@/bindings/sockets/events";
 import { loadRooms } from "@/lib/rooms/layout.svelte";
+import { addMessage, reloadLoaded, removeMessage, setMessageEdited } from "@/lib/messages.svelte";
 import { getToken, getUrl } from "@/lib/session.svelte";
 import { getStatus } from "@/lib/status.svelte";
 import { clearAllActivities, clearAllPresences, getUser, setActivityForUser, setPresenceForUser, setUser } from "@/lib/users.svelte";
@@ -137,6 +138,25 @@ function receive(data: string): void {
       banner_file_id: event.banner_file_id,
     });
     return;
+  }
+
+  if (event.type === "message") {
+    addMessage(event.message);
+    return;
+  }
+
+  if (event.type === "message_edited") {
+    setMessageEdited(event.room_id, event.message_id, event.body, event.edited_at);
+    return;
+  }
+
+  if (event.type === "message_deleted") {
+    removeMessage(event.room_id, event.message_id);
+    return;
+  }
+
+  if (event.type === "resync") {
+    reloadLoaded();
   }
 
   if (

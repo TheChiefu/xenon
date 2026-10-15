@@ -151,3 +151,22 @@ async function syncFile(
     URL.revokeObjectURL(stored_file.url);
   }
 }
+
+// SESSION //
+
+// Removes every stored user, revoking the URLs of their avatars and banners
+export function clearUsers(): void {
+  for (const avatar of avatars.values()) {
+    URL.revokeObjectURL(avatar.url);
+  }
+
+  for (const banner of banners.values()) {
+    URL.revokeObjectURL(banner.url);
+  }
+
+  summaries.clear();
+  presences.clear();
+  activities.clear();
+  avatars.clear();
+  banners.clear();
+}

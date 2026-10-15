@@ -13,13 +13,13 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::api;
-use crate::api::messages::attachments::{Attached, Incoming};
+use crate::api::messages::attachments::Attachment;
 use crate::api::rooms::access::NotifyUserPair;
 use crate::error::{AppError, Result};
 use crate::api::messages::Message;
 use crate::services::push::send;
 use crate::services::push::send::Payload;
-use crate::shared::Notify;
+use crate::shared::{AttachmentRequest, Notify};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::registry;
@@ -29,15 +29,17 @@ use crate::state::AppState;
 
 /// POST body for a new message.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
 pub struct PostMessageRequest {
     pub body: Option<String>,
     pub client_nonce: String,
     #[serde(default)]
-    pub attachments: Vec<Incoming>
+    pub attachments: Vec<AttachmentRequest>
 }
 
 /// PATCH body for editing a message.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
 pub struct EditMessageRequest {
     pub body: Option<String>
 }
@@ -53,14 +55,14 @@ pub struct AttachmentResponse {
     pub spoiler: bool,
 }
 
-impl From<Attached> for AttachmentResponse {
-    fn from(attached: Attached) -> Self {
+impl From<Attachment> for AttachmentResponse {
+    fn from(attachment: Attachment) -> Self {
         Self {
-            id: attached.file.id,
-            filename: attached.file.filename,
-            mime: attached.file.mime,
-            byte_size: attached.file.byte_size,
-            spoiler: attached.spoiler,
+            id: attachment.file.id,
+            filename: attachment.file.filename,
+            mime: attachment.file.mime,
+            byte_size: attachment.file.byte_size,
+            spoiler: attachment.spoiler,
         }
     }
 }
@@ -174,7 +176,11 @@ pub async fn post_message(
     let files = api::messages::attachments::for_message(&mut conn, message.id).await?;
     drop(conn); // Once connection is done being needed, drop it
 
-    let attachments = files.into_iter().map(AttachmentResponse::from).collect();
+    let mut attachments = Vec::with_capacity(files.len());
+    for file in files {
+        attachments.push(AttachmentResponse::from(file));
+    }
+
     let response = MessageResponse::new(message, attachments);
 
     // If message is posted, broadcast to all subscribed users in room
@@ -221,7 +227,11 @@ pub async fn fetch_messages(
     // Convert returned vector of internal messages into vector of HTTP message responses
     let mut response = Vec::with_capacity(result.len());
     for (message, files) in result {
-        let attachments = files.into_iter().map(AttachmentResponse::from).collect();
+        let mut attachments = Vec::with_capacity(files.len());
+        for file in files {
+            attachments.push(AttachmentResponse::from(file));
+        }
+
         response.push(MessageResponse::new(message, attachments));
     }
 
@@ -236,7 +246,11 @@ pub async fn get_message(
 ) -> Result<Json<MessageResponse>> {
 
     let (message, files) = api::messages::get(&pool, message_id, user_id).await?;
-    let attachments = files.into_iter().map(AttachmentResponse::from).collect();
+
+    let mut attachments = Vec::with_capacity(files.len());
+    for file in files {
+        attachments.push(AttachmentResponse::from(file));
+    }
 
     Ok(Json(MessageResponse::new(message, attachments)))
 }

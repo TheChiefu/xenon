@@ -1,6 +1,5 @@
 //! The `room_invites` table: who has been offered access to a room.
 
-use serde::Serialize;
 use uuid::Uuid;
 
 use crate::db;
@@ -12,7 +11,7 @@ use crate::validate;
 // Data Structs //
 
 /// One invite a room has issued.
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow)]
 pub struct Issued {
     pub user_id: Uuid,
     pub invited_by: Uuid,
@@ -21,7 +20,7 @@ pub struct Issued {
 }
 
 /// One invite a user has received, with the room's name joined in.
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow)]
 pub struct Received {
     pub room_id: Uuid,
     pub room_name: Option<String>,

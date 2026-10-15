@@ -4,7 +4,6 @@ pub mod bans;
 pub mod invites;
 pub mod access;
 
-use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 use uuid::Uuid;
 
@@ -17,13 +16,12 @@ use crate::validate;
 // Data Structs //
 
 /// A `rooms` row
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow)]
 pub struct Room {
     pub id: Uuid,
     pub name: String,
     pub visibility: Visibility,
     pub created_at: i64,
-    pub mutation_seq: i64,
 }
 
 // API Methods //
@@ -44,7 +42,7 @@ pub async fn get(
     let mut conn = pool.acquire().await?;
     let room: Room = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
+        SELECT r.id, r.name, r.visibility, r.created_at
         FROM rooms r
         WHERE r.id = ?1
             AND (r.visibility IN (?2, ?3)
@@ -62,32 +60,28 @@ pub async fn get(
     Ok(room)
 }
 
-/// PATCH body for room
-#[derive(Deserialize)]
-pub struct RoomPatch {
-    pub name: Option<String>,
-    pub visibility: Option<Visibility>,
-    pub default_permissions: Option<Vec<Permission>>,
-}
-
 /// Updates a given room's properties given patch.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `pool` - Pool of SQL Connections
 /// * `room_id` - Room to be patched
 /// * `caller_id` - Who is patching the room
-/// * `patch` - Patch to be applied
+/// * `name` - New name, if renaming
+/// * `visibility` - New visibility, if changing
+/// * `default_permissions` - New default permissions, if changing
 pub async fn update(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
-    patch: RoomPatch,
+    name: Option<&str>,
+    visibility: Option<Visibility>,
+    default_permissions: Option<Vec<Permission>>,
 ) -> Result<()> {
 
     // Extract name if available
-    let renaming = patch.name.is_some();
-    let mut name = patch.name.as_deref().unwrap_or("");
+    let renaming = name.is_some();
+    let mut name = name.unwrap_or("");
 
     // A name of nothing but spaces is stored as empty
     if name.trim().is_empty() {
@@ -96,8 +90,8 @@ pub async fn update(
 
     validate::room_name(name)?;
 
-    let revealing = patch.visibility.is_some();
-    let granting = patch.default_permissions.is_some();
+    let revealing = visibility.is_some();
+    let granting = default_permissions.is_some();
 
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
@@ -126,8 +120,8 @@ pub async fn update(
     )
     .bind(renaming)
     .bind(name)
-    .bind(patch.visibility)
-    .bind(patch.default_permissions.map(Json))
+    .bind(visibility)
+    .bind(default_permissions.map(Json))
     .bind(room_id)
     .execute(&mut *tx)
     .await?;
@@ -378,7 +372,7 @@ pub async fn list_mine(
     // Get list based on user's room access
     let rooms: Vec<Room> = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
+        SELECT r.id, r.name, r.visibility, r.created_at
         FROM rooms r JOIN room_access a ON a.room_id = r.id
         WHERE a.user_id = ?1
         ORDER BY r.id
@@ -408,7 +402,7 @@ pub async fn list_discoverable(
 
     let rooms: Vec<Room> = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.created_at, r.mutation_seq
+        SELECT r.id, r.name, r.visibility, r.created_at
         FROM rooms r
         WHERE r.visibility IN (?1, ?2)
             AND (?3 IS NULL OR r.id > ?3)

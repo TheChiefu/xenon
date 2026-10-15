@@ -4,11 +4,11 @@ pub mod attachments;
 
 use uuid::Uuid;
 
-use crate::api::messages::attachments::{Attached, Incoming};
+use crate::api::messages::attachments::Attachment;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::Permission;
+use crate::shared::{AttachmentRequest, Permission};
 use crate::utils;
 use crate::validate;
 
@@ -80,7 +80,7 @@ pub async fn post(
     author_id: Uuid,
     body: Option<&str>,
     client_nonce: [u8; 16],
-    attachments: &[Incoming],
+    attachments: &[AttachmentRequest],
 ) -> Result<Posted> {
 
     // Format checks, before the transaction opens
@@ -164,7 +164,7 @@ pub async fn fetch(
     room_id: Uuid,
     user_id: Uuid,
     cursor: Cursor,
-) -> Result<Vec<(Message, Vec<Attached>)>> {
+) -> Result<Vec<(Message, Vec<Attachment>)>> {
 
     let mut conn = pool.acquire().await?;
 
@@ -236,7 +236,7 @@ pub async fn get(
     pool: &sqlx::SqlitePool,
     message_id: Uuid,
     user_id: Uuid,
-) -> Result<(Message, Vec<Attached>)> {
+) -> Result<(Message, Vec<Attachment>)> {
 
     let mut conn = pool.acquire().await?;
 
@@ -322,12 +322,6 @@ pub async fn delete(
     .execute(&mut *tx)
     .await?;
 
-    // Bump the room
-    sqlx::query("UPDATE rooms SET mutation_seq = mutation_seq + 1 WHERE id = ?1")
-    .bind(room_id)
-    .execute(&mut *tx)
-    .await?;
-
     // Finish Transaction
     tx.commit().await?;
 
@@ -408,12 +402,6 @@ pub async fn edit(
         return Err(AppError::NotFound);
     }
 
-    // Update mutation sequence
-    sqlx::query("UPDATE rooms SET mutation_seq = mutation_seq + 1 WHERE id = ?1")
-    .bind(room_id)
-    .execute(&mut *tx)
-    .await?;
-
     // Commit transaction
     tx.commit().await?;
 
@@ -434,7 +422,7 @@ pub async fn edit(
 /// Returns `AppError::Validation` if the message has neither body nor
 /// attachments, carries more attachments than the configured limit, repeats a
 /// file id, or has a body over the length limit.
-fn validate_post(body: Option<&str>, attachments: &[Incoming]) -> Result<()> {
+fn validate_post(body: Option<&str>, attachments: &[AttachmentRequest]) -> Result<()> {
 
     // No body or attachments
     if body.is_none() && attachments.is_empty() {

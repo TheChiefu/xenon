@@ -54,9 +54,7 @@ CREATE TABLE rooms (
     name                TEXT NOT NULL,
     visibility          TEXT NOT NULL,
     default_permissions TEXT NOT NULL,
-    created_at          INTEGER NOT NULL,
-    -- Incremented on edit and tombstone
-    mutation_seq        INTEGER NOT NULL DEFAULT 0
+    created_at          INTEGER NOT NULL
 ) STRICT;
 
 -- The directory query:

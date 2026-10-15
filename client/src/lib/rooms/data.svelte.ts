@@ -19,3 +19,8 @@ export function setRoomData(fetched: RoomResponse[]): void {
 export function addRoomData(room: RoomResponse): void {
   rooms.set(room.id, room);
 }
+
+// Removes every stored room
+export function clearRoomData(): void {
+  rooms = new Map();
+}

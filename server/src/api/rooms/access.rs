@@ -1,11 +1,7 @@
 //! The `room_access` table: who belongs to a room, and what they may do in it.
 
-use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 use uuid::Uuid;
-
-#[cfg(feature = "ts_bindings")]
-use ts_rs::TS;
 
 use crate::db;
 use crate::error::{AppError, Result};
@@ -14,21 +10,12 @@ use crate::shared::{Notify, Permission};
 // Data Structs //
 
 /// One member of a room, with their resolved permissions.
-#[derive(sqlx::FromRow, Serialize, Clone)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+#[derive(sqlx::FromRow)]
 pub struct Entry {
     pub user_id: Uuid,
-    #[cfg_attr(feature = "ts_bindings", ts(as = "Vec<Permission>"))]
     pub permissions: Json<Vec<Permission>>,
     pub granted_at: i64,
     /// Present on a caller's own row, members never sees another's
-    pub notify: Option<Notify>
-}
-
-/// PATCH body for a room_access row
-#[derive(Deserialize)]
-pub struct RoomAccessPatch {
-    pub permissions: Option<Vec<Permission>>,
     pub notify: Option<Notify>
 }
 

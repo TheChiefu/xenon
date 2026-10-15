@@ -142,3 +142,11 @@ pub enum RoomListItem {
     Room(Uuid),
     Folder(Folder),
 }
+
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+pub struct AttachmentRequest {
+    pub file_id: Uuid,
+    #[serde(default)]
+    pub spoiler: bool,
+}

@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 
 use uuid::Uuid;
-use serde::Serialize;
 
 use crate::api::rooms::access;
 use crate::db;
@@ -15,7 +14,7 @@ use crate::validate;
 // Data Structs //
 
 /// The `users` column
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -385,8 +384,7 @@ pub async fn set_role(
 
 // Helper Methods //
 
-/// Tombstones every message an account wrote, destroying the text and bumping
-/// the rooms that held them so clients refetch.
+/// Tombstones every message an account wrote, destroying the text.
 ///
 /// # Arguments
 ///
@@ -396,16 +394,6 @@ async fn tombstone_messages(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
 ) -> Result<()> {
-
-    sqlx::query(
-        "
-        UPDATE rooms SET mutation_seq = mutation_seq + 1
-        WHERE id IN (SELECT DISTINCT room_id FROM messages WHERE author_id = ?1)
-        "
-    )
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
 
     sqlx::query(
         "

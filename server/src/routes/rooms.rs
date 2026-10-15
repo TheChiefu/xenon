@@ -10,13 +10,9 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::api::rooms::RoomPatch;
-use crate::api::rooms::bans::Entry as BanEntry;
-use crate::api::rooms::invites::{Issued, Received};
-use crate::api::rooms::access::{Entry as RoomAccessEntry, RoomAccessPatch};
 use crate::error::{AppError, Result};
 use crate::api::rooms::Room;
-use crate::shared::{Permission, Visibility};
+use crate::shared::{Notify, Permission, Visibility};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::{presence, registry};
@@ -64,7 +60,6 @@ pub struct RoomResponse {
     pub id: Uuid,
     pub name: String,
     pub visibility: Visibility,
-    pub mutation_seq: i64,
 }
 
 impl From<Room> for RoomResponse {
@@ -73,7 +68,6 @@ impl From<Room> for RoomResponse {
             id: room.id,
             name: room.name,
             visibility: room.visibility,
-            mutation_seq: room.mutation_seq,
         }
     }
 }
@@ -88,22 +82,64 @@ pub struct DiscoverableRoomResponse {
     pub created_at: i64,
 }
 
-impl From<Room> for DiscoverableRoomResponse {
-    fn from(room: Room) -> Self {
-        Self {
-            id: room.id,
-            name: room.name,
-            visibility: room.visibility,
-            created_at: room.created_at,
-        }
-    }
-}
-
 /// Query string for a paged room listing
 #[derive(Deserialize)]
 pub struct DirectoryQuery {
     pub after: Option<Uuid>,
     pub limit: Option<i64>
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct RoomPatch {
+    pub name: Option<String>,
+    pub visibility: Option<Visibility>,
+    pub default_permissions: Option<Vec<Permission>>,
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct RoomAccessPatch {
+    pub permissions: Option<Vec<Permission>>,
+    pub notify: Option<Notify>
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct MemberResponse {
+    pub user_id: Uuid,
+    pub permissions: Vec<Permission>,
+    pub granted_at: i64,
+    pub notify: Option<Notify>
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct ReceivedInviteResponse {
+    pub room_id: Uuid,
+    pub room_name: Option<String>,
+    pub invited_by: Uuid,
+    pub created_at: i64,
+    pub expires_at: Option<i64>
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct IssuedInviteResponse {
+    pub user_id: Uuid,
+    pub invited_by: Uuid,
+    pub created_at: i64,
+    pub expires_at: Option<i64>
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct BanResponse {
+    pub user_id: Uuid,
+    pub created_by: Uuid,
+    pub reason: Option<String>,
+    pub created_at: i64,
+    pub expires_at: Option<i64>
 }
 
 // Routing Methods //
@@ -119,11 +155,21 @@ pub async fn list_members(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<RoomAccessEntry>>> {
+) -> Result<Json<Vec<MemberResponse>>> {
 
     let members = api::rooms::access::list(&pool, room_id, caller_id).await?;
 
-    Ok(Json(members))
+    let mut response = Vec::with_capacity(members.len());
+    for member in members {
+        response.push(MemberResponse {
+            user_id: member.user_id,
+            permissions: member.permissions.0,
+            granted_at: member.granted_at,
+            notify: member.notify
+        });
+    }
+
+    Ok(Json(response))
 }
 
 /// Writes a member's row in a room
@@ -200,11 +246,22 @@ pub async fn invite_user(
 pub async fn list_my_invites(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<Received>>> {
+) -> Result<Json<Vec<ReceivedInviteResponse>>> {
 
     let invites = api::rooms::invites::list_for_user(&pool, user_id).await?;
 
-    Ok(Json(invites))
+    let mut response = Vec::with_capacity(invites.len());
+    for invite in invites {
+        response.push(ReceivedInviteResponse {
+            room_id: invite.room_id,
+            room_name: invite.room_name,
+            invited_by: invite.invited_by,
+            created_at: invite.created_at,
+            expires_at: invite.expires_at
+        });
+    }
+
+    Ok(Json(response))
 }
 
 /// Gets the invites a room has issued
@@ -218,11 +275,21 @@ pub async fn list_invites(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<Issued>>> {
+) -> Result<Json<Vec<IssuedInviteResponse>>> {
 
     let invites = api::rooms::invites::list(&pool, room_id, caller_id).await?;
 
-    Ok(Json(invites))
+    let mut response = Vec::with_capacity(invites.len());
+    for invite in invites {
+        response.push(IssuedInviteResponse {
+            user_id: invite.user_id,
+            invited_by: invite.invited_by,
+            created_at: invite.created_at,
+            expires_at: invite.expires_at
+        });
+    }
+
+    Ok(Json(response))
 }
 
 /// Declines a room invite
@@ -277,11 +344,22 @@ pub async fn list_bans(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<BanEntry>>> {
+) -> Result<Json<Vec<BanResponse>>> {
 
     let bans = api::rooms::bans::list(&pool, room_id, caller_id).await?;
 
-    Ok(Json(bans))
+    let mut response = Vec::with_capacity(bans.len());
+    for ban in bans {
+        response.push(BanResponse {
+            user_id: ban.user_id,
+            created_by: ban.created_by,
+            reason: ban.reason,
+            created_at: ban.created_at,
+            expires_at: ban.expires_at
+        });
+    }
+
+    Ok(Json(response))
 }
 
 /// Bans a user from a room
@@ -352,7 +430,14 @@ pub async fn update(
 ) -> Result<StatusCode> {
 
     // Update the room with the given patch
-    api::rooms::update(&app_state.pool, room_id, caller_id, body).await?;
+    api::rooms::update(
+        &app_state.pool,
+        room_id,
+        caller_id,
+        body.name.as_deref(),
+        body.visibility,
+        body.default_permissions
+    ).await?;
 
     // Notify all room members, room has updated
     let event = ServerEvent::RoomUpdated { room_id };
@@ -475,9 +560,13 @@ pub async fn list_my_rooms(
 ) -> Result<Json<Vec<RoomResponse>>> {
 
     let rooms = api::rooms::list_mine(&pool, user_id).await?;
-    let rooms = rooms.into_iter().map(RoomResponse::from).collect();
 
-    Ok(Json(rooms))
+    let mut response = Vec::with_capacity(rooms.len());
+    for room in rooms {
+        response.push(RoomResponse::from(room));
+    }
+
+    Ok(Json(response))
 }
 
 /// Gets one room
@@ -514,7 +603,16 @@ pub async fn list_discoverable_rooms(
     let limit = query.limit.unwrap_or(max).clamp(1, max);
 
     let rooms = api::rooms::list_discoverable(&pool, query.after, limit).await?;
-    let rooms = rooms.into_iter().map(DiscoverableRoomResponse::from).collect();
 
-    Ok(Json(rooms))
+    let mut response = Vec::with_capacity(rooms.len());
+    for room in rooms {
+        response.push(DiscoverableRoomResponse {
+            id: room.id,
+            name: room.name,
+            visibility: room.visibility,
+            created_at: room.created_at
+        });
+    }
+
+    Ok(Json(response))
 }

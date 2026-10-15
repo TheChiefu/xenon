@@ -15,6 +15,10 @@
   import { loadRooms } from "./lib/rooms/layout.svelte";
   import { getSelectedRoom } from "./lib/session.svelte";
   import { close, connect } from "./lib/socket.svelte";
+  import { untrack } from "svelte";
+  import { clearMessages } from "./lib/messages.svelte";
+  import { clearRoomData } from "./lib/rooms/data.svelte";
+  import { clearUsers } from "./lib/users.svelte";
   import { Pane, isOpen } from "./lib/panes.svelte";
 
   $effect(() => {
@@ -29,6 +33,17 @@
       .then(loadRooms);
 
     return close;
+  });
+
+  // Removes everything stored for an account once its token is gone
+  $effect(() => {
+    if (getToken() !== null) return;
+
+    untrack(() => {
+      clearMessages();
+      clearRoomData();
+      clearUsers();
+    });
   });
 </script>
 

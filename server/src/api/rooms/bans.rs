@@ -1,6 +1,5 @@
 //! The `room_bans` table: who is barred from a room, and until when.
 
-use serde::Serialize;
 use uuid::Uuid;
 
 use crate::api::rooms;
@@ -13,7 +12,7 @@ use crate::validate;
 // Data Structs //
 
 /// One ban a room holds.
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow)]
 pub struct Entry {
     pub user_id: Uuid,
     pub created_by: Uuid,

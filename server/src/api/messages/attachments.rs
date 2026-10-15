@@ -2,25 +2,17 @@
 
 use std::collections::HashMap;
 
-use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
 use crate::api::files::File;
+use crate::shared::AttachmentRequest;
 
 // Data Structs //
 
-/// A file the client is attaching to a message.
-#[derive(Deserialize)]
-pub struct Incoming {
-    pub file_id: Uuid,
-    #[serde(default)]
-    pub spoiler: bool,
-}
-
 /// A file as one message attaches it.
 #[derive(sqlx::FromRow)]
-pub struct Attached {
+pub struct Attachment {
     #[sqlx(flatten)]
     pub file: File,
     pub spoiler: bool,
@@ -33,7 +25,7 @@ pub struct Attached {
 struct AttachmentRow {
     message_id: Uuid,
     #[sqlx(flatten)]
-    attached: Attached,
+    attachment: Attachment,
 }
 
 // API Methods //
@@ -52,7 +44,7 @@ struct AttachmentRow {
 pub async fn insert(
     conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
-    attachments: &[Incoming],
+    attachments: &[AttachmentRequest],
 ) -> Result<()> {
 
     let sql = "
@@ -96,9 +88,9 @@ pub async fn insert(
 pub async fn for_message(
     conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
-) -> Result<Vec<Attached>> {
+) -> Result<Vec<Attachment>> {
 
-    let result = sqlx::query_as::<_, Attached>(
+    let result = sqlx::query_as::<_, Attachment>(
         "
         SELECT f.id, f.sha256, f.filename, f.mime, f.byte_size, f.created_at, ma.spoiler
         FROM message_attachments ma
@@ -127,7 +119,7 @@ pub async fn for_message_range(
     room_id: Uuid,
     low: i64,
     high: i64,
-) -> Result<HashMap<Uuid, Vec<Attached>>> {
+) -> Result<HashMap<Uuid, Vec<Attachment>>> {
 
     let rows = sqlx::query_as::<_, AttachmentRow>(
         "
@@ -145,9 +137,9 @@ pub async fn for_message_range(
     .fetch_all(&mut *conn)
     .await?;
 
-    let mut files: HashMap<Uuid, Vec<Attached>> = HashMap::new();
+    let mut files: HashMap<Uuid, Vec<Attachment>> = HashMap::new();
     for row in rows {
-        files.entry(row.message_id).or_default().push(row.attached);
+        files.entry(row.message_id).or_default().push(row.attachment);
     }
 
     Ok(files)
