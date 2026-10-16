@@ -37,6 +37,7 @@ pub struct UserSummary {
     pub display_name: String,
     pub avatar_file_id: Option<Uuid>,
     pub banner_file_id: Option<Uuid>,
+    pub global_role: GlobalRole,
 }
 
 
@@ -70,7 +71,7 @@ pub async fn by_username_prefix(
 
     let users: Vec<UserSummary> = sqlx::query_as(
         "
-        SELECT id, username, display_name, avatar_file_id, banner_file_id
+        SELECT id, username, display_name, avatar_file_id, banner_file_id, global_role
         FROM users u
         WHERE (?1 IS NULL OR u.id > ?1)
             AND (?2 IS NULL OR u.username LIKE ?2 ESCAPE '\\')
@@ -141,7 +142,7 @@ pub async fn by_ids(
 
     let mut builder = sqlx::QueryBuilder::new(
         "
-        SELECT id, username, display_name, avatar_file_id, banner_file_id
+        SELECT id, username, display_name, avatar_file_id, banner_file_id, global_role
         FROM users
         WHERE deleted_at IS NULL AND id IN (
         "
@@ -315,6 +316,7 @@ pub async fn delete_other(
     caller_id: Uuid,
     target_id: Uuid,
     anonymize: bool,
+    delete_history: bool,
 ) -> Result<Vec<Uuid>> {
 
     let mut conn = pool.acquire().await?;
@@ -332,7 +334,7 @@ pub async fn delete_other(
         return Err(AppError::Forbidden);
     }
 
-    delete(pool, target_id, anonymize, false).await
+    delete(pool, target_id, anonymize, delete_history).await
 }
 
 /// Changes a user's server-wide role.

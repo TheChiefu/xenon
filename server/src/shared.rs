@@ -143,6 +143,18 @@ pub enum RoomListItem {
     Folder(Folder),
 }
 
+/// The `registration_codes` columns
+#[derive(sqlx::FromRow, Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+pub struct RegistrationCode {
+    pub code: String,
+    pub created_by: Uuid,
+    pub created_at: i64,
+    pub expires_at: Option<i64>,
+    pub max_uses: Option<i64>,
+    pub uses: i64,
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 pub struct AttachmentRequest {

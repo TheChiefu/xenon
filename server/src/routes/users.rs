@@ -60,6 +60,7 @@ pub struct UserSummaryResponse {
     pub display_name: String,
     pub avatar_file_id: Option<Uuid>,
     pub banner_file_id: Option<Uuid>,
+    pub global_role: GlobalRole,
 }
 
 impl From<UserSummary> for UserSummaryResponse {
@@ -70,6 +71,7 @@ impl From<UserSummary> for UserSummaryResponse {
             display_name: user.display_name,
             avatar_file_id: user.avatar_file_id,
             banner_file_id: user.banner_file_id,
+            global_role: user.global_role,
         }
     }
 }
@@ -96,6 +98,7 @@ pub struct ProfilePatch {
 
 /// PATCH body for changing a user's global role.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct SetRoleRequest {
     pub role: GlobalRole,
 }
@@ -113,6 +116,7 @@ pub struct PasswordRequest {
 
 /// DELETE body for closing your own account.
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct DeleteAccountRequest {
     /// Replaces the names and releases the username
     #[serde(default)]
@@ -391,7 +395,7 @@ pub async fn delete_user(
     Json(body): Json<DeleteAccountRequest>,
 ) -> Result<StatusCode> {
     let rooms =
-        api::users::delete_other(&app_state.pool, caller_id, target_id, body.anonymize).await?;
+        api::users::delete_other(&app_state.pool, caller_id, target_id, body.anonymize, body.delete_history).await?;
 
     broadcast_member_left(&app_state, target_id, rooms).await;
 

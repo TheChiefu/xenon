@@ -4,11 +4,35 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::GlobalRole;
+use crate::shared::{GlobalRole, RegistrationCode};
 use crate::utils;
 use crate::validate;
 
 // API Methods //
+
+/// Lists every registration code, newest first
+///
+/// # Arguments
+///
+/// * `pool` - Pool of SQL connections
+pub async fn list_registration_codes(
+    pool: &sqlx::SqlitePool,
+) -> Result<Vec<RegistrationCode>> {
+
+    let mut conn = pool.acquire().await?;
+
+    let codes: Vec<RegistrationCode> = sqlx::query_as(
+        "
+        SELECT code, created_by, created_at, expires_at, max_uses, uses
+        FROM registration_codes
+        ORDER BY created_at DESC
+        ",
+    )
+    .fetch_all(&mut *conn)
+    .await?;
+
+    Ok(codes)
+}
 
 /// Creates an account from a registration code, returning its id and session token.
 pub async fn register(

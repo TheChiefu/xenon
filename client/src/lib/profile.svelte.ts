@@ -21,5 +21,6 @@ export async function load(): Promise<void> {
     display_name: fetched.display_name,
     avatar_file_id: fetched.avatar_file_id,
     banner_file_id: fetched.banner_file_id,
+    global_role: fetched.global_role,
   });
 }

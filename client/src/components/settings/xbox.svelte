@@ -1,11 +1,11 @@
 <script lang="ts">
   import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
-  import { MSG_SAVED, MSG_REFRESHED, MSG_ERROR, MSG_UNLINK_XBOX } from "@/lib/labels";
+  import { MSG_SAVED, MSG_ERROR, MSG_UNLINK_XBOX } from "@/lib/labels";
   import * as confirm from "@/lib/confirm.svelte";
   import { Platform } from "@/bindings/shared";
   import type { LinkResponse, XboxResponse } from "@/bindings/services/xbox";
   import * as xboxAPI from "@/lib/api/xbox";
-  import { failureText } from "@/lib/utils";
+  import { failureText, refreshedText } from "@/lib/utils";
   import * as profile from "@/lib/profile.svelte";
   import icon_link from "@/assets/icons/link.svg?raw";
   import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
@@ -36,8 +36,7 @@
     await loadXboxAccount();
 
     if (xbox_notify === "") {
-      const now = new Date();
-      xbox_notify = `(${MSG_REFRESHED} ${now.toLocaleTimeString('en-US', { hour12: true })})`;
+      xbox_notify = refreshedText();
     }
   }
 

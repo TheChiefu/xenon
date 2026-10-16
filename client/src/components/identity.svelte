@@ -4,14 +4,16 @@
   import * as users from "@/lib/users.svelte";
   import * as status from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
-  import { Status } from "@/bindings/shared";
+  import { GlobalRole, Status } from "@/bindings/shared";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
   import * as confirm from "@/lib/confirm.svelte";
   import { dialogFly } from "@/lib/transitions";
   import Settings from "@/views/settings.svelte";
+  import Admin from "@/views/admin.svelte";
 
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
+  import icon_shield from "@/assets/icons/shield.svg?raw";
   import icon_headphones from "@/assets/icons/headphones.svg?raw";
   import icon_headphones_muted from "@/assets/icons/headphones-muted.svg?raw";
   import icon_mic from "@/assets/icons/mic.svg?raw";
@@ -19,6 +21,7 @@
 
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
+  let adminOpen = $state(false);
 
   const presence = $derived(users.getPresence(profile.get()?.id ?? ""));
 
@@ -29,6 +32,11 @@
   function openSettings() {
     menuOpen = false;
     settingsOpen = true;
+  }
+
+  function openAdmin() {
+    menuOpen = false;
+    adminOpen = true;
   }
 
   async function doSignout() {
@@ -184,6 +192,11 @@
         <button class="icon-btn" aria-label="Settings" onclick={openSettings} title="Open Settings Menu">
           <span class="icon" aria-hidden="true">{@html icon_gear}</span>
         </button>
+        {#if profile.get()?.global_role === GlobalRole.admin}
+          <button class="icon-btn" aria-label="Admin" onclick={openAdmin} title="Open Admin Menu">
+            <span class="icon" aria-hidden="true">{@html icon_shield}</span>
+          </button>
+        {/if}
         <button
           class="icon-btn"
           class:is-muted={!getSoundEnabled()}
@@ -227,4 +240,8 @@
 
 {#if settingsOpen}
   <Settings onClose={() => settingsOpen = false}/>
+{/if}
+
+{#if adminOpen}
+  <Admin onClose={() => adminOpen = false}/>
 {/if}

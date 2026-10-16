@@ -77,6 +77,7 @@ pub fn router(state: AppState) -> Router {
         .route("/login", post(auth::login))
         .route("/codes",
             post(auth::create_registration_code)
+            .get(auth::list_registration_codes)
             .delete(auth::revoke_registration_code)
         )
 

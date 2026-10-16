@@ -2,6 +2,19 @@
 import type { GlobalRole, Platform } from "../shared";
 
 /**
+ * DELETE body for closing your own account.
+ */
+export type DeleteAccountRequest = { 
+/**
+ * Replaces the names and releases the username
+ */
+anonymize: boolean, 
+/**
+ * Tombstones every message the account wrote
+ */
+delete_history: boolean, };
+
+/**
  * A user's linked account
  * - Platform: Service the account belongs to
  * - Handle: Name shown for the account
@@ -36,6 +49,11 @@ avatar_file_id: string | null,
 banner_file_id: string | null, };
 
 /**
+ * PATCH body for changing a user's global role.
+ */
+export type SetRoleRequest = { role: GlobalRole, };
+
+/**
  * A user's profile
  */
 export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, deleted_at: number | null, linked_accounts: Array<LinkedAccountResponse>, };
@@ -43,7 +61,7 @@ export type UserProfileResponse = { id: string, username: string, display_name: 
 /**
  * What a member row or search result shows of a user
  */
-export type UserSummaryResponse = { id: string, username: string, display_name: string, avatar_file_id: string | null, banner_file_id: string | null, };
+export type UserSummaryResponse = { id: string, username: string, display_name: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, };
 
 /**
  * POST body for looking up users.

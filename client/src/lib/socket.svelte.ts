@@ -137,6 +137,7 @@ function receive(data: string): void {
       display_name: event.display_name,
       avatar_file_id: event.avatar_file_id,
       banner_file_id: event.banner_file_id,
+      global_role: summary.global_role,
     });
     return;
   }

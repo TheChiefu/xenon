@@ -11,7 +11,7 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::error::{AppError, Result};
-use crate::shared::GlobalRole;
+use crate::shared::{GlobalRole, RegistrationCode};
 use crate::routes::AuthUser;
 use crate::{api, db, validate};
 
@@ -65,10 +65,10 @@ pub struct LoginResponse {
     pub token: String,
 }
 
-/// Response carrying a registration code.
+/// Response carrying a registration code
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
-pub struct CreateRegistrationCodeResponse {
+pub struct CodeResponse {
     pub code: String,
 }
 
@@ -117,7 +117,7 @@ pub async fn create_registration_code(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Json(body): Json<CreateRegistrationCodeRequest>,
-) -> Result<(StatusCode, Json<CreateRegistrationCodeResponse>)> {
+) -> Result<(StatusCode, Json<CodeResponse>)> {
 
     let mut conn = pool.acquire().await?;
 
@@ -131,7 +131,24 @@ pub async fn create_registration_code(
     validate::registration_code_params(max_uses, lifetime)?;
     let code = db::create_registration_code(&mut conn, caller_id, Some(max_uses), Some(lifetime)).await?;
 
-    Ok((StatusCode::CREATED, Json(CreateRegistrationCodeResponse { code })))
+    Ok((StatusCode::CREATED, Json(CodeResponse { code })))
+}
+
+/// Lists every registration code
+pub async fn list_registration_codes(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<RegistrationCode>>> {
+
+    let mut conn = pool.acquire().await?;
+
+    let allowed = [GlobalRole::Admin];
+    db::require_role(&mut conn, caller_id, &allowed).await?;
+    drop(conn);
+
+    let codes = api::auth::list_registration_codes(&pool).await?;
+
+    Ok(Json(codes))
 }
 
 /// Revokes a registration code, deleting it outright

@@ -56,7 +56,9 @@
 </script>
 
 <div class="section rows">
-  <h3>Notifications</h3>
+  <div class="grid-title">
+    <h3>Notifications</h3>
+  </div>
   <p class="message">{notifications_notify}</p>
 
   <p>Browser Notifications</p>
@@ -77,7 +79,9 @@
 </div>
 
 <div class="section rows">
-  <h3>Preferences</h3>
+  <div class="grid-title">
+    <h3>Preferences</h3>
+  </div>
   <p class="message">{client_notify}</p>
 
   <p>Theme</p>

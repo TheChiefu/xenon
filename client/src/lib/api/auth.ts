@@ -1,4 +1,21 @@
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from "@/bindings/routes/auth";
+import type { CodeResponse, CreateRegistrationCodeRequest, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, RevokeRegistrationCodeRequest } from "@/bindings/routes/auth";
+import type { RegistrationCode } from "@/bindings/shared";
+import { request } from "@/lib/utils";
+
+export async function listRegistrationCodes(): Promise<RegistrationCode[]> {
+    const response = await request("/codes");
+    return await response.json() as RegistrationCode[];
+}
+
+export async function createRegistrationCode(body: CreateRegistrationCodeRequest): Promise<string> {
+    const response = await request("/codes", "POST", body);
+    return (await response.json() as CodeResponse).code;
+}
+
+export async function revokeRegistrationCode(code: string): Promise<void> {
+    const body: RevokeRegistrationCodeRequest = { code };
+    await request("/codes", "DELETE", body);
+}
 
 export async function login(username: string, password: string, url: string): Promise<string> {
     const request: LoginRequest = { username, password };

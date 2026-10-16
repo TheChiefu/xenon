@@ -1,4 +1,4 @@
-import type { ProfilePatch, UserSummaryResponse, UsersLookup } from "@/bindings/routes/users";
+import type { DeleteAccountRequest, ProfilePatch, UserSummaryResponse, UsersLookup } from "@/bindings/routes/users";
 import { request } from "@/lib/utils";
 
 export async function lookup(body: UsersLookup): Promise<UserSummaryResponse[]> {
@@ -16,4 +16,8 @@ export async function changePassword(current_password: string, new_password: str
 
 export async function deleteMe(anonymize: boolean, delete_history: boolean): Promise<void> {
     await request("/me", "DELETE", { anonymize, delete_history });
+}
+
+export async function deleteUser(id: string, body: DeleteAccountRequest): Promise<void> {
+    await request(`/users/${id}`, "DELETE", body);
 }

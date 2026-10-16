@@ -47,7 +47,9 @@
 </script>
 
 <div class="section rows">
-    <h3>Credentials</h3>
+    <div class="grid-title">
+        <h3>Credentials</h3>
+    </div>
     <p class="message">{creds_notify}</p>
 
     <p>Current Password</p>
@@ -61,10 +63,10 @@
     <button class="full-row" onclick={savePassword}>Save Changes</button>
 </div>
 
-<hr/>
-
 <div class="section rows">
-    <h3 style="color: var(--danger);">Account Deletion</h3>
+    <div class="grid-title">
+        <h3 style="color: var(--danger);">Account Deletion</h3>
+    </div>
     <p class="message">{delete_notify}</p>
 
     <label for="delete-username" title={MSG_ANONYMIZE}>Anonymize</label>

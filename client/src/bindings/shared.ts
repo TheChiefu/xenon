@@ -6,14 +6,14 @@
 export enum Status { "online" = "online", "busy" = "busy", "away" = "away", "offline" = "offline" }
 
 /**
- * How a room is discovered and entered
- */
-export enum Visibility { "public" = "public", "locked" = "locked", "hidden" = "hidden" }
-
-/**
  * A game service an account is linked to
  */
 export enum Platform { "xbox" = "xbox", "steam" = "steam" }
+
+/**
+ * How a room is discovered and entered
+ */
+export enum Visibility { "public" = "public", "locked" = "locked", "hidden" = "hidden" }
 
 /**
  * A user's server-wide role
@@ -26,6 +26,11 @@ export type AttachmentRequest = { file_id: string, spoiler: boolean, };
  * A named group of rooms in a user's room list layout
  */
 export type Folder = { name: string, rooms: Array<string>, collapsed: boolean, };
+
+/**
+ * The `registration_codes` columns
+ */
+export type RegistrationCode = { code: string, created_by: string, created_at: number, expires_at: number | null, max_uses: number | null, uses: number, };
 
 /**
  * One entry in a user's room list layout, room ID and possible folder it's in
