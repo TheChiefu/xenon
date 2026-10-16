@@ -1,6 +1,7 @@
 <script lang="ts">
   import Login from "./views/login.svelte";
   import Toolbar from "./components/areas/toolbar.svelte";
+  import BottomToolbar from "./components/toolbar/bottom_toolbar.svelte";
   import Popup from "./views/popup.svelte";
   import Rooms from "./components/areas/rooms.svelte";
   import Members from "./components/areas/members.svelte";
@@ -22,6 +23,23 @@
   import * as members from "./lib/rooms/members.svelte";
   import { Pane } from "./lib/panes.svelte";
   import * as panes from "./lib/panes.svelte";
+  import { COMPACT_CLASS, isCompact } from "./lib/utils";
+
+  const opened: Record<Pane, boolean> = $state({
+    [Pane.room]: false,
+    [Pane.members]: false,
+    [Pane.xbox]: false,
+  });
+
+  $effect.pre(() => {
+    for (const pane of Object.values(Pane)) {
+      if (panes.isOpen(pane)) opened[pane] = true;
+    }
+  });
+
+  $effect(() => {
+    document.documentElement.classList.toggle(COMPACT_CLASS, isCompact.current);
+  });
 
   $effect(() => {
     if (getToken() === null) return;
@@ -55,17 +73,20 @@
   <div class="app">
     <Toolbar/>
     <div class="panes">
-      {#if panes.isOpen(Pane.room)}
+      {#if opened[Pane.room]}
         <Rooms/>
       {/if}
-      {#if panes.isOpen(Pane.members)}
+      {#if opened[Pane.members]}
         <Members/>
       {/if}
       <Chat/>
-      {#if panes.isOpen(Pane.xbox)}
+      {#if opened[Pane.xbox]}
         <Xbox/>
       {/if}
     </div>
+    {#if isCompact.current}
+      <BottomToolbar/>
+    {/if}
   </div>
 {:else}
   <!-- If there is no token, show login screen -->

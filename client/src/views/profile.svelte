@@ -17,7 +17,7 @@
 <style>
   dialog {
     width: 44rem;
-    padding: 1.5rem;
+    padding: var(--dialog-padding);
     border: 1px solid var(--border);
     background: var(--component);
     color: var(--text);
@@ -30,7 +30,7 @@
   .header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1.0rem;
+    margin-bottom: var(--section-gap);
     border-bottom: 1px solid var(--border);
   }
 

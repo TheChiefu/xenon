@@ -91,7 +91,7 @@ export function clearActivities(): void {
 export function getDisplayName(id: string): string {
   const user = summaries.get(id);
   if (user === undefined) {
-    return "";
+    return "Undefined User";
   }
 
   return user.display_name;

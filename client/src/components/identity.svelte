@@ -62,7 +62,7 @@
 
 <style>
   .card {
-    --point: 35px;
+    --point: 2.5rem;
 
     display: flex;
     width: calc(6rem + var(--point));
@@ -109,7 +109,7 @@
   .status-busy      { --status-color: var(--status-busy); }
   .status-away      { --status-color: var(--status-away); }
   .status-offline   { --status-color: var(--status-offline); }
-  
+
   .user-name, .user-handle {
     white-space: nowrap;
     overflow: hidden;

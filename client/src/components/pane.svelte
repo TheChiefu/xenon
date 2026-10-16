@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
   import { Pane } from "@/lib/panes.svelte";
   import * as panes from "@/lib/panes.svelte";
+  import { isCompact } from "@/lib/utils";
 
   interface Props {
     pane: Pane;
@@ -10,9 +11,22 @@
   }
 
   let { pane, overlay = false, children }: Props = $props();
+
+  //UNDOCUMENTED
+  function pressAway(event: PointerEvent): void {
+    if (!isCompact.current) return;
+    if (!(event.target instanceof Element)) return;
+    if (event.target.closest(".pane, .bottom-toolbar, .menu, .menu-backdrop, dialog") !== null) return;
+
+    panes.setOpenState(pane, false);
+  }
 </script>
 
+<svelte:window onpointerdown={pressAway}/>
+
 <style>
+
+  
 
   .pane {
     position: relative;
@@ -32,19 +46,9 @@
     bottom: 0;
   }
 
-  @media (width < 1000px) {
-    .pane {
-      position: absolute;
-      top: 0;
-      right: auto;
-      bottom: 0;
-      left: 0;
-      width: 75%;
-    }
-  }
 
 </style>
 
-<div class="pane" class:overlay style:--pane-width="{panes.getWidth(pane)}rem">
+<div class="pane" class:overlay style:display={panes.isOpen(pane) ? null : "none"} style:--pane-width="{panes.getWidth(pane)}rem">
   {@render children()}
 </div>

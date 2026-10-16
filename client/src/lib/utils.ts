@@ -1,6 +1,7 @@
 import type { ErrorResponse } from "@/bindings/error";
 import { getToken, getUrl } from "@/lib/session.svelte";
 import { MSG_REFRESHED } from "@/lib/labels";
+import { MediaQuery } from "svelte/reactivity";
 
 // Types / Interfaces //
 
@@ -13,6 +14,12 @@ export interface FetchedFile {
 export type Method = "GET" | "POST" | "PATCH" | "DELETE" | "QUERY";
 
 export const DAY_MS = 86400000;
+
+const COMPACT_WIDTH_START: number = 520;
+
+export const COMPACT_CLASS: string = "compact";
+
+export const isCompact: MediaQuery = new MediaQuery(`width < ${COMPACT_WIDTH_START}px`);
 
 
 // Public Methods //

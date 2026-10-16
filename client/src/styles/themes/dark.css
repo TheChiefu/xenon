@@ -48,6 +48,10 @@ input {
     border: 1px solid var(--border);
 }
 
+hr {
+    border-color: var(--component-raised);
+}
+
 .icon {
     display: inline-flex;
     width: var(--icon-size);

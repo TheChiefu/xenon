@@ -4,7 +4,7 @@
   import type { Device, GameActivity } from "@/bindings/sockets/events";
   import { ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
   import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
-  import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
+  import * as settings from "@/lib/settings.svelte";
 
   interface Props {
     id: string;
@@ -147,10 +147,10 @@
 </style>
 
 <div class="card">
-  <div class="banner" {@attach playOnHover}>
+  <div class="banner" {@attach settings.playOnHover}>
     {#if banner !== null}
       {#if banner.mime.startsWith("video/")}
-        <video class="media" src={banner.url} {@attach animatePhoto}></video>
+        <video class="media" src={banner.url} {@attach settings.animatePhoto}></video>
       {:else}
         <img class="media" src={banner.url} alt=""/>
       {/if}
@@ -159,7 +159,7 @@
     <div class="avatar">
       {#if avatar !== null}
         {#if avatar.mime.startsWith("video/")}
-          <video class="media" src={avatar.url} {@attach animatePhoto}></video>
+          <video class="media" src={avatar.url} {@attach settings.animatePhoto}></video>
         {:else}
           <img class="media" src={avatar.url} alt=""/>
         {/if}

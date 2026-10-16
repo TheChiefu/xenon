@@ -2,6 +2,7 @@
   import * as server from "@/lib/server.svelte";
 
   const info = $derived(server.getInfo());
+  const name: string = $derived(info?.name ?? "");
 </script>
 
 <style>
@@ -24,6 +25,7 @@
     gap: 0.2rem;
     grid-template-columns: auto 1fr;
     justify-items: start;
+    max-width: 40%;
     padding: 0 var(--point) 0 0.75rem;
     width: fit-content;
   }
@@ -33,9 +35,12 @@
     font-style: italic;
     font-weight: 600;
     grid-column: 1 / -1;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    user-select: none;
   }
 
   .kind {
@@ -49,6 +54,7 @@
     order: 1;
     padding: 1px 6px;
     text-transform: capitalize;
+    user-select: none;
   }
 
   .version {
@@ -57,11 +63,12 @@
     grid-column: 1;
     grid-row: 2;
     white-space: nowrap;
+    user-select: none;
   }
 </style>
 
 <div>
-  <h1 class="title">{info?.name ?? ''}</h1>
+  <h1 class="title" title={name}>{name}</h1>
   {#if info?.kind}
     <span class="kind">{info.kind}</span>
   {/if}

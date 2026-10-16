@@ -6,7 +6,7 @@
   import * as members from "@/lib/rooms/members.svelte";
   import { getSelectedRoom } from "@/lib/session.svelte";
   import * as users from "@/lib/users.svelte";
-  import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
+  import * as settings from "@/lib/settings.svelte";
   import { Pane } from "@/lib/panes.svelte";
   import PaneArea from "@/components/pane.svelte";
 
@@ -83,8 +83,6 @@
 </script>
 
 <style>
-
-  /* Pane */
 
   /* Header */
 
@@ -243,10 +241,10 @@
       {@const banner = users.getBanner(id)}
       {@const presence = users.getPresence(id)}
       {@const activity = users.getActivity(id)}
-      <button class="member" {@attach playOnHover}>
+      <button class="member" {@attach settings.playOnHover}>
         {#if banner !== undefined}
           {#if banner.mime.startsWith("video/")}
-            <video class="banner" src={banner.url} {@attach animatePhoto}></video>
+            <video class="banner" src={banner.url} {@attach settings.animatePhoto}></video>
           {:else}
             <img class="banner" src={banner.url} alt=""/>
           {/if}
@@ -255,7 +253,7 @@
         {#if avatar === undefined}
           <span class="avatar"></span>
         {:else if avatar.mime.startsWith("video/")}
-          <video class="avatar" src={avatar.url} {@attach animatePhoto}></video>
+          <video class="avatar" src={avatar.url} {@attach settings.animatePhoto}></video>
         {:else}
           <img class="avatar" src={avatar.url} alt=""/>
         {/if}

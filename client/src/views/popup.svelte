@@ -18,7 +18,7 @@
     .row {
         display: flex;
         width: 100%;
-        gap: 1.0rem;
+        gap: var(--inline-gap);
         align-items: center;
         justify-content: center;
     }

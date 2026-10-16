@@ -46,24 +46,24 @@
   }
 </script>
 
-<div class="section rows">
+<div class="section fields">
     <div class="grid-title">
         <h3>Credentials</h3>
     </div>
     <p class="message">{creds_notify}</p>
 
-    <p>Current Password</p>
-    <input name="current-password" type="password" autocomplete="current-password" bind:value={creds_password_curr}/>
+    <label for="current-password">Current Password</label>
+    <input id="current-password" name="current-password" type="password" autocomplete="current-password" bind:value={creds_password_curr}/>
 
-    <p>New Password</p>
-    <input name="new-password" type="password" autocomplete="new-password" bind:value={creds_password_new}/>
+    <label for="new-password">New Password</label>
+    <input id="new-password" name="new-password" type="password" autocomplete="new-password" bind:value={creds_password_new}/>
 
     <label for="revoke-sessions">Sign Out Other Sessions</label>
     <input id="revoke-sessions" type="checkbox" bind:checked={creds_revoke_sessions}/>
     <button class="full-row" onclick={savePassword}>Save Changes</button>
 </div>
 
-<div class="section rows">
+<div class="section fields">
     <div class="grid-title">
         <h3 style="color: var(--danger);">Account Deletion</h3>
     </div>

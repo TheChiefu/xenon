@@ -7,14 +7,10 @@
 
   .links :global {
 
-    hr {
-      border-color: var(--component-raised);
-    }
-
     .platform {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: var(--row-gap);
     }
 
     .title {
@@ -25,13 +21,13 @@
     .platform-row {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--inline-gap);
     }
 
     .platform-text {
       display: flex;
       align-items: baseline;
-      gap: 0.5rem;
+      gap: var(--inline-gap);
     }
 
     .platform p {
@@ -49,7 +45,7 @@
 
     .platform-buttons {
       display: flex;
-      gap: 0.5rem;
+      gap: var(--inline-gap);
     }
 
     .handle {

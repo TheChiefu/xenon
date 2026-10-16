@@ -60,9 +60,8 @@ async function loadRoom(roomId: string): Promise<void> {
   const entries = await roomsAPI.listMembers(roomId);
   const ids: string[] = entries.map((entry) => entry.user_id);
 
-  // Summaries load before the IDs are stored
-  await users.load(ids);
-
   // Replaces the room's stored member IDs
   rooms.set(roomId, new SvelteSet(ids));
+
+  await users.load(ids);
 }

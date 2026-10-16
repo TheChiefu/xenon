@@ -44,40 +44,17 @@
 </script>
 
 <style>
-  dialog {
-    width: 50rem;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    background: var(--component);
-    color: var(--text);
-  }
-
-  dialog::backdrop {
-    background: var(--modal-background)
-  }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1.0rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  h2 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-  }
-
   .tab-view {
       background-color: var(--background);
-      padding: 1rem;
-      max-height: 60vh;
+      padding: var(--section-padding);
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
   }
 
 </style>
 
-<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
+<dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
 
   <div class="header">
     <h2>Settings</h2>
@@ -87,15 +64,17 @@
   </div>
 
 
-{#each tabs as tab, index}
-  <button
-    class="is-tab"
-    class:is-active={current_tab == index}
-    onclick={() => current_tab = index}
-  >
-    {tab.label}
-  </button>
-{/each}
+  <div>
+    {#each tabs as tab, index}
+      <button
+        class="is-tab"
+        class:is-active={current_tab == index}
+        onclick={() => current_tab = index}
+      >
+        {tab.label}
+      </button>
+    {/each}
+  </div>
 
   <div class="tab-view">
     <Tabs/>

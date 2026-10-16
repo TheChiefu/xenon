@@ -1,7 +1,7 @@
 // Client Settings - Status this device presents to other users
 
 import { Status } from "@/bindings/shared";
-import { getAwayMinutes } from "@/lib/settings.svelte";
+import * as settings from "@/lib/settings.svelte";
 import { send } from "@/lib/socket.svelte";
 
 const keyStatus = "default_status";
@@ -61,7 +61,7 @@ function scheduleAway(): void {
   clearTimeout(awayTimer);
 
   // Check if user is away (0 means never idle)
-  const minutes = getAwayMinutes();
+  const minutes = settings.getAwayMinutes();
   if (minutes <= 0) {
     awayTimer = undefined;
     return;

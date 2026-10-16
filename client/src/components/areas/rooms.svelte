@@ -138,8 +138,8 @@
         class:held={drag.isHeld(roomId)}
         class:drop-above={drop === Section.Above}
         class:drop-below={drop === Section.Below}
+        {@attach drag.linkRow(roomId)}
         onpointerdown={(event) => drag.start(event, roomId)}
-        onpointermove={(event) => drag.hold(event, roomId)}
         onclick={() => { if (layout.isLocked()) selectRoom(roomId); }}
         oncontextmenu={(event) => menu.open(event, roomCtx(roomId))}
     >
@@ -170,8 +170,8 @@
             class:drop-below={drop === Section.Below}
             class:drop-into={drop === Section.Inside}
             class:open={!folder.collapsed}
+            {@attach drag.row(folder)}
             onpointerdown={(event) => drag.start(event, folder)}
-            onpointermove={(event) => drag.hold(event, folder)}
             onclick={() => layout.folderToggle(folder)}
             oncontextmenu={(event) => menu.open(event, folderCtx(folder))}
         >
@@ -188,7 +188,7 @@
 
 
 <!-- Release can happen anywhere, not only over the list -->
-<svelte:window onpointerup={drag.release} onpointercancel={drag.reset}/>
+<svelte:window onpointermove={drag.hold} onpointerup={drag.release} onpointercancel={drag.reset}/>
 
 <!-- Room Pane -->
 <PaneArea pane={Pane.room}>

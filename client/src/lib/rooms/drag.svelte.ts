@@ -17,12 +17,19 @@ export function start(event: PointerEvent, row: RoomListItem): void {
 }
 
 // Determine drag state while holding row
-export function hold(event: PointerEvent, row: RoomListItem): void {
+export function hold(event: PointerEvent): void {
   if (held === null) return;
+
+  const element = document
+    .elementFromPoint(event.clientX, event.clientY)
+    ?.closest<HTMLElement>("[data-room], [data-folder]");
+  if (!element) return;
+
+  const row = rowOf(element);
+  if (row === undefined) return;
   hover = row;
 
   // Calculate which part of element the mouse is over (Y-Axis)
-  const element = event.currentTarget as HTMLElement;
   const rect = element.getBoundingClientRect();
   const at = (event.clientY - rect.top) / rect.height;
 

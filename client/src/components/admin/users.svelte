@@ -74,8 +74,8 @@
 <style>
   .search {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
+    gap: var(--inline-gap);
+    margin-bottom: var(--section-gap);
   }
 
   .search input {
@@ -87,17 +87,16 @@
     min-height: 0;
     display: grid;
     grid-template-columns: 1fr 2fr;
-    gap: 1rem;
+    gap: var(--section-gap);
+  }
+
+  :global(.compact) .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 2fr;
   }
 
   .list {
     display: grid;
-    grid-auto-rows: min-content;
-    gap: 0.25rem;
-  }
-
-  .list button {
-    text-align: left;
   }
 
   .pane {
@@ -107,6 +106,18 @@
 
   .pane .grid-title {
     grid-column: 1 / -1;
+  }
+
+  .empty {
+    display: grid;
+    place-items: center;
+    user-select: none;
+  }
+
+  .pane .grid-title:first-child {
+    position: sticky;
+    top: 0;
+    background: var(--component);
   }
 </style>
 
@@ -121,7 +132,7 @@
   </form>
 
   <div class="layout">
-    <div class="list grid">
+    <div class="list grid table">
       <span class="grid-heading">Username</span>
 
       {#each users as user (user.id)}
@@ -131,12 +142,14 @@
       {/each}
     </div>
 
-    <form class="pane grid fields" onsubmit={deleteUser}>
-      <div class="grid-title">
-        <h4>{selected === null ? "No User Selected" : selected.display_name}</h4>
-      </div>
+    {#if selected === null}
+      <div class="grid grid-heading empty">No User Selected</div>
+    {:else}
+      <form class="pane grid fields" onsubmit={deleteUser}>
+        <div class="grid-title">
+          <h4>{selected.display_name}</h4>
+        </div>
 
-      {#if selected !== null}
         <span class="grid-heading">Display Name</span>
         <span>{selected.display_name}</span>
         <span class="grid-heading">Username</span>
@@ -154,7 +167,7 @@
         <input id="delete-history" name="delete_history" type="checkbox"/>
 
         <button type="submit" class="is-danger">Delete</button>
-      {/if}
-    </form>
+      </form>
+    {/if}
   </div>
 </div>

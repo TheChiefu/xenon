@@ -38,53 +38,16 @@
 </script>
 
 <style>
-  dialog {
-    width: 50rem;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    background: var(--component);
-    color: var(--text);
-  }
-
-  dialog::backdrop {
-    background: var(--modal-background);
-  }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  h2 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .body {
-    display: grid;
-    grid-template-columns: 10rem 1fr;
-    height: 30rem;
-  }
-
-  .tabs {
-    display: grid;
-    align-content: start;
-  }
-
-  .tabs button {
-    text-align: left;
-  }
-
   .tab-view {
-    padding: 1rem;
+    padding: var(--section-padding);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     background-color: var(--background);
   }
 </style>
 
-<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
+<dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
   <div class="header">
     <h2>Admin</h2>
     <button class="icon-btn" aria-label="Close" onclick={onClose}>
@@ -92,21 +55,19 @@
     </button>
   </div>
 
-  <div class="body">
-    <div class="tabs">
-      {#each tabs as tab, index}
-        <button
-          class="is-tab"
-          class:is-active={current_tab === index}
-          onclick={() => current_tab = index}
-        >
-          {tab.label}
-        </button>
-      {/each}
-    </div>
+  <div>
+    {#each tabs as tab, index}
+      <button
+        class="is-tab"
+        class:is-active={current_tab === index}
+        onclick={() => current_tab = index}
+      >
+        {tab.label}
+      </button>
+    {/each}
+  </div>
 
-    <div class="tab-view">
-      <View/>
-    </div>
+  <div class="tab-view">
+    <View/>
   </div>
 </dialog>

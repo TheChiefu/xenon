@@ -58,13 +58,12 @@
 
 <style>
   form {
-    grid-template-columns: 20em 1fr;
-    margin-bottom: 1.25rem;
+    margin-bottom: var(--section-gap);
   }
 
   .list-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--inline-gap);
     align-items: center;
   }
 
@@ -76,13 +75,10 @@
   .codes {
     flex: 1;
     display: grid;
-    grid-template-columns: 2fr 1fr 2fr 2rem;
-    grid-auto-rows: min-content;
-    align-items: center;
+    grid-template-columns: 2fr 1fr 2fr auto;
   }
 
   .code {
-    padding: 0;
     color: var(--link);
     font-family: monospace;
     text-align: left;
@@ -119,11 +115,11 @@
     </div>
   </div>
 
-  <div class="codes grid">
+  <div class="codes grid table">
     <span class="grid-heading">Code</span>
     <span class="grid-heading">Uses</span>
     <span class="grid-heading">Expires</span>
-    <span></span>
+    <span class="grid-heading"></span>
 
     {#each codes as entry (entry.code)}
       <button class="code inherit" title="Copy Code" onclick={() => navigator.clipboard.writeText(entry.code)}>
@@ -131,9 +127,11 @@
       </button>
       <span>{entry.uses} / {entry.max_uses}</span>
       <span>{entry.expires_at && new Date(entry.expires_at).toLocaleString()}</span>
-      <button class="icon-btn" aria-label="Revoke code" title="Revoke Code" onclick={() => revokeCode(entry.code)}>
-        <span class="icon" aria-hidden="true">{@html icon_x}</span>
-      </button>
+      <span>
+        <button class="icon-btn" aria-label="Revoke code" title="Revoke Code" onclick={() => revokeCode(entry.code)}>
+          <span class="icon" aria-hidden="true">{@html icon_x}</span>
+        </button>
+      </span>
     {/each}
   </div>
 

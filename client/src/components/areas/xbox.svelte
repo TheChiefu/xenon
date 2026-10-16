@@ -10,11 +10,6 @@
 
   let failure: string | null = $state(null);
 
-  // Loads friends when pane opens or an account is linked
-  $effect(() => {
-    refreshFriends();
-  });
-
   async function refreshFriends(): Promise<void> {
     if (!xbox.isLinked()) {
       return;

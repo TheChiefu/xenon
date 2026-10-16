@@ -35,7 +35,7 @@
 <style>
   dialog {
     width: 24rem;
-    padding: 1.5rem;
+    padding: var(--dialog-padding);
     border: 1px solid var(--border);
     background: var(--component);
     color: var(--text);
@@ -48,35 +48,35 @@
   .header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1.0rem;
+    margin-bottom: var(--section-gap);
     border-bottom: 1px solid var(--border);
   }
 
   form {
     display: grid;
-    gap: 0.75rem;
+    gap: var(--row-gap);
   }
 
   .field {
     display: grid;
-    gap: 0.3rem;
+    gap: var(--row-gap);
   }
 
   .check {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--inline-gap);
   }
 
   fieldset {
     display: grid;
-    gap: 0.3rem;
+    gap: var(--row-gap);
     border: 1px solid var(--border);
   }
 
   .row {
     display: flex;
-    gap: 1rem;
+    gap: var(--inline-gap);
     justify-content: flex-end;
   }
 </style>
