@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { postMessage } from "@/lib/api/messages";
-  import { addMessage } from "@/lib/messages.svelte";
+  import * as messagesAPI from "@/lib/api/messages";
+  import * as messages from "@/lib/messages.svelte";
   import { failureText } from "@/lib/utils";
 
   interface Props {
@@ -35,8 +35,8 @@
     sending = true;
 
     try {
-      const message = await postMessage(roomId, { body: text, client_nonce: nonce, attachments: [] });
-      addMessage(message);
+      const message = await messagesAPI.post(roomId, { body: text, client_nonce: nonce, attachments: [] });
+      messages.add(message);
 
       text = "";
       failure = null;

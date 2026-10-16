@@ -1,7 +1,7 @@
 import type { FriendResponse } from "@/bindings/services/xbox";
 import { Platform } from "@/bindings/shared";
-import { getXboxFriends } from "@/lib/api/xbox";
-import { getProfile } from "@/lib/profile.svelte";
+import * as xboxAPI from "@/lib/api/xbox";
+import * as profile from "@/lib/profile.svelte";
 
 // State //
 let friends: FriendResponse[] = $state([]);  // Friends from last load
@@ -13,18 +13,18 @@ export function getFriends(): FriendResponse[] {
 }
 
 // Whether profile has a linked Xbox account
-export function isXboxLinked(): boolean {
-  const profile = getProfile();
+export function isLinked(): boolean {
+  const my_profile = profile.get();
 
-  if (profile === null) {
+  if (my_profile === null) {
     return false;
   }
 
-  return profile.linked_accounts.some((account) => account.platform === Platform.xbox);
+  return my_profile.linked_accounts.some((account) => account.platform === Platform.xbox);
 }
 
 // Server //
 
 export async function loadFriends(): Promise<void> {
-  friends = await getXboxFriends();
+  friends = await xboxAPI.getFriends();
 }

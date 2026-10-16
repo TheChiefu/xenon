@@ -1,5 +1,5 @@
 import type { Folder } from "@/bindings/shared";
-import { folderCreate, folderRename } from "@/lib/rooms/layout.svelte";
+import * as layout from "@/lib/rooms/layout.svelte";
 
 // Types //
 type NameFieldEvent = KeyboardEvent & { currentTarget: HTMLInputElement }; // Keyboard event from an <input>
@@ -44,10 +44,10 @@ export function nameFinished(event: NameFieldEvent): void {
 
     if (naming?.kind === Kind.Create) {
       // Add a new folder based on name (with nothing in it)
-      folderCreate(name);
+      layout.folderCreate(name);
     } else if (naming?.kind === Kind.Rename) {
       // Rename selected folder with new name
-      folderRename(naming.folder, name);
+      layout.folderRename(naming.folder, name);
     }
     nameReset();
     return;

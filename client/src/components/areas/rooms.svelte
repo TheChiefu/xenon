@@ -2,13 +2,15 @@
     import type { Folder } from "@/bindings/shared";
     import { Visibility } from "@/bindings/shared";
     import { LABELS_VISIBILITY } from "@/lib/labels";
-    import { Section, folderToggle, getLayout, isLocked, toggleLock } from "@/lib/rooms/layout.svelte";
-    import { getRoomData, type RoomId } from "@/lib/rooms/data.svelte";
+    import { Section } from "@/lib/rooms/layout.svelte";
+    import * as layout from "@/lib/rooms/layout.svelte";
+    import type { RoomId } from "@/lib/rooms/data.svelte";
+    import * as room from "@/lib/rooms/data.svelte";
     import { getSelectedRoom, selectRoom } from "@/lib/session.svelte";
-    import { dragRelease,dragStart, dragStateReset, dragging, dropAt, isDragging, isHeld } from "@/lib/rooms/drag.svelte";
+    import * as drag from "@/lib/rooms/drag.svelte";
     import { Pane } from "@/lib/panes.svelte";
     import PaneArea from "@/components/pane.svelte";
-    import { openMenu } from "@/lib/menu.svelte";
+    import * as menu from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
     import { close, isOpen } from "@/lib/rooms/creation.svelte";
@@ -128,23 +130,23 @@
 
 <!-- Layout for movable room button -->
 {#snippet roomButton(roomId: RoomId, nested: boolean)}
-    {@const room = getRoomData(roomId)}
-    {@const drop = dropAt(roomId)}
+    {@const data = room.get(roomId)}
+    {@const drop = drag.dropAt(roomId)}
     <button
         class:nested
         class:selected={getSelectedRoom() === roomId}
-        class:held={isHeld(roomId)}
+        class:held={drag.isHeld(roomId)}
         class:drop-above={drop === Section.Above}
         class:drop-below={drop === Section.Below}
-        onpointerdown={(event) => dragStart(event, roomId)}
-        onpointermove={(event) => dragging(event, roomId)}
-        onclick={() => { if (isLocked()) selectRoom(roomId); }}
-        oncontextmenu={(event) => openMenu(event, roomCtx(roomId))}
+        onpointerdown={(event) => drag.start(event, roomId)}
+        onpointermove={(event) => drag.hold(event, roomId)}
+        onclick={() => { if (layout.isLocked()) selectRoom(roomId); }}
+        oncontextmenu={(event) => menu.open(event, roomCtx(roomId))}
     >
-        {room?.name}
-        {#if room?.visibility === Visibility.locked}
+        {data?.name}
+        {#if data?.visibility === Visibility.locked}
             <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.locked]}>{@html icon_lock}</span>
-        {:else if room?.visibility === Visibility.hidden}
+        {:else if data?.visibility === Visibility.hidden}
             <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.hidden]}>{@html icon_eye_off}</span>
         {/if}
     </button>
@@ -161,17 +163,17 @@
             onblur={nameReset}
         />
     {:else}
-        {@const drop = dropAt(folder)}
+        {@const drop = drag.dropAt(folder)}
         <button
-            class:held={isHeld(folder)}
+            class:held={drag.isHeld(folder)}
             class:drop-above={drop === Section.Above}
             class:drop-below={drop === Section.Below}
             class:drop-into={drop === Section.Inside}
             class:open={!folder.collapsed}
-            onpointerdown={(event) => dragStart(event, folder)}
-            onpointermove={(event) => dragging(event, folder)}
-            onclick={() => folderToggle(folder)}
-            oncontextmenu={(event) => openMenu(event, folderCtx(folder))}
+            onpointerdown={(event) => drag.start(event, folder)}
+            onpointermove={(event) => drag.hold(event, folder)}
+            onclick={() => layout.folderToggle(folder)}
+            oncontextmenu={(event) => menu.open(event, folderCtx(folder))}
         >
             <span class="icon" aria-hidden="true" title="Folder">{@html icon_folder}</span>
             <span class="folder-name">{folder.name}</span>
@@ -186,7 +188,7 @@
 
 
 <!-- Release can happen anywhere, not only over the list -->
-<svelte:window onpointerup={dragRelease} onpointercancel={dragStateReset}/>
+<svelte:window onpointerup={drag.release} onpointercancel={drag.reset}/>
 
 <!-- Room Pane -->
 <PaneArea pane={Pane.room}>
@@ -206,22 +208,22 @@
         {/if}
         <button
             class="icon-btn"
-            aria-label={isLocked() ? "Unlock layout" : "Lock layout"}
-            title={isLocked() ? "Unlock layout" : "Lock layout"}
-            onclick={toggleLock}
+            aria-label={layout.isLocked() ? "Unlock layout" : "Lock layout"}
+            title={layout.isLocked() ? "Unlock layout" : "Lock layout"}
+            onclick={layout.toggleLock}
         >
-            <span class="icon" aria-hidden="true">{@html isLocked() ? icon_lock : icon_lock_open}</span>
+            <span class="icon" aria-hidden="true">{@html layout.isLocked() ? icon_lock : icon_lock_open}</span>
         </button>
     </div>
 
     <!-- Room List -->
     <div
         class="list"
-        class:moving={isDragging()}
-        oncontextmenu={(event) => openMenu(event, paneCtx())}
+        class:moving={drag.isActive()}
+        oncontextmenu={(event) => menu.open(event, paneCtx())}
         role="presentation"
     >
-        {#each getLayout() as entry}
+        {#each layout.get() as entry}
 
             <!-- Room with no folder -->
             {#if typeof entry === "string"}

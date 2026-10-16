@@ -1,12 +1,12 @@
 <script lang="ts">
   import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
   import { MSG_SAVED, MSG_REFRESHED, MSG_ERROR, MSG_UNLINK_XBOX } from "@/lib/labels";
-  import { confirmDialog } from "@/lib/confirm.svelte";
+  import * as confirm from "@/lib/confirm.svelte";
   import { Platform } from "@/bindings/shared";
   import type { LinkResponse, XboxResponse } from "@/bindings/services/xbox";
-  import { getXboxAccount, startXboxLink, unlinkXbox, updateXboxAccount } from "@/lib/api/xbox";
+  import * as xboxAPI from "@/lib/api/xbox";
   import { failureText } from "@/lib/utils";
-  import { loadProfile } from "@/lib/profile.svelte";
+  import * as profile from "@/lib/profile.svelte";
   import icon_link from "@/assets/icons/link.svg?raw";
   import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
@@ -24,8 +24,8 @@
     xbox_notify = "";
 
     try {
-      xbox_account = await getXboxAccount();
-      await loadProfile();
+      xbox_account = await xboxAPI.getAccount();
+      await profile.load();
     } catch (failure) {
       xbox_notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }
@@ -54,7 +54,7 @@
         throw new Error("Sign-in tab was blocked");
       }
 
-      const link: LinkResponse = await startXboxLink();
+      const link: LinkResponse = await xboxAPI.startLink();
       sign_in.location.href = link.authorize_url;
     } catch (failure) {
       sign_in?.close();
@@ -66,7 +66,7 @@
   async function unlinkXboxAccount(): Promise<void> {
     xbox_notify = "";
 
-    const accepted = await confirmDialog(MSG_UNLINK_XBOX);
+    const accepted = await confirm.dialog(MSG_UNLINK_XBOX);
 
     if (!accepted) {
       return;
@@ -74,9 +74,9 @@
 
     try {
       // Unlink on server and remove entry from current settings page
-      await unlinkXbox();
+      await xboxAPI.unlink();
       xbox_account = null;
-      await loadProfile();
+      await profile.load();
     } catch (failure) {
       xbox_notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }
@@ -90,7 +90,7 @@
     }
 
     try {
-      await updateXboxAccount({ honor_cloaked: xbox_account.honor_cloaked });
+      await xboxAPI.updateAccount({ honor_cloaked: xbox_account.honor_cloaked });
       xbox_notify = `(${MSG_SAVED})`;
     } catch (failure) {
       xbox_notify = `(${MSG_ERROR}: ${failureText(failure)})`;

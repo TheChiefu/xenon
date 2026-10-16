@@ -3,7 +3,7 @@
   import { Pane } from "@/lib/panes.svelte";
   import PaneArea from "@/components/pane.svelte";
   import { failureText } from "@/lib/utils";
-  import { getFriends, isXboxLinked, loadFriends } from "@/lib/xbox.svelte";
+  import * as xbox from "@/lib/xbox.svelte";
   import icon_lock from "@/assets/icons/lock.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
@@ -16,12 +16,12 @@
   });
 
   async function refreshFriends(): Promise<void> {
-    if (!isXboxLinked()) {
+    if (!xbox.isLinked()) {
       return;
     }
 
     try {
-      await loadFriends();
+      await xbox.loadFriends();
       failure = null;
     } catch (error) {
       failure = failureText(error);
@@ -37,7 +37,7 @@
     return a.gamertag.localeCompare(b.gamertag);
   }
 
-  const ordered: FriendResponse[] = $derived(getFriends().toSorted(compareFriends));
+  const ordered: FriendResponse[] = $derived(xbox.getFriends().toSorted(compareFriends));
 </script>
 
 <style>
@@ -159,13 +159,13 @@
 
   <!-- Display Header -->
   <div class="header">
-    <h3>Xbox Friends: {getFriends().length}</h3>
+    <h3>Xbox Friends: {xbox.getFriends().length}</h3>
     <button class="icon-btn" aria-label="Refresh friends" title="Refresh friends" onclick={refreshFriends}>
       <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
     </button>
   </div>
 
-  {#if !isXboxLinked()}
+  {#if !xbox.isLinked()}
     <p class="empty">No Xbox Account Linked</p>
   {:else if failure !== null}
     <p class="failure">Failure: {failure}</p>

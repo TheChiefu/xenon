@@ -1,5 +1,6 @@
 import type { RoomListItem } from "@/bindings/shared";
-import { Section, isLocked, moveEntry } from "@/lib/rooms/layout.svelte";
+import { Section } from "@/lib/rooms/layout.svelte";
+import * as layout from "@/lib/rooms/layout.svelte";
 
 let held: RoomListItem | null = $state(null);    // Row being held
 let hover: RoomListItem | null = $state(null);   // Row being hovered over
@@ -8,15 +9,15 @@ let hoverPart: Section = $state(Section.Above);  // Which part pointer is over
 // Pointer Events //
 
 // Capture row being held on initial drag start
-export function dragStart(event: PointerEvent, row: RoomListItem): void {
+export function start(event: PointerEvent, row: RoomListItem): void {
   if (event.button !== 0) return; // Only allow left click drag
-  if (isLocked()) return;
+  if (layout.isLocked()) return;
   held = row;
   hover = null;
 }
 
 // Determine drag state while holding row
-export function dragging(event: PointerEvent, row: RoomListItem): void {
+export function hold(event: PointerEvent, row: RoomListItem): void {
   if (held === null) return;
   hover = row;
 
@@ -25,7 +26,7 @@ export function dragging(event: PointerEvent, row: RoomListItem): void {
   const rect = element.getBoundingClientRect();
   const at = (event.clientY - rect.top) / rect.height;
 
-  // Determine which section of the row is being hovered 
+  // Determine which section of the row is being hovered
   if (at < 0.33) {
     hoverPart = Section.Above;
   } else if (at > 0.66) {
@@ -36,26 +37,26 @@ export function dragging(event: PointerEvent, row: RoomListItem): void {
 }
 
 // Determine how to handle drag result
-export function dragRelease(): void {
+export function release(): void {
 
   // Invalid state is canceled
   if (held === null || hover === null) {
-    dragStateReset();
+    reset();
     return;
   }
 
   // Move layout depending on move type
-  moveEntry(held, hover, hoverPart);
-  dragStateReset();
+  layout.moveEntry(held, hover, hoverPart);
+  reset();
 }
 
 // Drag State //
-export function dragStateReset(): void {
+export function reset(): void {
   held = null;
   hover = null;
 }
 
-export function isDragging(): boolean {
+export function isActive(): boolean {
   return held !== null;
 }
 

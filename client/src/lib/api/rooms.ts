@@ -1,12 +1,12 @@
 import type { CreateRoomRequest, CreateRoomResponse, MemberResponse, RoomResponse } from "@/bindings/routes/rooms";
 import { request } from "@/lib/utils";
 
-export async function createRoom(body: CreateRoomRequest): Promise<CreateRoomResponse> {
+export async function create(body: CreateRoomRequest): Promise<CreateRoomResponse> {
     const response = await request("/rooms", "POST", body);
     return await response.json() as CreateRoomResponse;
 }
 
-export async function getRoom(roomId: string): Promise<RoomResponse> {
+export async function get(roomId: string): Promise<RoomResponse> {
     const response = await request(`/rooms/${roomId}`);
     return await response.json() as RoomResponse;
 }

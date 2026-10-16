@@ -5,22 +5,22 @@ export type RoomId = string;
 
 let rooms: Map<RoomId, RoomResponse> = $state(new Map());
 
-export function getRoomData(id: RoomId): RoomResponse | undefined {
+export function get(id: RoomId): RoomResponse | undefined {
   return rooms.get(id);
 }
 
-export function setRoomData(fetched: RoomResponse[]): void {
+export function set(fetched: RoomResponse[]): void {
   rooms = new Map();
   for (const room of fetched) {
     rooms.set(room.id, room);
   }
 }
 
-export function addRoomData(room: RoomResponse): void {
+export function add(room: RoomResponse): void {
   rooms.set(room.id, room);
 }
 
 // Removes every stored room
-export function clearRoomData(): void {
+export function clear(): void {
   rooms = new Map();
 }

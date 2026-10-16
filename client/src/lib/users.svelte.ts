@@ -4,8 +4,8 @@ import { SvelteMap } from "svelte/reactivity";
 import type { UserSummaryResponse } from "@/bindings/routes/users";
 import { Status } from "@/bindings/shared";
 import { GamePresence, type Device, type GameActivity } from "@/bindings/sockets/events";
-import { lookupUsers } from "@/lib/api/users";
-import { getServerInfo } from "@/lib/server.svelte";
+import * as usersAPI from "@/lib/api/users";
+import * as server from "@/lib/server.svelte";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
 
 // A user's status and what they are connected from
@@ -24,13 +24,13 @@ const banners: SvelteMap<string, FetchedFile> = new SvelteMap();
 // SUMMARIES //
 
 // What is held for a user, or undefined until a lookup fills it
-export function getUser(id: string): UserSummaryResponse | undefined {
+export function get(id: string): UserSummaryResponse | undefined {
   return summaries.get(id);
 }
 
 // Fetches every id not already held
-export async function loadUsers(ids: string[]): Promise<void> {
-  const info = getServerInfo();
+export async function load(ids: string[]): Promise<void> {
+  const info = server.getInfo();
   if (info === null) {
     return;
   }
@@ -39,7 +39,7 @@ export async function loadUsers(ids: string[]): Promise<void> {
   const missing: string[] = [...new Set(ids)].filter((id) => !summaries.has(id));
 
   for (let start = 0; start < missing.length; start += perLookup) {
-    const fetched = await lookupUsers({ ids: missing.slice(start, start + perLookup) });
+    const fetched = await usersAPI.lookup({ ids: missing.slice(start, start + perLookup) });
 
     for (const user of fetched) {
       summaries.set(user.id, user);
@@ -48,27 +48,27 @@ export async function loadUsers(ids: string[]): Promise<void> {
 }
 
 // Replaces what is held, for a profile change the server reports
-export function setUser(user: UserSummaryResponse): void {
+export function set(user: UserSummaryResponse): void {
   summaries.set(user.id, user);
 }
 
 // PRESENCE //
 
-export function getPresenceOfUser(id: string): Presence {
+export function getPresence(id: string): Presence {
   return presences.get(id) ?? { status: Status.offline, device: null };
 }
 
-export function setPresenceForUser(id: string, status: Status, device: Device | null): void {
+export function setPresence(id: string, status: Status, device: Device | null): void {
   presences.set(id, { status, device });
 }
 
-export function clearAllPresences(): void {
+export function clearPresences(): void {
   presences.clear();
 }
 
 // GAMES //
 
-export function getActivityOfUser(id: string): GameActivity | undefined {
+export function getActivity(id: string): GameActivity | undefined {
   const gameActivity = activities.get(id);
 
   if (gameActivity?.status === GamePresence.Offline) {
@@ -78,17 +78,17 @@ export function getActivityOfUser(id: string): GameActivity | undefined {
   return gameActivity;
 }
 
-export function setActivityForUser(id: string, game: GameActivity): void {
+export function setActivity(id: string, game: GameActivity): void {
   activities.set(id, game);
 }
 
-export function clearAllActivities(): void {
+export function clearActivities(): void {
   activities.clear();
 }
 
 // PROFILE FILES //
 
-export function getDisplayNameOfUser(id: string): string {
+export function getDisplayName(id: string): string {
   const user = summaries.get(id);
   if (user === undefined) {
     return "";
@@ -97,16 +97,16 @@ export function getDisplayNameOfUser(id: string): string {
   return user.display_name;
 }
 
-export function getAvatarOfUser(id: string): FetchedFile | undefined {
+export function getAvatar(id: string): FetchedFile | undefined {
   return avatars.get(id);
 }
 
-export function getBannerOfUser(id: string): FetchedFile | undefined {
+export function getBanner(id: string): FetchedFile | undefined {
   return banners.get(id);
 }
 
 // Downloads a user's changed avatar and banner
-export function loadProfileFilesOfUser(id: string): void {
+export function loadProfileFiles(id: string): void {
   const user = summaries.get(id);
   if (user === undefined) {
     return;
@@ -155,7 +155,7 @@ async function syncFile(
 // SESSION //
 
 // Removes every stored user, revoking the URLs of their avatars and banners
-export function clearUsers(): void {
+export function clear(): void {
   for (const avatar of avatars.values()) {
     URL.revokeObjectURL(avatar.url);
   }

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { chooseItem, closeMenu, getMenuItems, getMenuPos } from "@/lib/menu.svelte";
+    import * as menu from "@/lib/menu.svelte";
 </script>
 
 <style>
@@ -28,11 +28,11 @@
 </style>
 
 <!-- Right click context window -->
-{#if getMenuPos()}
-    <div class="menu-backdrop" role="presentation" onpointerdown={closeMenu}></div>
-    <div class="menu" style:left="{getMenuPos()?.x}px" style:top="{getMenuPos()?.y}px">
-        {#each getMenuItems() as item}
-            <button onclick={() => chooseItem(item)}>{item.label}</button>
+{#if menu.getPos()}
+    <div class="menu-backdrop" role="presentation" onpointerdown={menu.close}></div>
+    <div class="menu" style:left="{menu.getPos()?.x}px" style:top="{menu.getPos()?.y}px">
+        {#each menu.getItems() as item}
+            <button onclick={() => menu.chooseItem(item)}>{item.label}</button>
         {/each}
     </div>
 {/if}

@@ -1,6 +1,6 @@
 import type { CreateRoomRequest } from "@/bindings/routes/rooms";
-import { createRoom, getRoom } from "@/lib/api/rooms";
-import { roomAdd } from "@/lib/rooms/layout.svelte";
+import * as roomsAPI from "@/lib/api/rooms";
+import * as layout from "@/lib/rooms/layout.svelte";
 import { failureText } from "@/lib/utils";
 
 // State //
@@ -41,10 +41,10 @@ export async function submit(body: CreateRoomRequest): Promise<void> {
   error = null;
 
   try {
-    const created = await createRoom(body);
+    const created = await roomsAPI.create(body);
 
     // Create answers with an id alone
-    roomAdd(await getRoom(created.id));
+    layout.roomAdd(await roomsAPI.get(created.id));
     visible = false;
   } catch (err) {
     error = failureText(err);

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getServerInfo } from "@/lib/server.svelte";
+  import * as server from "@/lib/server.svelte";
 
-  const info = $derived(getServerInfo());
+  const info = $derived(server.getInfo());
 </script>
 
 <style>

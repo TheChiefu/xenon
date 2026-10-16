@@ -1,20 +1,20 @@
 // Shared Yes/No confirmation popup - one instance is mounted at the app root
-// (see app.svelte); call confirmDialog() from anywhere to show it.
+// (see app.svelte); call confirm.dialog() from anywhere to show it.
 
 let message = $state("");
 let visible = $state(false);
 let resolveFn: ((result: boolean) => void) | null = null;
 
-export function isConfirmVisible(): boolean {
+export function isVisible(): boolean {
   return visible;
 }
 
-export function getConfirmMessage(): string {
+export function getMessage(): string {
   return message;
 }
 
 // Show the popup and wait for the user's answer
-export function confirmDialog(text: string): Promise<boolean> {
+export function dialog(text: string): Promise<boolean> {
   message = text;
   visible = true;
 
@@ -24,7 +24,7 @@ export function confirmDialog(text: string): Promise<boolean> {
 }
 
 // Called by the root Popup instance's onConfirm/onCancel
-export function resolveConfirm(result: boolean): void {
+export function resolve(result: boolean): void {
   visible = false;
   resolveFn?.(result);
   resolveFn = null;

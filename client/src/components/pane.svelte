@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { Pane, getWidth } from "@/lib/panes.svelte";
+  import { Pane } from "@/lib/panes.svelte";
+  import * as panes from "@/lib/panes.svelte";
 
   interface Props {
     pane: Pane;
@@ -44,6 +45,6 @@
 
 </style>
 
-<div class="pane" class:overlay style:--pane-width="{getWidth(pane)}rem">
+<div class="pane" class:overlay style:--pane-width="{panes.getWidth(pane)}rem">
   {@render children()}
 </div>

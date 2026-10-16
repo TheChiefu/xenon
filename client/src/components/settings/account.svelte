@@ -1,7 +1,7 @@
 <script lang="ts">
   import { MSG_SAVED, MSG_ERROR, MSG_ANONYMIZE, MSG_DELETE_ACCOUNT } from "@/lib/labels";
-  import { changePassword, deleteMe } from "@/lib/api/users";
-  import { confirmDialog } from "@/lib/confirm.svelte";
+  import * as usersAPI from "@/lib/api/users";
+  import * as confirm from "@/lib/confirm.svelte";
   import { removeLoggedInAccount } from "@/lib/session.svelte";
   import { failureText } from "@/lib/utils";
 
@@ -20,7 +20,7 @@
     creds_notify = "";
 
     try {
-      await changePassword(creds_password_curr, creds_password_new, creds_revoke_sessions);
+      await usersAPI.changePassword(creds_password_curr, creds_password_new, creds_revoke_sessions);
       creds_password_curr = "";
       creds_password_new = "";
       creds_revoke_sessions = false;
@@ -31,14 +31,14 @@
   }
 
   async function deleteAccount() {
-    const accepted = await confirmDialog(MSG_DELETE_ACCOUNT);
+    const accepted = await confirm.dialog(MSG_DELETE_ACCOUNT);
 
     if (!accepted) {
       return;
     }
 
     try {
-      await deleteMe(delete_anonymize, delete_history);
+      await usersAPI.deleteMe(delete_anonymize, delete_history);
       removeLoggedInAccount();
     } catch (failure) {
       delete_notify = `${MSG_ERROR}: ${failureText(failure)}`;
