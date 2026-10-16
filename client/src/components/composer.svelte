@@ -16,6 +16,12 @@
   // Kept after a failed send, so a retry cannot store the message twice
   let nonce: string = newNonce();
 
+  // Creates a new nonce when the room changes
+  $effect(() => {
+    roomId;
+    nonce = newNonce();
+  });
+
   // Ctrl+Enter sends, Enter alone adds a new line
   function onKeydown(event: KeyboardEvent): void {
     if (event.key !== "Enter" || !event.ctrlKey) {
