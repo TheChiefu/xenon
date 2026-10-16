@@ -1,12 +1,12 @@
 <script lang="ts">
   import { getLoggedInAccount, removeLoggedInAccount, clearCurrentLogin } from "@/lib/session.svelte";
-  import { getProfile } from "@/lib/profile.svelte";
-  import { getPresenceOfUser } from "@/lib/users.svelte";
-  import { getPreferedStatus, setStatus } from "@/lib/status.svelte";
+  import * as profile from "@/lib/profile.svelte";
+  import * as users from "@/lib/users.svelte";
+  import * as status from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { Status } from "@/bindings/shared";
   import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
-  import { confirmDialog } from "@/lib/confirm.svelte";
+  import * as confirm from "@/lib/confirm.svelte";
   import { dialogFly } from "@/lib/transitions";
   import Settings from "@/views/settings.svelte";
 
@@ -20,7 +20,7 @@
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
 
-  const presence = $derived(getPresenceOfUser(getProfile()?.id ?? ""));
+  const presence = $derived(users.getPresence(profile.get()?.id ?? ""));
 
   // Messages
   const msg_sign_out = "Are you sure you want to sign out?";
@@ -32,7 +32,7 @@
   }
 
   async function doSignout() {
-    const result = await confirmDialog(msg_sign_out);
+    const result = await confirm.dialog(msg_sign_out);
     if (result) {
       removeLoggedInAccount();
     }
@@ -41,7 +41,7 @@
   function onStatusChange(event: Event) {
     if (!(event.target instanceof HTMLSelectElement)) return;
 
-    setStatus(event.target.value as Status);
+    status.set(event.target.value as Status);
   }
 
   function pressAway(event: PointerEvent) {
@@ -167,7 +167,7 @@
         onclick={() => menuOpen = !menuOpen}
       >
         <span class="text">
-          <span class="user-name">{getProfile()?.display_name ?? ""}</span>
+          <span class="user-name">{profile.get()?.display_name ?? ""}</span>
           <span class="user-handle">@{getLoggedInAccount()?.username}</span>
         </span>
       </button>
@@ -207,7 +207,7 @@
       <select
         id="status"
         title="How you are shown to others when using the client"
-        value={getPreferedStatus()}
+        value={status.getPreferred()}
         onchange={onStatusChange}
       >
         {#each Object.values(Status) as value}

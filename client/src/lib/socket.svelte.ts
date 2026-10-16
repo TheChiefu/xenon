@@ -1,9 +1,10 @@
 import { Device, type ClientEvent, type ServerEvent } from "@/bindings/sockets/events";
-import { loadRooms } from "@/lib/rooms/layout.svelte";
-import { addMessage, reloadLoaded, removeMessage, setMessageEdited } from "@/lib/messages.svelte";
+import * as layout from "@/lib/rooms/layout.svelte";
+import * as members from "@/lib/rooms/members.svelte";
+import * as messages from "@/lib/messages.svelte";
 import { getToken, getUrl } from "@/lib/session.svelte";
-import { getStatus } from "@/lib/status.svelte";
-import { clearAllActivities, clearAllPresences, getUser, setActivityForUser, setPresenceForUser, setUser } from "@/lib/users.svelte";
+import * as status from "@/lib/status.svelte";
+import * as users from "@/lib/users.svelte";
 
 let socket: WebSocket | null = null;
 let connected: boolean = $state(false);
@@ -28,7 +29,7 @@ export function connect(): void {
 
   const address = new URL(`${url}/ws`);
   address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
-  address.searchParams.set("status", getStatus());
+  address.searchParams.set("status", status.get());
 
   const device = deviceName();
   if (device !== null) {
@@ -87,24 +88,24 @@ function receive(data: string): void {
 
   // Needs to be manually updated right now (see if we can use a proper generated enum)
   if (event.type === "presence_snapshot") {
-    clearAllPresences();
+    users.clearPresences();
 
     for (const user of event.users) {
-      setPresenceForUser(user.user_id, user.status, user.device);
+      users.setPresence(user.user_id, user.status, user.device);
     }
     return;
   }
 
   if (event.type === "presence_updated") {
-    setPresenceForUser(event.user_id, event.status, event.device);
+    users.setPresence(event.user_id, event.status, event.device);
     return;
   }
 
   if (event.type === "game_presence_snapshot") {
-    clearAllActivities();
+    users.clearActivities();
 
     for (const user of event.users) {
-      setActivityForUser(user.user_id, {
+      users.setActivity(user.user_id, {
         platform: user.platform,
         status: user.status,
         title: user.title,
@@ -115,7 +116,7 @@ function receive(data: string): void {
   }
 
   if (event.type === "game_presence_updated") {
-    setActivityForUser(event.user_id, {
+    users.setActivity(event.user_id, {
       platform: event.platform,
       status: event.status,
       title: event.title,
@@ -125,12 +126,12 @@ function receive(data: string): void {
   }
 
   if (event.type === "profile_updated") {
-    const summary = getUser(event.user_id);
+    const summary = users.get(event.user_id);
     if (summary === undefined) {
       return;
     }
 
-    setUser({
+    users.set({
       id: event.user_id,
       username: summary.username,
       display_name: event.display_name,
@@ -141,22 +142,35 @@ function receive(data: string): void {
   }
 
   if (event.type === "message") {
-    addMessage(event.message);
+    messages.add(event.message);
     return;
   }
 
   if (event.type === "message_edited") {
-    setMessageEdited(event.room_id, event.message_id, event.body, event.edited_at);
+    messages.edit(event.room_id, event.message_id, event.body, event.edited_at);
     return;
   }
 
   if (event.type === "message_deleted") {
-    removeMessage(event.room_id, event.message_id);
+    messages.remove(event.room_id, event.message_id);
     return;
   }
 
+  if (event.type === "member_joined") {
+    members.add(event.room_id, event.user_id);
+  }
+
+  if (event.type === "member_left") {
+    members.remove(event.room_id, event.user_id);
+  }
+
+  if (event.type === "room_deleted") {
+    members.leave(event.room_id);
+  }
+
   if (event.type === "resync") {
-    reloadLoaded();
+    messages.clear();
+    members.clear();
   }
 
   if (
@@ -169,7 +183,7 @@ function receive(data: string): void {
     || event.type === "room_deleted"
     || event.type === "resync"
   ) {
-    loadRooms();
+    layout.loadRooms();
   }
 }
 

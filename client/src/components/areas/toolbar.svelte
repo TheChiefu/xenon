@@ -3,8 +3,9 @@
   import ServerInfo from "@/components/server_info.svelte";
   import { Platform } from "@/bindings/shared";
   import { ICONS_PLATFORM } from "@/lib/labels";
-  import { isXboxLinked } from "@/lib/xbox.svelte";
-  import { Pane, isOpen, togglePane } from "@/lib/panes.svelte";
+  import * as xbox from "@/lib/xbox.svelte";
+  import { Pane } from "@/lib/panes.svelte";
+  import * as panes from "@/lib/panes.svelte";
 
   import icon_search from "@/assets/icons/search.svg?raw";
   import icon_menu from "@/assets/icons/menu.svg?raw";
@@ -52,16 +53,16 @@
 
   <div class="spacer"></div>
 
-  <button class="icon-btn pane-btn" class:open={isOpen(Pane.room)} aria-label="Rooms" title="Rooms" onclick={() => togglePane(Pane.room)}>
+  <button class="icon-btn pane-btn" class:open={panes.isOpen(Pane.room)} aria-label="Rooms" title="Rooms" onclick={() => panes.toggle(Pane.room)}>
     <span class="icon" aria-hidden="true">{@html icon_menu}</span>
   </button>
 
-  <button class="icon-btn pane-btn" class:open={isOpen(Pane.members)} aria-label="Members" title="Members" onclick={() => togglePane(Pane.members)}>
+  <button class="icon-btn pane-btn" class:open={panes.isOpen(Pane.members)} aria-label="Members" title="Members" onclick={() => panes.toggle(Pane.members)}>
     <span class="icon" aria-hidden="true">{@html icon_users}</span>
   </button>
 
-  {#if isXboxLinked()}
-    <button class="icon-btn pane-btn" class:open={isOpen(Pane.xbox)} aria-label="Xbox" title="Xbox" onclick={() => togglePane(Pane.xbox)}>
+  {#if xbox.isLinked()}
+    <button class="icon-btn pane-btn" class:open={panes.isOpen(Pane.xbox)} aria-label="Xbox" title="Xbox" onclick={() => panes.toggle(Pane.xbox)}>
       <span class="icon" aria-hidden="true">{@html ICONS_PLATFORM[Platform.xbox]}</span>
     </button>
   {/if}

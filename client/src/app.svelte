@@ -8,18 +8,20 @@
   import Xbox from "./components/areas/xbox.svelte";
   import ContextMenu from "./components/context_menu.svelte";
   import { getToken } from "./lib/session.svelte";
-  import { isConfirmVisible, getConfirmMessage, resolveConfirm } from "./lib/confirm.svelte";
-  import { loadProfile } from "./lib/profile.svelte";
-  import { loadServerInfo } from "./lib/server.svelte";
-  import { loadPreferences } from "./lib/preferences.svelte";
-  import { loadRooms } from "./lib/rooms/layout.svelte";
+  import * as confirm from "./lib/confirm.svelte";
+  import * as profile from "./lib/profile.svelte";
+  import * as server from "./lib/server.svelte";
+  import * as preferences from "./lib/preferences.svelte";
+  import * as layout from "./lib/rooms/layout.svelte";
   import { getSelectedRoom } from "./lib/session.svelte";
   import { close, connect } from "./lib/socket.svelte";
   import { untrack } from "svelte";
-  import { clearMessages } from "./lib/messages.svelte";
-  import { clearRoomData } from "./lib/rooms/data.svelte";
-  import { clearUsers } from "./lib/users.svelte";
-  import { Pane, isOpen } from "./lib/panes.svelte";
+  import * as messages from "./lib/messages.svelte";
+  import * as room from "./lib/rooms/data.svelte";
+  import * as users from "./lib/users.svelte";
+  import * as members from "./lib/rooms/members.svelte";
+  import { Pane } from "./lib/panes.svelte";
+  import * as panes from "./lib/panes.svelte";
 
   $effect(() => {
     if (getToken() === null) return;
@@ -27,10 +29,10 @@
     connect(); // Connect to server's websocket
 
     // Load server elements sequentially
-    loadServerInfo()
-      .then(loadProfile)
-      .then(loadPreferences)
-      .then(loadRooms);
+    server.loadInfo()
+      .then(profile.load)
+      .then(preferences.load)
+      .then(layout.loadRooms);
 
     return close;
   });
@@ -40,9 +42,10 @@
     if (getToken() !== null) return;
 
     untrack(() => {
-      clearMessages();
-      clearRoomData();
-      clearUsers();
+      messages.clear();
+      room.clear();
+      users.clear();
+      members.clear();
     });
   });
 </script>
@@ -52,14 +55,14 @@
   <div class="app">
     <Toolbar/>
     <div class="panes">
-      {#if isOpen(Pane.room)}
+      {#if panes.isOpen(Pane.room)}
         <Rooms/>
       {/if}
-      {#if isOpen(Pane.members)}
+      {#if panes.isOpen(Pane.members)}
         <Members/>
       {/if}
       <Chat/>
-      {#if isOpen(Pane.xbox)}
+      {#if panes.isOpen(Pane.xbox)}
         <Xbox/>
       {/if}
     </div>
@@ -73,10 +76,10 @@
 <ContextMenu/>
 
 <!-- Yes/No popup setter for generic popup messages -->
-{#if isConfirmVisible()}
+{#if confirm.isVisible()}
   <Popup
-    message={getConfirmMessage()}
-    onConfirm={() => resolveConfirm(true)}
-    onCancel={() => resolveConfirm(false)}
+    message={confirm.getMessage()}
+    onConfirm={() => confirm.resolve(true)}
+    onCancel={() => confirm.resolve(false)}
   />
 {/if}

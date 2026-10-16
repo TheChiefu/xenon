@@ -2,19 +2,19 @@
   import type { MessageResponse } from "@/bindings/routes/messages";
   import Composer from "@/components/composer.svelte";
   import Message from "@/components/message.svelte";
-  import { getMessages, loadLatest } from "@/lib/messages.svelte";
-  import { getRoomData } from "@/lib/rooms/data.svelte";
+  import * as messages from "@/lib/messages.svelte";
+  import * as room from "@/lib/rooms/data.svelte";
   import { getSelectedRoom } from "@/lib/session.svelte";
-  import { getAvatarOfUser, getDisplayNameOfUser, loadProfileFilesOfUser, loadUsers } from "@/lib/users.svelte";
+  import * as users from "@/lib/users.svelte";
   import { failureText } from "@/lib/utils";
 
   // Pixels from the bottom still counted as at the bottom, since scrollTop can be fractional
   const BOTTOM_MARGIN = 4;
 
   const roomId: string | null = $derived(getSelectedRoom());
-  const roomName: string = $derived(roomId === null ? "" : getRoomData(roomId)?.name ?? "");
-  const messages: MessageResponse[] = $derived(roomId === null ? [] : getMessages(roomId));
-  const authorIds: string[] = $derived(uniqueAuthors(messages));
+  const roomName: string = $derived(roomId === null ? "" : room.get(roomId)?.name ?? "");
+  const roomMessages: MessageResponse[] = $derived(roomId === null ? [] : messages.get(roomId));
+  const authorIds: string[] = $derived(uniqueAuthors(roomMessages));
 
   let list: HTMLDivElement | undefined = $state();
   let failure: string | null = $state(null);
@@ -36,13 +36,13 @@
 
   // Fetches summaries of authors not already stored
   $effect(() => {
-    loadUsers(authorIds);
+    users.load(authorIds);
   });
 
   // Downloads each author's avatar
   $effect(() => {
     for (const id of authorIds) {
-      loadProfileFilesOfUser(id);
+      users.loadProfileFiles(id);
     }
   });
 
@@ -60,7 +60,7 @@
 
   // After the list changes, restores a switched room's position, or follows new messages when at the bottom
   $effect(() => {
-    if (list === undefined || messages.length === 0) {
+    if (list === undefined || roomMessages.length === 0) {
       return;
     }
 
@@ -77,7 +77,7 @@
 
   async function load(id: string): Promise<void> {
     try {
-      await loadLatest(id);
+      await messages.loadLatest(id);
       failure = null;
     } catch (error) {
       failure = failureText(error);
@@ -156,11 +156,11 @@
       <p>{failure}</p>
     {/if}
 
-    {#each messages as message (message.id)}
+    {#each roomMessages as message (message.id)}
       <Message
         {message}
-        author={getDisplayNameOfUser(message.author_id)}
-        avatar={getAvatarOfUser(message.author_id)?.url ?? ""}
+        author={users.getDisplayName(message.author_id)}
+        avatar={users.getAvatar(message.author_id)?.url ?? ""}
       />
     {/each}
   </div>

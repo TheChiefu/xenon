@@ -1,8 +1,9 @@
 import type { RoomResponse } from "@/bindings/routes/rooms";
 import type { Folder, RoomListItem } from "@/bindings/shared";
-import { listMyRooms } from "@/lib/api/rooms";
-import { getStoredPreferences, savePreferences } from "@/lib/preferences.svelte";
-import { addRoomData, setRoomData, type RoomId } from "@/lib/rooms/data.svelte";
+import * as roomsAPI from "@/lib/api/rooms";
+import * as preferences from "@/lib/preferences.svelte";
+import * as room from "@/lib/rooms/data.svelte";
+import type { RoomId } from "@/lib/rooms/data.svelte";
 
 // Note: any bare "string" types are assumed to be room rows
 
@@ -18,7 +19,7 @@ let saved: string = $state("[]");         // Layout as JSON when last loaded or 
 
 // Getters & Setters //
 
-export function getLayout(): RoomListItem[] {
+export function get(): RoomListItem[] {
   return layout;
 }
 
@@ -63,27 +64,27 @@ export function folderDelete(folder: Folder): void {
   layout.splice(index, 1, ...folder.rooms);
 }
 
-export function roomAdd(room: RoomResponse): void {
-  addRoomData(room);
-  layout.push(room.id);
+export function roomAdd(data: RoomResponse): void {
+  room.add(data);
+  layout.push(data.id);
 }
 
 // Server //
 
 // Load room list for user
 export async function loadRooms(): Promise<void> {
-  const fetched = await listMyRooms(); // Fetch all rooms user has access to
-  const stored = getStoredPreferences()?.room_layout; // User's saved arrangement
+  const fetched = await roomsAPI.listMyRooms(); // Fetch all rooms user has access to
+  const stored = preferences.get()?.room_layout; // User's saved arrangement
   const storedLayout = stored ? JSON.parse(stored) as RoomListItem[] : [];
 
-  setRoomData(fetched);
+  room.set(fetched);
 
   const seenIds: Set<RoomId> = new Set();
   layout = [];
 
   const fetchedIds: Set<RoomId> = new Set();
-  for (const room of fetched) {
-    fetchedIds.add(room.id);
+  for (const fetchedRoom of fetched) {
+    fetchedIds.add(fetchedRoom.id);
   }
 
   // Drop any room id that's gone
@@ -106,9 +107,9 @@ export async function loadRooms(): Promise<void> {
   }
 
   // Unseen IDs are new, added to end of layout
-  for (const room of fetched) {
-    if (!seenIds.has(room.id)) {
-      layout.push(room.id);
+  for (const fetchedRoom of fetched) {
+    if (!seenIds.has(fetchedRoom.id)) {
+      layout.push(fetchedRoom.id);
     }
   }
 
@@ -116,9 +117,9 @@ export async function loadRooms(): Promise<void> {
 }
 
 // Persists the current layout
-export async function saveLayout(): Promise<void> {
+export async function save(): Promise<void> {
   const current = JSON.stringify(layout);
-  await savePreferences({ room_layout: current });
+  await preferences.save({ room_layout: current });
   saved = current;
 }
 
@@ -134,7 +135,7 @@ export function isLocked(): boolean {
 // Unlocks a locked layout, or locks an unlocked one
 export function toggleLock(): void {
   locked = !locked;
-  if (locked && isUnsaved()) saveLayout();
+  if (locked && isUnsaved()) save();
 }
 
 // Helper Methods //

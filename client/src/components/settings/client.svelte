@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getTheme, setTheme, AnimatePhotos, getAnimatePhotos, setAnimatePhotos, getAwayMinutes, setAwayMinutes } from "@/lib/settings.svelte";
   import { LABELS_ANIMATE_PHOTOS, MSG_SAVED, MSG_ERROR, MSG_REMOVE_PUSH, MSG_DISABLE_NOTIFICATION } from "@/lib/labels";
-  import { confirmDialog } from "@/lib/confirm.svelte";
+  import * as confirm from "@/lib/confirm.svelte";
   import { isBrowserNotificationGranted, isPushSubscribed, enableBrowserNotifications, enablePush, disablePush } from "@/lib/notifications.svelte";
 
   // Notifications
@@ -43,7 +43,7 @@
   }
 
   async function unsubscribePush() {
-    const accepted = await confirmDialog(MSG_REMOVE_PUSH);
+    const accepted = await confirm.dialog(MSG_REMOVE_PUSH);
 
     // If dialog is declined, cancel operation
     if (!accepted) {

@@ -3,9 +3,9 @@
   import type { GameActivity } from "@/bindings/sockets/events";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";
-  import { listMembers } from "@/lib/api/rooms";
+  import * as members from "@/lib/rooms/members.svelte";
   import { getSelectedRoom } from "@/lib/session.svelte";
-  import { getActivityOfUser, getAvatarOfUser, getBannerOfUser, getDisplayNameOfUser, getPresenceOfUser, getUser, loadProfileFilesOfUser, loadUsers } from "@/lib/users.svelte";
+  import * as users from "@/lib/users.svelte";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
   import { Pane } from "@/lib/panes.svelte";
   import PaneArea from "@/components/pane.svelte";
@@ -18,17 +18,20 @@
     [Status.offline]: 3,
   };
 
-  let member_ids: string[] = $state([]);
+  const roomId: string | null = $derived(getSelectedRoom());
+  const member_ids: string[] = $derived.by(() => {
+    if (roomId === null) {
+      return [];
+    }
+
+    return members.get(roomId);
+  });
   const ordered_ids: string[] = $derived(member_ids.toSorted(compareMembers));
   let failure: string | null = $state(null);
 
   // Loads members of a selected room
   $effect(() => {
-    const roomId = getSelectedRoom();
-    
-    // Clear member list if no room is selected
     if (roomId === null) {
-      member_ids = [];
       return;
     }
 
@@ -37,28 +40,15 @@
 
   $effect(() => {
     for (const id of member_ids) {
-      loadProfileFilesOfUser(id);
+      users.loadProfileFiles(id);
     }
   });
 
-  // Gets room members IDs
-  async function load(roomId: string): Promise<void> {
+  async function load(id: string): Promise<void> {
     try {
-      const entries = await listMembers(roomId);
-      const ids: string[] = entries.map((entry) => entry.user_id);
-
-      await loadUsers(ids);
-
-      member_ids = [];
-      for (const id of ids) {
-        if (getUser(id) !== undefined) {
-          member_ids.push(id);
-        }
-      }
-
+      await members.load(id);
       failure = null;
     } catch (error) {
-      member_ids = [];
       failure = failureText(error);
     }
   }
@@ -78,15 +68,15 @@
   function compareMembers(a: string, b: string): number {
 
     // Determine state difference
-    const status_a = ORDER_STATUS[getPresenceOfUser(a).status];
-    const status_b = ORDER_STATUS[getPresenceOfUser(b).status];
+    const status_a = ORDER_STATUS[users.getPresence(a).status];
+    const status_b = ORDER_STATUS[users.getPresence(b).status];
     if (status_a !== status_b) {
       return status_a - status_b;
     }
 
     // Sort by display name
-    const name_a = getDisplayNameOfUser(a);
-    const name_b = getDisplayNameOfUser(b);
+    const name_a = users.getDisplayName(a);
+    const name_b = users.getDisplayName(b);
     return name_a.localeCompare(name_b);
   }
 
@@ -249,10 +239,10 @@
   <!-- Member List -->
   <div class="list">
     {#each ordered_ids as id (id)}
-      {@const avatar = getAvatarOfUser(id)}
-      {@const banner = getBannerOfUser(id)}
-      {@const presence = getPresenceOfUser(id)}
-      {@const activity = getActivityOfUser(id)}
+      {@const avatar = users.getAvatar(id)}
+      {@const banner = users.getBanner(id)}
+      {@const presence = users.getPresence(id)}
+      {@const activity = users.getActivity(id)}
       <button class="member" {@attach playOnHover}>
         {#if banner !== undefined}
           {#if banner.mime.startsWith("video/")}
@@ -271,7 +261,7 @@
         {/if}
 
         <span class="text text-outline">
-          <span class="name">{getDisplayNameOfUser(id)}</span>
+          <span class="name">{users.getDisplayName(id)}</span>
 
           {#if activity !== undefined}
             <span class="game">

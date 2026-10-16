@@ -21,7 +21,7 @@ scheduleAway();
 
 // STATUS //
 
-export function getStatus(): Status {
+export function get(): Status {
   if (isAutoAway && currentStatus === Status.online) {
     return Status.away;
   }
@@ -29,15 +29,15 @@ export function getStatus(): Status {
 }
 
 // The preferred status on this device
-export function getPreferedStatus(): Status {
+export function getPreferred(): Status {
   return currentStatus;
 }
 
-export function setStatus(status: Status): void {
+export function set(status: Status): void {
   isAutoAway = false;
   currentStatus = status;
   localStorage.setItem(keyStatus, status); // Set status preference on client
-  send({ type: "status", status: getStatus() }); // Send server event about status
+  send({ type: "status", status: get() }); // Send server event about status
 }
 
 // IDLE //
@@ -45,7 +45,7 @@ export function setStatus(status: Status): void {
 function onActivity(): void {
   if (isAutoAway) {
     isAutoAway = false;
-    send({ type: "status", status: getStatus() });
+    send({ type: "status", status: get() });
   }
 
   scheduleAway();
@@ -76,7 +76,7 @@ function onAway(): void {
   }
 
   isAutoAway = true;
-  send({ type: "status", status: getStatus() });
+  send({ type: "status", status: get() });
 }
 
 // STORAGE //

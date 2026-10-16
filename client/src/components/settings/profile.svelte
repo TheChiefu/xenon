@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { getProfile, loadProfile } from "@/lib/profile.svelte";
-  import { getAvatarOfUser, getBannerOfUser, loadProfileFilesOfUser } from "@/lib/users.svelte";
-  import { updateProfile } from "@/lib/api/users";
-  import { uploadFile } from "@/lib/api/files";
+  import * as profile from "@/lib/profile.svelte";
+  import * as users from "@/lib/users.svelte";
+  import * as usersAPI from "@/lib/api/users";
+  import * as filesAPI from "@/lib/api/files";
   import { failureText, type FetchedFile } from "@/lib/utils";
   import { animatePhoto, playOnHover } from "@/lib/settings.svelte";
   import icon_pencil from "@/assets/icons/pencil.svg?raw";
@@ -13,8 +13,8 @@
 
   // TEXT FIELDS //
 
-  let display_name = $state(getProfile()?.display_name ?? "");
-  let description = $state(getProfile()?.description ?? "");
+  let display_name = $state(profile.get()?.display_name ?? "");
+  let description = $state(profile.get()?.description ?? "");
   let error = $state("");
 
   // FILES //
@@ -36,13 +36,13 @@
   let banner_removed = $state(false);
 
   // Avatar and banner, counting unsaved changes
-  const user_id = getProfile()?.id ?? "";
-  const avatar: FetchedFile | null = $derived(getProfileFile(avatar_preview, avatar_removed, getAvatarOfUser(user_id)));
-  const banner: FetchedFile | null = $derived(getProfileFile(banner_preview, banner_removed, getBannerOfUser(user_id)));
+  const user_id = profile.get()?.id ?? "";
+  const avatar: FetchedFile | null = $derived(getProfileFile(avatar_preview, avatar_removed, users.getAvatar(user_id)));
+  const banner: FetchedFile | null = $derived(getProfileFile(banner_preview, banner_removed, users.getBanner(user_id)));
 
   // Load stored avatar and banner of own user
   $effect(() => {
-    loadProfileFilesOfUser(user_id);
+    users.loadProfileFiles(user_id);
   });
 
   // HELPERS //
@@ -85,7 +85,7 @@
 
     // Upload a local file for a new id
     if (local !== null) {
-      const stored = await uploadFile(local);
+      const stored = await filesAPI.upload(local);
       return stored.id;
     }
 
@@ -147,7 +147,7 @@
       const banner_saved = await getFileChange(banner_file, banner_removed);
 
       // Send profile changes
-      await updateProfile({
+      await usersAPI.updateProfile({
         display_name,
         description,
         avatar_file_id: avatar_saved,
@@ -159,7 +159,7 @@
       banner_file = null;
 
       // Reload own profile and summary
-      await loadProfile();
+      await profile.load();
     } catch (failure) {
       error = failureText(failure);
     }

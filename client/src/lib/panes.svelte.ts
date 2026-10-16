@@ -53,7 +53,7 @@ export function isOpen(pane: Pane): boolean {
   return open[pane];
 }
 
-export function togglePane(pane: Pane): void {
+export function toggle(pane: Pane): void {
   open[pane] = !open[pane];
 
   if (window.innerWidth >= BREAKPOINT) {
