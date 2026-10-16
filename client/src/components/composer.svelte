@@ -71,7 +71,6 @@
   .composer-box {
     display: flex;
     flex-direction: column;
-    flex: 1;
     gap: 0.25rem;
   }
 

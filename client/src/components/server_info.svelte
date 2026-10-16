@@ -7,12 +7,11 @@
 
 <style>
 
-  div {
+  .server-info {
     --point: 35px;
 
     align-content: center;
     align-items: center;
-    align-self: stretch;
     background: var(--border);
     clip-path: polygon(
       0 0,                            /* Top Left */
@@ -25,9 +24,7 @@
     gap: 0.2rem;
     grid-template-columns: auto 1fr;
     justify-items: start;
-    max-width: 40%;
     padding: 0 var(--point) 0 0.75rem;
-    width: fit-content;
   }
 
   .title {
@@ -67,7 +64,7 @@
   }
 </style>
 
-<div>
+<div class="server-info">
   <h1 class="title" title={name}>{name}</h1>
   {#if info?.kind}
     <span class="kind">{info.kind}</span>

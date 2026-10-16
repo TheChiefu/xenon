@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { getLoggedInAccount, removeLoggedInAccount, clearCurrentLogin } from "@/lib/session.svelte";
+  import * as session from "@/lib/session.svelte";
   import * as profile from "@/lib/profile.svelte";
   import * as users from "@/lib/users.svelte";
   import * as status from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { GlobalRole, Status } from "@/bindings/shared";
-  import { getMicEnabled, setMicEnabled, getSoundEnabled, setSoundEnabled } from "@/lib/av.svelte";
+  import * as av from "@/lib/av.svelte";
   import * as confirm from "@/lib/confirm.svelte";
   import { dialogFly } from "@/lib/transitions";
-  import Settings from "@/views/settings.svelte";
-  import Admin from "@/views/admin.svelte";
+  import { Modal } from "@/lib/modals.svelte";
+  import * as modals from "@/lib/modals.svelte";
 
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
@@ -20,8 +20,6 @@
   import icon_mic_muted from "@/assets/icons/mic-muted.svg?raw";
 
   let menuOpen = $state(false);
-  let settingsOpen = $state(false);
-  let adminOpen = $state(false);
 
   const presence = $derived(users.getPresence(profile.get()?.id ?? ""));
 
@@ -31,18 +29,18 @@
   // Closes the menu and opens the settings
   function openSettings() {
     menuOpen = false;
-    settingsOpen = true;
+    modals.open(Modal.settings);
   }
 
   function openAdmin() {
     menuOpen = false;
-    adminOpen = true;
+    modals.open(Modal.admin);
   }
 
   async function doSignout() {
     const result = await confirm.dialog(msg_sign_out);
     if (result) {
-      removeLoggedInAccount();
+      session.removeLoggedInAccount();
     }
   }
 
@@ -65,7 +63,6 @@
     --point: 2.5rem;
 
     display: flex;
-    width: calc(6rem + var(--point));
     height: 100%;
     clip-path: polygon(
       0 0,                  /* Top Left */
@@ -127,7 +124,6 @@
 
   .identity {
     position: relative;
-    height: 100%;
   }
 
   .menu-clip {
@@ -176,7 +172,7 @@
       >
         <span class="text">
           <span class="user-name">{profile.get()?.display_name ?? ""}</span>
-          <span class="user-handle">@{getLoggedInAccount()?.username}</span>
+          <span class="user-handle">@{session.getLoggedInAccount()?.username}</span>
         </span>
       </button>
     </div>
@@ -199,21 +195,21 @@
         {/if}
         <button
           class="icon-btn"
-          class:is-muted={!getSoundEnabled()}
+          class:is-muted={!av.getSoundEnabled()}
           aria-label="Toggle sound"
           title="Toggle Sound"
-          onclick={() => setSoundEnabled(!getSoundEnabled())}
+          onclick={() => av.setSoundEnabled(!av.getSoundEnabled())}
         >
-          <span class="icon" aria-hidden="true">{@html getSoundEnabled() ? icon_headphones : icon_headphones_muted}</span>
+          <span class="icon" aria-hidden="true">{@html av.getSoundEnabled() ? icon_headphones : icon_headphones_muted}</span>
         </button>
         <button
           class="icon-btn"
-          class:is-muted={!getMicEnabled()}
+          class:is-muted={!av.getMicEnabled()}
           aria-label="Toggle microphone"
           title="Toggle Microphone"
-          onclick={() => setMicEnabled(!getMicEnabled())}
+          onclick={() => av.setMicEnabled(!av.getMicEnabled())}
         >
-          <span class="icon" aria-hidden="true">{@html getMicEnabled() ? icon_mic : icon_mic_muted}</span>
+          <span class="icon" aria-hidden="true">{@html av.getMicEnabled() ? icon_mic : icon_mic_muted}</span>
         </button>
       </div>
 
@@ -230,18 +226,9 @@
 
       <hr/>
 
-      <button onclick={clearCurrentLogin}>Switch Account</button>
+      <button onclick={session.clearCurrentLogin}>Switch Account</button>
       <button class="is-danger" onclick={doSignout}>Sign Out</button>
     </div>
     </div>
   {/if}
 </div>
-
-
-{#if settingsOpen}
-  <Settings onClose={() => settingsOpen = false}/>
-{/if}
-
-{#if adminOpen}
-  <Admin onClose={() => adminOpen = false}/>
-{/if}

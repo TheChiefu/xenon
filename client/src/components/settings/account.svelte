@@ -2,7 +2,7 @@
   import { MSG_SAVED, MSG_ERROR, MSG_ANONYMIZE, MSG_DELETE_ACCOUNT } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
   import * as confirm from "@/lib/confirm.svelte";
-  import { removeLoggedInAccount } from "@/lib/session.svelte";
+  import * as session from "@/lib/session.svelte";
   import { failureText } from "@/lib/utils";
 
   // User Credentials
@@ -39,7 +39,7 @@
 
     try {
       await usersAPI.deleteMe(delete_anonymize, delete_history);
-      removeLoggedInAccount();
+      session.removeLoggedInAccount();
     } catch (failure) {
       delete_notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }

@@ -6,15 +6,16 @@
     import * as layout from "@/lib/rooms/layout.svelte";
     import type { RoomId } from "@/lib/rooms/data.svelte";
     import * as room from "@/lib/rooms/data.svelte";
-    import { getSelectedRoom, selectRoom } from "@/lib/session.svelte";
+    import * as session from "@/lib/session.svelte";
     import * as drag from "@/lib/rooms/drag.svelte";
-    import { Pane } from "@/lib/panes.svelte";
-    import PaneArea from "@/components/pane.svelte";
     import * as menu from "@/lib/menu.svelte";
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
-    import { nameFinished, isCreating, isRenaming, nameReset } from "@/lib/rooms/folders.svelte";
-    import { close, isOpen } from "@/lib/rooms/creation.svelte";
-    import NewRoom from "@/views/new_room.svelte";
+    import { nameFinished, isCreating, isRenaming, nameReset, startCreation } from "@/lib/rooms/folders.svelte";
+    import * as creation from "@/lib/rooms/creation.svelte";
+    import icon_plus from "@/assets/icons/plus.svg?raw";
+    import icon_compass from "@/assets/icons/compass.svg?raw";
+    import icon_copy from "@/assets/icons/copy.svg?raw";
+    import icon_gear from "@/assets/icons/gear.svg?raw";
     import icon_lock from "@/assets/icons/lock.svg?raw";
     import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
     import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
@@ -31,15 +32,41 @@
 
     .header {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         flex: none;
-        padding: 0.5rem;
+    }
+
+    .row {
+        display: flex;
         align-items: center;
+        gap: 0.1rem;
+        padding: 0.5rem;
+    }
+
+    .action-row {
+        padding: 0.25rem 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--component-raised);
+    }
+
+    .room-actions {
+        display: contents;
     }
 
     .header h3 {
-        margin-right: auto;
+        padding-right: var(--inline-gap);
         font-size: 1rem;
+        line-height: 1;
+    }
+
+    .spacer {
+        flex: 1;
+    }
+
+    .divider {
+        align-self: stretch;
+        width: 1px;
+        background: var(--border);
     }
 
     /* List */
@@ -72,6 +99,10 @@
         justify-content: space-between;
     }
 
+    .list button > * {
+        pointer-events: none;
+    }
+
     .folder-name {
         flex: 1;
         margin-left: 0.5rem;
@@ -80,7 +111,7 @@
     }
 
     .selected {
-        background-color: var(--component-hover);
+        background-color: var(--btn-active);
     }
 
     .nested {
@@ -134,13 +165,13 @@
     {@const drop = drag.dropAt(roomId)}
     <button
         class:nested
-        class:selected={getSelectedRoom() === roomId}
+        class:selected={session.getSelectedRoom() === roomId}
         class:held={drag.isHeld(roomId)}
         class:drop-above={drop === Section.Above}
         class:drop-below={drop === Section.Below}
-        {@attach drag.linkRow(roomId)}
+        {@attach drag.dropTarget(roomId)}
         onpointerdown={(event) => drag.start(event, roomId)}
-        onclick={() => { if (layout.isLocked()) selectRoom(roomId); }}
+        onclick={() => { if (layout.isLocked()) session.selectRoom(roomId); }}
         oncontextmenu={(event) => menu.open(event, roomCtx(roomId))}
     >
         {data?.name}
@@ -170,7 +201,7 @@
             class:drop-below={drop === Section.Below}
             class:drop-into={drop === Section.Inside}
             class:open={!folder.collapsed}
-            {@attach drag.row(folder)}
+            {@attach drag.dropTarget(folder)}
             onpointerdown={(event) => drag.start(event, folder)}
             onclick={() => layout.folderToggle(folder)}
             oncontextmenu={(event) => menu.open(event, folderCtx(folder))}
@@ -190,22 +221,26 @@
 <!-- Release can happen anywhere, not only over the list -->
 <svelte:window onpointermove={drag.hold} onpointerup={drag.release} onpointercancel={drag.reset}/>
 
-<!-- Room Pane -->
-<PaneArea pane={Pane.room}>
+<!-- Display Header and related buttons -->
+<div class="header">
 
-    <!-- Display Header and related buttons -->
-    <div class="header">
+    <!-- Header Row -->
+    <div class="row">
         <h3>Rooms</h3>
-        {#if getSelectedRoom() !== null}
-            <button
-                class="icon-btn"
-                aria-label="Close room"
-                title="Close room"
-                onclick={() => selectRoom(null)}
-            >
-                <span class="icon" aria-hidden="true">{@html icon_back}</span>
-            </button>
-        {/if}
+        <span class="divider" aria-hidden="true"></span>
+        <span class="spacer"></span>
+        <span class="divider" aria-hidden="true"></span>
+
+        <!-- Discover Rooms -->
+        <button
+            class="icon-btn"
+            aria-label="Discover rooms"
+            title="Discover rooms"
+        >
+            <span class="icon" aria-hidden="true">{@html icon_compass}</span>
+        </button>
+
+        <!-- Layout Lock -->
         <button
             class="icon-btn"
             aria-label={layout.isLocked() ? "Unlock layout" : "Lock layout"}
@@ -216,46 +251,101 @@
         </button>
     </div>
 
-    <!-- Room List -->
-    <div
-        class="list"
-        class:moving={drag.isActive()}
-        oncontextmenu={(event) => menu.open(event, paneCtx())}
-        role="presentation"
-    >
-        {#each layout.get() as entry}
+    <!-- Action Row -->
+    <div class="row action-row">
 
-            <!-- Room with no folder -->
-            {#if typeof entry === "string"}
-                {@render roomButton(entry, false)}
-            {:else}
+        <!-- New Room -->
+        <button
+            class="icon-btn"
+            aria-label="New room"
+            title="New room"
+            onclick={creation.open}
+        >
+            <span class="icon" aria-hidden="true">{@html icon_plus}</span>
+        </button>
 
-                <!-- Folder -->
-                {@render folderButton(entry)}
-
-                <!-- Room inside folder -->
-                {#if !entry.collapsed}
-                    {#each entry.rooms as roomId}
-                        {@render roomButton(roomId, true)}
-                    {/each}
-                {/if}
-            {/if}
-        {/each}
-    
-        <!-- New Folder Input Bar -->
-        {#if isCreating()}
-            <input
-                type="text"
-                autofocus
-                onkeydown={nameFinished}
-                onblur={nameReset}
-            />
+        <!-- New Folder, only while unlocked -->
+        {#if !layout.isLocked()}
+            <button
+                class="icon-btn"
+                aria-label="New folder"
+                title="New folder"
+                onclick={startCreation}
+            >
+                <span class="icon" aria-hidden="true">{@html icon_folder}</span>
+            </button>
         {/if}
+
+        <!-- Selected Room Actions, hidden without a room but still taking space -->
+        <span class="spacer"></span>
+        <div class="room-actions" style:visibility={session.getSelectedRoom() === null ? "hidden" : null}>
+            <span class="divider" aria-hidden="true"></span>
+
+            <!-- Close Room -->
+            <button
+                class="icon-btn"
+                aria-label="Close room"
+                title="Close room"
+                onclick={() => session.selectRoom(null)}
+            >
+                <span class="icon" aria-hidden="true">{@html icon_back}</span>
+            </button>
+
+            <!-- Copy Room ID -->
+            <button
+                class="icon-btn"
+                aria-label="Copy room ID"
+                title="Copy room ID"
+                onclick={() => navigator.clipboard.writeText(session.getSelectedRoom() ?? "")}
+            >
+                <span class="icon" aria-hidden="true">{@html icon_copy}</span>
+            </button>
+
+            <!-- Room Settings -->
+            <button
+                class="icon-btn"
+                aria-label="Room settings"
+                title="Room settings"
+            >
+                <span class="icon" aria-hidden="true">{@html icon_gear}</span>
+            </button>
+        </div>
     </div>
+</div>
 
-</PaneArea>
+<!-- Room List -->
+<div
+    class="list"
+    class:moving={drag.isActive()}
+    oncontextmenu={(event) => menu.open(event, paneCtx())}
+    role="presentation"
+>
+    {#each layout.get() as entry}
 
-<!-- Room creation dialog, opened from the pane's context menu -->
-{#if isOpen()}
-    <NewRoom onClose={close}/>
-{/if}
+        <!-- Room with no folder -->
+        {#if typeof entry === "string"}
+            {@render roomButton(entry, false)}
+        {:else}
+
+            <!-- Folder -->
+            {@render folderButton(entry)}
+
+            <!-- Room inside folder -->
+            {#if !entry.collapsed}
+                {#each entry.rooms as roomId}
+                    {@render roomButton(roomId, true)}
+                {/each}
+            {/if}
+        {/if}
+    {/each}
+
+    <!-- New Folder Input Bar -->
+    {#if isCreating()}
+        <input
+            type="text"
+            autofocus
+            onkeydown={nameFinished}
+            onblur={nameReset}
+        />
+    {/if}
+</div>

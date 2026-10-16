@@ -4,14 +4,18 @@
   import Message from "@/components/message.svelte";
   import * as messages from "@/lib/messages.svelte";
   import * as room from "@/lib/rooms/data.svelte";
-  import { getSelectedRoom } from "@/lib/session.svelte";
   import * as users from "@/lib/users.svelte";
   import { failureText } from "@/lib/utils";
+
+  interface Props {
+    roomId: string | null;
+  }
+
+  let { roomId }: Props = $props();
 
   // Pixels from the bottom still counted as at the bottom, since scrollTop can be fractional
   const BOTTOM_MARGIN = 4;
 
-  const roomId: string | null = $derived(getSelectedRoom());
   const roomName: string = $derived(roomId === null ? "" : room.get(roomId)?.name ?? "");
   const roomMessages: MessageResponse[] = $derived(roomId === null ? [] : messages.get(roomId));
   const authorIds: string[] = $derived(uniqueAuthors(roomMessages));
@@ -109,9 +113,7 @@
   .chat {
     display: flex;
     flex-direction: column;
-    flex: 1;
     overflow: hidden;
-    min-width: 50%;
   }
 
   .header {

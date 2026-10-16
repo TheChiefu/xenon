@@ -1,6 +1,6 @@
 <script lang="ts">
   import { login, register } from "@/lib/api/auth";
-  import { addAccount, getAccounts, setCurrentLogin, removeAccount } from "@/lib/session.svelte";
+  import * as session from "@/lib/session.svelte";
   import { failureText } from "@/lib/utils";
   import iconX from "@/assets/icons/x.svg?raw";
 
@@ -21,7 +21,7 @@
 
   // Whether any login has ever been saved
   function hasSavedLogins(): boolean {
-    return Object.keys(getAccounts()).length > 0;
+    return Object.keys(session.getAccounts()).length > 0;
   }
 
   // Attempt to login
@@ -36,7 +36,7 @@
 
       // Attempt to fetch via cleaned URL
       const token = await login(username, password, clean_url);
-      addAccount(username, clean_url, token);
+      session.addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
       error = failureText(err);
@@ -57,7 +57,7 @@
 
       // Attempt to fetch via cleaned URL
       const token = await register(username, password, display_name, registration_code, clean_url);
-      addAccount(username, clean_url, token);
+      session.addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
       error = failureText(err);
@@ -79,7 +79,7 @@
   // Prompt before removing a saved login
   function confirmRemoveLogin(key: string, username: string) {
     if (confirm(`Remove ${username}?`)) {
-      removeAccount(key);
+      session.removeAccount(key);
     }
   }
 
@@ -105,7 +105,6 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
   }
 
   .login-card {
@@ -267,9 +266,9 @@
             <!-- Saved logins -->
             <div class="saved">
                 <div class="login-entries">
-                    {#each Object.entries(getAccounts()) as [key, entry]}
+                    {#each Object.entries(session.getAccounts()) as [key, entry]}
                         <div class="login-entry">
-                            <button class="is-entry login-entry-main" onclick={() => setCurrentLogin(key)}>
+                            <button class="is-entry login-entry-main" onclick={() => session.setCurrentLogin(key)}>
                                 @{entry.username}<br/>{entry.url}
                             </button>
                             <button class="inherit is-danger is-entry" aria-label="Remove {entry.username}" onclick={() => confirmRemoveLogin(key, entry.username)}>

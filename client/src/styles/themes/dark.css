@@ -27,6 +27,7 @@
     --btn-entry-hover: rgba(30, 30, 30, 1);
     --btn-action: rgba(79, 140, 255, 1);
     --btn-action-hover: rgba(79, 120, 255, 1);
+    --btn-active: rgb(0, 89, 131);
 
     /* Status Colors */
     --status-bar-width: 0.4rem;

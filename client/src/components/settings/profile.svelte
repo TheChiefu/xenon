@@ -36,7 +36,7 @@
   let banner_removed = $state(false);
 
   // Avatar and banner, counting unsaved changes
-  const user_id = profile.get()?.id ?? "";
+  const user_id: string = $derived(profile.get()?.id ?? "");
   const avatar: FetchedFile | null = $derived(getProfileFile(avatar_preview, avatar_removed, users.getAvatar(user_id)));
   const banner: FetchedFile | null = $derived(getProfileFile(banner_preview, banner_removed, users.getBanner(user_id)));
 

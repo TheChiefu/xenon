@@ -1,36 +1,33 @@
 import { isCompact } from "@/lib/utils";
 
-const MEMBERS_WIDTH: number = 16;
-const ROOM_WIDTH: number = 16;
-const XBOX_WIDTH: number = 20;
-
 export enum Pane {
+  search = "search",
   room = "room",
   members = "members",
   xbox = "xbox",
 }
 
 interface Definition {
-  width: number;
   open: boolean;
 }
 
 const PANES: Record<Pane, Definition> = {
+  [Pane.search]: {
+    open: false,
+  },
   [Pane.room]: {
-    width: ROOM_WIDTH,
     open: true,
   },
   [Pane.members]: {
-    width: MEMBERS_WIDTH,
     open: true,
   },
   [Pane.xbox]: {
-    width: XBOX_WIDTH,
     open: false,
   },
 };
 
 const open: Record<Pane, boolean> = $state({
+  [Pane.search]: initialOpen(Pane.search),
   [Pane.room]: initialOpen(Pane.room),
   [Pane.members]: initialOpen(Pane.members),
   [Pane.xbox]: initialOpen(Pane.xbox),
@@ -40,14 +37,22 @@ function openKey(pane: Pane): string {
   return `pane_open_${pane}`;
 }
 
+// Starting state of a pane
 function initialOpen(pane: Pane): boolean {
+
+  // If view is compact, no panes are opened
+  if (isCompact.current) return false;
+
+  // Load saved pane
   const stored: string | null = localStorage.getItem(openKey(pane));
 
-  return stored !== null ? stored === "true" : PANES[pane].open;
-}
+  // If nothing is stored, open default panes
+  if (stored === null) {
+    return PANES[pane].open;
+  }
 
-export function getWidth(pane: Pane): number {
-  return PANES[pane].width;
+  // If stored pane is loaded, return open/close state
+  return stored === "true";
 }
 
 export function isOpen(pane: Pane): boolean {

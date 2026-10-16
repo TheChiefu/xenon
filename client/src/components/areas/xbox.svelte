@@ -1,7 +1,5 @@
 <script lang="ts">
   import type { FriendResponse } from "@/bindings/services/xbox";
-  import { Pane } from "@/lib/panes.svelte";
-  import PaneArea from "@/components/pane.svelte";
   import { failureText } from "@/lib/utils";
   import * as xbox from "@/lib/xbox.svelte";
   import icon_lock from "@/assets/icons/lock.svg?raw";
@@ -149,56 +147,51 @@
 
 </style>
 
-<!-- Xbox Pane -->
-<PaneArea pane={Pane.xbox} overlay>
+<!-- Display Header -->
+<div class="header">
+  <h3>Xbox Friends: {xbox.getFriends().length}</h3>
+  <button class="icon-btn" aria-label="Refresh friends" title="Refresh friends" onclick={refreshFriends}>
+    <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
+  </button>
+</div>
 
-  <!-- Display Header -->
-  <div class="header">
-    <h3>Xbox Friends: {xbox.getFriends().length}</h3>
-    <button class="icon-btn" aria-label="Refresh friends" title="Refresh friends" onclick={refreshFriends}>
-      <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
-    </button>
-  </div>
+{#if !xbox.isLinked()}
+  <p class="empty">No Xbox Account Linked</p>
+{:else if failure !== null}
+  <p class="failure">Failure: {failure}</p>
+{/if}
 
-  {#if !xbox.isLinked()}
-    <p class="empty">No Xbox Account Linked</p>
-  {:else if failure !== null}
-    <p class="failure">Failure: {failure}</p>
-  {/if}
+<!-- Friend List -->
+<div class="list">
+  {#each ordered as friend (friend.gamertag)}
+    <div class="friend" class:online={friend.online} >
 
-  <!-- Friend List -->
-  <div class="list">
-    {#each ordered as friend (friend.gamertag)}
-      <div class="friend" class:online={friend.online} >
+      {#if friend.picture_url === null}
+        <span class="picture"></span>
+      {:else}
+        <img class="picture" src={friend.picture_url} alt=""/>
+      {/if}
 
-        {#if friend.picture_url === null}
-          <span class="picture"></span>
-        {:else}
-          <img class="picture" src={friend.picture_url} alt=""/>
-        {/if}
+      <span class="text">
+        <span class="name">{friend.gamertag}</span>
+        <span class="presence">{friend.presence_text}</span>
+      </span>
 
-        <span class="text">
-          <span class="name">{friend.gamertag}</span>
-          <span class="presence">{friend.presence_text}</span>
-        </span>
-
-        {#if friend.in_party > 0}
-          <span
-            class="party"
-            aria-label={friend.party_locked ? "Invite Only" : "In Party"}
-            title={friend.party_locked ? "Invite Only" : "In Party"}
-          >
-            <span class="count">{friend.in_party}</span>
-            <span class="icons">
-              <span class="icon" aria-hidden="true">{@html icon_users}</span>
-              {#if friend.party_locked}
-                <span class="icon" aria-hidden="true">{@html icon_lock}</span>
-              {/if}
-            </span>
+      {#if friend.in_party > 0}
+        <span
+          class="party"
+          aria-label={friend.party_locked ? "Invite Only" : "In Party"}
+          title={friend.party_locked ? "Invite Only" : "In Party"}
+        >
+          <span class="count">{friend.in_party}</span>
+          <span class="icons">
+            <span class="icon" aria-hidden="true">{@html icon_users}</span>
+            {#if friend.party_locked}
+              <span class="icon" aria-hidden="true">{@html icon_lock}</span>
+            {/if}
           </span>
-        {/if}
-      </div>
-    {/each}
-  </div>
-
-</PaneArea>
+        </span>
+      {/if}
+    </div>
+  {/each}
+</div>

@@ -1,0 +1,94 @@
+/* App */
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+
+/* Toolbar */
+
+.toolbar {
+  height: 4rem;
+  flex: none;
+}
+
+.server-info {
+  align-self: stretch;
+  width: fit-content;
+  max-width: 40%;
+}
+
+.identity {
+  width: 8.5rem;
+  height: 100%;
+}
+
+
+/* Panes */
+
+.panes {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.panes > .pane {
+  position: relative;
+  flex: none;
+}
+
+.panes > .pane-room {
+  width: 19rem;
+}
+
+.panes > .pane-members {
+  width: 18rem;
+}
+
+.panes > .pane-xbox {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20rem;
+}
+
+.compact .panes > .pane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.panes > .pane-backdrop {
+  display: none;
+}
+
+.compact .panes > .pane-backdrop {
+  display: block;
+  position: absolute;
+  inset: 0;
+}
+
+
+/* Chat */
+
+.chat {
+  flex: 1;
+  min-width: 50%;
+}
+
+.composer-box {
+  flex: 1;
+}
+
+
+/* Login */
+
+.login {
+  min-height: 100vh;
+}

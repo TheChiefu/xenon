@@ -90,9 +90,15 @@
     gap: var(--section-gap);
   }
 
-  :global(.compact) .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 2fr;
+  @container (width < 30rem) {
+    .layout {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 2fr;
+    }
+  }
+
+  .fill-column {
+    container-type: inline-size;
   }
 
   .list {

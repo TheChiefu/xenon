@@ -1,8 +1,14 @@
 <script lang="ts">
   import Identity from "@/components/identity.svelte";
   import ServerInfo from "@/components/server_info.svelte";
-  import PaneButtons from "@/components/toolbar/pane_buttons.svelte";
-  import { isCompact } from "@/lib/utils";
+  import { Pane } from "@/lib/panes.svelte";
+  import type { ToolbarButton } from "@/lib/toolbar";
+
+  interface Props {
+    buttons: ToolbarButton[];
+  }
+
+  let { buttons }: Props = $props();
 </script>
 
 <style>
@@ -10,8 +16,6 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    height: 4rem;
-    flex: none;
     padding: 0;
     border-bottom: 1px solid var(--border);
     background: var(--component);
@@ -25,18 +29,48 @@
     height: 100%;
   }
 
+  .pane-btn {
+    opacity: 0.4;
+  }
+
+  .pane-btn.open {
+    opacity: 1;
+  }
+
 </style>
+
+<!-- Pane Toggle -->
+{#snippet toggle(button: ToolbarButton)}
+  <button
+    class="icon-btn pane-btn"
+    class:open={button.active}
+    aria-label={button.label}
+    title={button.label}
+    onclick={button.onclick}
+  >
+    <span class="icon" aria-hidden="true">{@html button.icon}</span>
+  </button>
+{/snippet}
 
 <header class="toolbar">
 
-
   <ServerInfo/>
+
+  <!-- Search -->
+  {#each buttons as button}
+    {#if button.pane === Pane.search}
+      {@render toggle(button)}
+    {/if}
+  {/each}
 
   <div class="spacer"></div>
 
-  {#if !isCompact.current}
-    <PaneButtons/>
-  {/if}
+  <!-- Other Panes -->
+  {#each buttons as button}
+    {#if button.pane !== Pane.search}
+      {@render toggle(button)}
+    {/if}
+  {/each}
 
   <div class="toolbar-user">
     <Identity/>

@@ -1,7 +1,7 @@
 // Client Settings - Notifications
 
 import type { VapidKeyResponse } from "@/bindings/services/push";
-import { getUrl } from "@/lib/session.svelte";
+import * as session from "@/lib/session.svelte";
 import { failureText, request } from "@/lib/utils";
 
 let browserGranted: boolean = $state(checkBrowserGranted());
@@ -71,7 +71,7 @@ export async function enableBrowserNotifications(): Promise<string | undefined> 
 // reports the subscription to the server so it has somewhere to send pushes.
 // Returns an error message on failure, or undefined on success.
 export async function enablePush(): Promise<string | undefined> {
-  const url = getUrl();
+  const url = session.getUrl();
   if (url === null) {
     return "Not signed in";
   }

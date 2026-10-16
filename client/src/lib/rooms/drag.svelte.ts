@@ -1,3 +1,4 @@
+import type { Attachment } from "svelte/attachments";
 import type { RoomListItem } from "@/bindings/shared";
 import { Section } from "@/lib/rooms/layout.svelte";
 import * as layout from "@/lib/rooms/layout.svelte";
@@ -5,6 +6,17 @@ import * as layout from "@/lib/rooms/layout.svelte";
 let held: RoomListItem | null = $state(null);    // Row being held
 let hover: RoomListItem | null = $state(null);   // Row being hovered over
 let hoverPart: Section = $state(Section.Above);  // Which part pointer is over
+const rows: Map<Element, RoomListItem> = new Map(); // Row buttons and their room or folder
+
+// Drop Targets //
+
+// Registers a row button as a drop target for its room or folder
+export function dropTarget(item: RoomListItem): Attachment {
+  return (element) => {
+    rows.set(element, item);
+    return () => rows.delete(element);
+  };
+}
 
 // Pointer Events //
 
@@ -20,13 +32,18 @@ export function start(event: PointerEvent, row: RoomListItem): void {
 export function hold(event: PointerEvent): void {
   if (held === null) return;
 
-  const element = document
-    .elementFromPoint(event.clientX, event.clientY)
-    ?.closest<HTMLElement>("[data-room], [data-folder]");
-  if (!element) return;
+  // Row button under the pointer
+  const element = document.elementFromPoint(event.clientX, event.clientY);
+  if (element === null) {
+    return;
+  }
 
-  const row = rowOf(element);
-  if (row === undefined) return;
+  // Room or folder of that row button
+  const row = rows.get(element);
+  if (row === undefined) {
+    return;
+  }
+
   hover = row;
 
   // Calculate which part of element the mouse is over (Y-Axis)

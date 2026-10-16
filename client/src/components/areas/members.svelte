@@ -4,11 +4,15 @@
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";
   import * as members from "@/lib/rooms/members.svelte";
-  import { getSelectedRoom } from "@/lib/session.svelte";
   import * as users from "@/lib/users.svelte";
   import * as settings from "@/lib/settings.svelte";
-  import { Pane } from "@/lib/panes.svelte";
-  import PaneArea from "@/components/pane.svelte";
+
+  interface Props {
+    roomId: string | null;
+    open: boolean;
+  }
+
+  let { roomId, open }: Props = $props();
 
   // Order in list of status in terms of position
   const ORDER_STATUS: Record<Status, number> = {
@@ -18,7 +22,6 @@
     [Status.offline]: 3,
   };
 
-  const roomId: string | null = $derived(getSelectedRoom());
   const member_ids: string[] = $derived.by(() => {
     if (roomId === null) {
       return [];
@@ -31,7 +34,7 @@
 
   // Loads members of a selected room
   $effect(() => {
-    if (roomId === null) {
+    if (roomId === null || !open) {
       return;
     }
 
@@ -222,63 +225,59 @@
 
 </style>
 
-<!-- Member Pane -->
-<PaneArea pane={Pane.members}>
+<!-- Display Header -->
+<div class="header">
+  <h3>Members: {member_ids.length}</h3>
+</div>
 
-  <!-- Display Header -->
-  <div class="header">
-    <h3>Members: {member_ids.length}</h3>
-  </div>
+{#if failure !== null}
+  <p class="failure">Failure: {failure}</p>
+{/if}
 
-  {#if failure !== null}
-    <p class="failure">Failure: {failure}</p>
-  {/if}
-
-  <!-- Member List -->
-  <div class="list">
-    {#each ordered_ids as id (id)}
-      {@const avatar = users.getAvatar(id)}
-      {@const banner = users.getBanner(id)}
-      {@const presence = users.getPresence(id)}
-      {@const activity = users.getActivity(id)}
-      <button class="member" {@attach settings.playOnHover}>
-        {#if banner !== undefined}
-          {#if banner.mime.startsWith("video/")}
-            <video class="banner" src={banner.url} {@attach settings.animatePhoto}></video>
-          {:else}
-            <img class="banner" src={banner.url} alt=""/>
-          {/if}
-        {/if}
-
-        {#if avatar === undefined}
-          <span class="avatar"></span>
-        {:else if avatar.mime.startsWith("video/")}
-          <video class="avatar" src={avatar.url} {@attach settings.animatePhoto}></video>
+<!-- Member List -->
+<div class="list">
+  {#each ordered_ids as id (id)}
+    {@const avatar = users.getAvatar(id)}
+    {@const banner = users.getBanner(id)}
+    {@const presence = users.getPresence(id)}
+    {@const activity = users.getActivity(id)}
+    <button class="member" {@attach settings.playOnHover}>
+      {#if banner !== undefined}
+        {#if banner.mime.startsWith("video/")}
+          <video class="banner" src={banner.url} {@attach settings.animatePhoto}></video>
         {:else}
-          <img class="avatar" src={avatar.url} alt=""/>
+          <img class="banner" src={banner.url} alt=""/>
         {/if}
+      {/if}
 
-        <span class="text text-outline">
-          <span class="name">{users.getDisplayName(id)}</span>
+      {#if avatar === undefined}
+        <span class="avatar"></span>
+      {:else if avatar.mime.startsWith("video/")}
+        <video class="avatar" src={avatar.url} {@attach settings.animatePhoto}></video>
+      {:else}
+        <img class="avatar" src={avatar.url} alt=""/>
+      {/if}
 
-          {#if activity !== undefined}
-            <span class="game">
-              <span class="icon" aria-hidden="true" title={LABELS_PLATFORM[activity.platform]}>
-                {@html ICONS_PLATFORM[activity.platform]}
-              </span>
-              <span class="activity" title={activityText(activity)}>{activityText(activity)}</span>
+      <span class="text text-outline">
+        <span class="name">{users.getDisplayName(id)}</span>
+
+        {#if activity !== undefined}
+          <span class="game">
+            <span class="icon" aria-hidden="true" title={LABELS_PLATFORM[activity.platform]}>
+              {@html ICONS_PLATFORM[activity.platform]}
             </span>
-          {/if}
-        </span>
-
-        {#if presence.device !== null}
-          <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[presence.device]}>
-            {@html ICONS_DEVICE[presence.device]}
+            <span class="activity" title={activityText(activity)}>{activityText(activity)}</span>
           </span>
         {/if}
+      </span>
 
-        <span class="status {presence.status}"></span>
-      </button>
-    {/each}
-  </div>
-</PaneArea>
+      {#if presence.device !== null}
+        <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[presence.device]}>
+          {@html ICONS_DEVICE[presence.device]}
+        </span>
+      {/if}
+
+      <span class="status {presence.status}"></span>
+    </button>
+  {/each}
+</div>

@@ -1,5 +1,5 @@
 import type { ErrorResponse } from "@/bindings/error";
-import { getToken, getUrl } from "@/lib/session.svelte";
+import * as session from "@/lib/session.svelte";
 import { MSG_REFRESHED } from "@/lib/labels";
 import { MediaQuery } from "svelte/reactivity";
 
@@ -49,8 +49,8 @@ export function refreshedText(): string {
 // Attaches the active session's address and bearer token, and throws the
 // server's error message on a failing status
 export async function request(path: string, method?: Method, body?: unknown): Promise<Response> {
-    const url = getUrl();
-    const token = getToken();
+    const url = session.getUrl();
+    const token = session.getToken();
 
     if (url === null || token === null) {
         throw new Error("Not signed in");

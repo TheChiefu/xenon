@@ -30,7 +30,8 @@ h1, h2, h3, h4, h5 {
 
 hr {
     width: 100%;
-    border-color: var(--component-raised);
+    border: none;
+    border-top: 1px solid var(--component-raised);
 }
 
 button {
@@ -103,13 +104,6 @@ video {
   font: inherit;
 }
 
-.app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
 .section {
   border: 1px solid var(--border);
   padding: var(--section-padding);
@@ -122,21 +116,6 @@ video {
   white-space: nowrap;
   font-style: italic;
   color: var(--text-dim);
-}
-
-
-.panes {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.compact .panes > .pane {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
 }
 
 /* Dialog */

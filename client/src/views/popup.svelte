@@ -29,7 +29,7 @@
 
 </style>
 
-<dialog bind:this={dialog}>
+<dialog bind:this={dialog} oncancel={onCancel}>
     <p>{message}</p>
     <hr/>
     <div class="row">

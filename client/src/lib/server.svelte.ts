@@ -1,6 +1,6 @@
 import type { ServerInfo } from "@/bindings/routes/server";
 import * as serverAPI from "@/lib/api/server";
-import { getUrl } from "@/lib/session.svelte";
+import * as session from "@/lib/session.svelte";
 
 let info: ServerInfo | null = $state(null);
 
@@ -10,7 +10,7 @@ export function getInfo(): ServerInfo | null {
 
 // Fetches what the active server reports about itself
 export async function loadInfo(): Promise<void> {
-  const url = getUrl();
+  const url = session.getUrl();
   if (url === null) {
     return;
   }

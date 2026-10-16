@@ -2,7 +2,7 @@ import { Device, type ClientEvent, type ServerEvent } from "@/bindings/sockets/e
 import * as layout from "@/lib/rooms/layout.svelte";
 import * as members from "@/lib/rooms/members.svelte";
 import * as messages from "@/lib/messages.svelte";
-import { getToken, getUrl } from "@/lib/session.svelte";
+import * as session from "@/lib/session.svelte";
 import * as status from "@/lib/status.svelte";
 import * as users from "@/lib/users.svelte";
 
@@ -20,8 +20,8 @@ export function connect(): void {
     return;
   }
 
-  const url = getUrl();
-  const token = getToken();
+  const url = session.getUrl();
+  const token = session.getToken();
 
   if (url === null || token === null) {
     return;

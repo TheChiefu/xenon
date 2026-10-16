@@ -1,5 +1,11 @@
 <script lang="ts">
-  import PaneButtons from "@/components/toolbar/pane_buttons.svelte";
+  import type { ToolbarButton } from "@/lib/toolbar";
+
+  interface Props {
+    buttons: ToolbarButton[];
+  }
+
+  let { buttons }: Props = $props();
 </script>
 
 <style>
@@ -12,8 +18,26 @@
     border-top: 1px solid var(--border);
     background: var(--component);
   }
+
+  .pane-btn {
+    opacity: 0.4;
+  }
+
+  .pane-btn.open {
+    opacity: 1;
+  }
 </style>
 
 <nav class="bottom-toolbar">
-  <PaneButtons/>
+  {#each buttons as button}
+    <button
+      class="icon-btn pane-btn"
+      class:open={button.active}
+      aria-label={button.label}
+      title={button.label}
+      onclick={button.onclick}
+    >
+      <span class="icon" aria-hidden="true">{@html button.icon}</span>
+    </button>
+  {/each}
 </nav>
