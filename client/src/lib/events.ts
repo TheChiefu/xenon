@@ -34,6 +34,7 @@ export enum LocalEvent {
   signed_out = "signed_out",
   status_changed = "status_changed",
   user_selected = "user_selected",
+  image_selected = "image_selected",
   confirm_requested = "confirm_requested",
   discover_requested = "discover_requested",
   settings_requested = "settings_requested",

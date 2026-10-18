@@ -3,6 +3,7 @@
     import { parse } from "@/lib/markdown";
     import { LocalEvent } from "@/lib/events";
     import * as events from "@/lib/events";
+    import Attachment from "./attachment.svelte";
 
     interface Props {
         message: MessageResponse;
@@ -161,6 +162,9 @@
         {/if}
 
         <!-- Attachments -->
+        {#each message.attachments as attachment}
+            <Attachment {attachment}/>
+        {/each}
 
     </div>
 

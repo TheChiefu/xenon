@@ -26,6 +26,8 @@ pub struct ServerInfo {
     pub limit_message_page: i64,
     pub limit_room_page: i64,
     pub limit_users_page: i64,
+    pub limit_file_bytes_max: i64,
+    pub limit_attachments_per_message_max: usize,
 }
 
 // Routing Methods //
@@ -42,6 +44,8 @@ pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
         limit_message_page: config::get().limits.message_page,
         limit_room_page: config::get().limits.room_page,
         limit_users_page: config::get().limits.users_page,
+        limit_file_bytes_max: config::get().limits.file_bytes_max.to_int(),
+        limit_attachments_per_message_max: config::get().limits.attachments_per_message_max,
     };
 
     Ok((StatusCode::OK, Json(info)))

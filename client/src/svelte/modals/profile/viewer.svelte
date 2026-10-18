@@ -49,6 +49,20 @@
     onClose();
   }
 
+  function clickAway(event: MouseEvent) {
+    if (event.target !== dialog || dialog === null) {
+      return;
+    }
+
+    const rect = dialog.getBoundingClientRect();
+    const inside = event.clientX >= rect.left && event.clientX <= rect.right
+      && event.clientY >= rect.top && event.clientY <= rect.bottom;
+
+    if (!inside) {
+      onClose();
+    }
+  }
+
   function formatDate(time: number): string {
     return new Date(time).toLocaleDateString();
   }
@@ -65,22 +79,9 @@
   dialog::backdrop {
     background: var(--modal-background)
   }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: var(--section-gap);
-    border-bottom: 1px solid var(--border);
-  }
 </style>
 
-<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} transition:dialogFly={{ y: "1rem" }}>
-  <div class="header">
-    <h2>Profile</h2>
-    <button class="inherit" aria-label="Close" onclick={onClose}>
-      <span class="icon" aria-hidden="true">{@html icon_x}</span>
-    </button>
-  </div>
+<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} onclick={clickAway} transition:dialogFly={{ y: "1rem" }}>
 
   {#if failure !== null}
     <p>{failure}</p>

@@ -1,15 +1,25 @@
 <script lang="ts">
   import * as server from "@/lib/connection/server.svelte";
+  import * as socket from "@/lib/connection/socket.svelte";
 
   const info = $derived(server.getInfo());
   const name: string = $derived(info?.name ?? "");
+  const connected: boolean = $derived(socket.isConnected());
 </script>
 
 <style>
+  .frame {
+    height: 100%;
+    filter: drop-shadow(var(--status-bar-width) 0 0 var(--status-color));
+  }
 
-  .server-info {
+  .status-online    { --status-color: var(--status-online); }
+  .status-offline   { --status-color: var(--status-offline); }
+
+  .card {
     --point: 35px;
 
+    height: 100%;
     align-content: center;
     align-items: center;
     background: var(--border);
@@ -64,12 +74,16 @@
   }
 </style>
 
-<div class="server-info">
-  <h1 class="title" title={name}>{name}</h1>
-  {#if info?.kind}
-    <span class="kind">{info.kind}</span>
-  {/if}
-  {#if info?.version}
-    <span class="version">v{info.version}</span>
-  {/if}
+<div class="server-info" title={connected ? "Connected" : "Disconnected"}>
+  <div class="frame {connected ? "status-online" : "status-offline"}">
+    <div class="card">
+      <h1 class="title" title={name}>{name}</h1>
+      {#if info?.kind}
+        <span class="kind">{info.kind}</span>
+      {/if}
+      {#if info?.version}
+        <span class="version">v{info.version}</span>
+      {/if}
+    </div>
+  </div>
 </div>

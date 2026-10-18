@@ -6,12 +6,13 @@
     --text: rgba(231, 234, 239, 1);
     --text-dim: rgba(152, 162, 179, 1);
     --link: rgba(110, 168, 254, 1);
+    --link-active: rgb(39, 125, 253);
     --border: rgba(47, 54, 65, 1);
     --border-dim: rgba(47, 54, 65, 0.5);
-    --icon-size: 1.25rem;
     --danger: rgba(190, 0, 0, 1);
     --btn-muted: rgba(190, 0, 0, 1);
     --modal-background: rgba(0, 0, 0, 0.15);
+    --viewer-background: rgba(0, 0, 0, 0.85);
 
     /* Components */
     --component: rgba(27, 31, 38, 1);
@@ -30,7 +31,6 @@
     --btn-active: rgb(0, 89, 131);
 
     /* Status Colors */
-    --status-bar-width: 0.4rem;
     --status-online: rgba(59, 165, 93, 1);
     --status-busy: rgba(190, 0, 0, 1);
     --status-away: rgba(240, 166, 55, 1);
@@ -39,91 +39,3 @@
     color-scheme: dark;
 }
 
-dialog {
-    border: 1px solid var(--border);
-}
-
-input {
-    background: var(--background);
-    color: var(--text);
-    border: 1px solid var(--border);
-}
-
-hr {
-    border-color: var(--component-raised);
-}
-
-.icon {
-    display: inline-flex;
-    width: var(--icon-size);
-    height: var(--icon-size);
-}
-
-
-/* Buttons */
-
-button {
-    background: var(--component);
-    color: var(--text);
-    border: 1px solid var(--border);
-    user-select: none;
-}
-
-button.inherit {
-    background: none;
-    border: none;
-}
-
-button:hover {
-    background-color: var(--component-hover);
-}
-
-button:disabled {
-    background-color: var(--btn-disabled);
-}
-
-button.is-tab {
-    background: var(--btn-tab);
-    border: none;
-}
-
-button.is-tab.is-active {
-    background: var(--btn-tab-active);
-}
-
-button.is-entry {
-    background: var(--btn-entry);
-}
-
-button.is-entry:hover {
-    background: var(--btn-entry-hover);
-}
-
-button.is-action {
-    background: var(--btn-action);
-}
-
-button.is-action:hover {
-    background: var(--btn-action-hover);
-}
-
-button.is-danger:hover {
-    background-color: var(--danger);
-}
-
-.icon-btn:hover {
-    background: var(--component-hover);
-}
-
-.icon-btn:disabled {
-    opacity: 0.35;
-    cursor: default;
-}
-
-.icon-btn.is-muted {
-    background: var(--btn-muted);
-}
-
-.icon-btn.is-muted:hover {
-    background: var(--btn-muted);
-}

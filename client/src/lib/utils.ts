@@ -20,6 +20,12 @@ export const COMPACT_CLASS: string = "compact";
 
 export const isCompact: MediaQuery = new MediaQuery(`width < ${COMPACT_WIDTH_START}px`);
 
+const BYTE_UNITS: [string, number][] = [
+    ["GiB", 1024 ** 3],
+    ["MiB", 1024 ** 2],
+    ["KiB", 1024],
+];
+
 
 // Public Methods //
 
@@ -32,6 +38,17 @@ export function cssTime(name: string): number {
     }
 
     return value.endsWith("ms") ? number : number * 1000;
+}
+
+// Writes a byte count in the largest unit that divides it evenly
+export function formatBytes(bytes: number): string {
+    for (const [unit, size] of BYTE_UNITS) {
+        if (bytes % size === 0) {
+            return `${bytes / size}${unit}`;
+        }
+    }
+
+    return `${bytes}B`;
 }
 
 // Returns message of a caught failure

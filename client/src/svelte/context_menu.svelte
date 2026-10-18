@@ -1,23 +1,43 @@
 <script lang="ts">
     import * as menu from "@/lib/display/menu.svelte";
+
+    let contextMenu = $state<HTMLDialogElement | null>(null);
+
+    $effect(() => {
+        contextMenu?.showModal();
+    });
+
+    function pressAway(event: PointerEvent) {
+        if (event.target === contextMenu) {
+            menu.close();
+        }
+    }
+
+    function cancel(event: Event) {
+        event.preventDefault();
+        menu.close();
+    }
 </script>
 
 <style>
 
-    .menu-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 10;
-    }
-
-    .menu {
-        position: fixed;
-        z-index: 11;
-        display: flex;
-        flex-direction: column;
+    .context {
+        inset: auto;
+        margin: 0;
+        padding: 0;
         min-width: 10rem;
         border: 1px solid var(--border);
         background: var(--component);
+        color: var(--text);
+    }
+
+    .context[open] {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .context::backdrop {
+        background: none;
     }
 
     button {
@@ -29,10 +49,16 @@
 
 <!-- Right click context window -->
 {#if menu.getPos()}
-    <div class="menu-backdrop" role="presentation" onpointerdown={menu.close}></div>
-    <div class="menu" style:left="{menu.getPos()?.x}px" style:top="{menu.getPos()?.y}px">
+    <dialog
+        class="context"
+        bind:this={contextMenu}
+        oncancel={cancel}
+        onpointerdown={pressAway}
+        style:left="{menu.getPos()?.x}px"
+        style:top="{menu.getPos()?.y}px"
+    >
         {#each menu.getItems() as item}
             <button onclick={() => menu.chooseItem(item)}>{item.label}</button>
         {/each}
-    </div>
+    </dialog>
 {/if}

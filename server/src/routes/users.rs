@@ -375,6 +375,9 @@ pub async fn delete_me(
     )
     .await?;
 
+    // Remove the account's cached Xbox authorization header
+    xbox::auth::remove_header(user_id);
+
     broadcast_member_left(&app_state, user_id, rooms).await;
 
     Ok(StatusCode::NO_CONTENT)
@@ -396,6 +399,9 @@ pub async fn delete_user(
 ) -> Result<StatusCode> {
     let rooms =
         api::users::delete_other(&app_state.pool, caller_id, target_id, body.anonymize, body.delete_history).await?;
+
+    // Remove the account's cached Xbox authorization header
+    xbox::auth::remove_header(target_id);
 
     broadcast_member_left(&app_state, target_id, rooms).await;
 

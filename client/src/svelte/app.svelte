@@ -5,6 +5,7 @@
   import Settings from "./modals/user/settings.svelte";
   import Admin from "./modals/admin/settings.svelte";
   import Profile from "./modals/profile/viewer.svelte";
+  import ImageViewer from "./modals/image_viewer.svelte";
   import Discover from "./modals/discover.svelte";
   import RoomSettings from "./modals/room/settings.svelte";
 
@@ -30,6 +31,7 @@
   import * as modals from "@/lib/display/modals.svelte";
   import * as creation from "@/lib/rooms/creation.svelte";
   import * as profile_viewer from "@/lib/users/profile_viewer.svelte";
+  import * as image_viewer from "@/lib/display/image_viewer.svelte";
   import * as confirm from "@/lib/display/confirm.svelte";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
@@ -199,6 +201,10 @@
 
   {#if profile_viewer.isOpen()}
     <Profile onClose={profile_viewer.close}/>
+  {/if}
+
+  {#if image_viewer.isOpen()}
+    <ImageViewer onClose={image_viewer.close}/>
   {/if}
 
 {/if}

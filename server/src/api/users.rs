@@ -464,9 +464,10 @@ async fn clear_owned_rows(
     let statements = [
         "DELETE FROM sessions WHERE user_id = ?1",
         "DELETE FROM read_state WHERE user_id = ?1",
-        "DELETE FROM linked_accounts WHERE user_id = ?1",
+        "DELETE FROM xbox_accounts WHERE user_id = ?1",
         "DELETE FROM user_files WHERE user_id = ?1",
         "DELETE FROM room_invites WHERE user_id = ?1",
+        "DELETE FROM push_subscriptions WHERE user_id = ?1",
     ];
 
     for statement in statements {

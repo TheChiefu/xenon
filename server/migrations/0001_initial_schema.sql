@@ -45,8 +45,6 @@ CREATE TABLE sessions (
     revoked_at  INTEGER
 ) STRICT;
 
-CREATE INDEX sessions_user ON sessions(user_id);
-
 -- default_permissions has no DEFAULT: creation must state it. The value is
 -- copied into room_access.permissions when a member joins.
 CREATE TABLE rooms (
@@ -56,13 +54,6 @@ CREATE TABLE rooms (
     default_permissions TEXT NOT NULL,
     created_at          INTEGER NOT NULL
 ) STRICT;
-
--- The directory query:
--- Hidden rooms are absent from the index and id is a UUIDv7 (byte order is creation order)
--- of which the directory pages on with `id > ?`.
---
--- Queries must filter with `visibility IN ('public', 'locked')` to match this predicate.
-CREATE INDEX rooms_directory ON rooms(id) WHERE visibility IN ('public', 'locked');
 
 -- A row grants read access to the room
 --
@@ -88,8 +79,6 @@ CREATE TABLE room_invites (
     expires_at  INTEGER,
     PRIMARY KEY (room_id, user_id)
 ) STRICT;
-
-CREATE INDEX room_invites_user ON room_invites(user_id);
 
 -- Room scoped bans:
 -- created_by is a plain REFERENCES, never CASCADE (a cascade lifts every ban an issuer made)
@@ -165,6 +154,7 @@ CREATE TABLE message_attachments (
     UNIQUE (message_id, file_id)
 ) STRICT;
 
+-- Finds the messages a file is attached to
 CREATE INDEX message_attachments_file ON message_attachments(file_id);
 
 -- A user's library of files
@@ -175,6 +165,7 @@ CREATE TABLE user_files (
     PRIMARY KEY (user_id, file_id)
 ) STRICT;
 
+-- Finds the users who have a file in their library
 CREATE INDEX user_files_file ON user_files(file_id);
 
 -- Server registration codes

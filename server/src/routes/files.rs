@@ -2,7 +2,7 @@
 
 use axum::body::Body;
 use axum::extract::{Multipart, Path, State};
-use axum::http::{header, HeaderName, StatusCode};
+use axum::http::{header, HeaderMap, HeaderName, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use futures_util::TryStreamExt;
@@ -59,8 +59,29 @@ pub const FILE_MIME_HEADER: HeaderName = HeaderName::from_static("x-file-mime");
 pub async fn upload(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
+    headers: HeaderMap,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<FileResponse>)> {
+
+    // Reject a request with no content length
+    let Some(value) = headers.get(header::CONTENT_LENGTH) else {
+        return Err(AppError::Validation("upload must declare a content length".to_string()));
+    };
+
+    // Reject a content length that is not visible ASCII
+    let Ok(text) = value.to_str() else {
+        return Err(AppError::Validation("upload content length is unreadable".to_string()));
+    };
+
+    // Reject a content length that is not a number
+    let Ok(bytes) = text.parse::<usize>() else {
+        return Err(AppError::Validation("upload content length is not a number".to_string()));
+    };
+
+    // Reject a body over the body limit before reading it
+    if bytes > max_body_bytes() {
+        return Err(AppError::TooLarge(config::get().limits.file_bytes_max));
+    }
 
     // Reject unallowed roles to upload
     let mut conn = pool.acquire().await?;
