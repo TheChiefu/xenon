@@ -48,6 +48,7 @@ export async function remove(messageId: string): Promise<void> {
     await request(`/messages/${messageId}`, "DELETE");
 }
 
+// Events
 events.subscribe(LocalEvent.server_info_loaded, (info: ServerInfo) => {
     max_attachments = info.limit_attachments_per_message_max;
 });

@@ -30,6 +30,8 @@ html, body, #app {
   margin: 0;
   height: 100%;
   font: 1rem system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--background);
+  color: var(--text);
 }
 
 h1, h2, h3, h4, h5 {

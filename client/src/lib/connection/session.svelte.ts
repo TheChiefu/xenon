@@ -1,4 +1,4 @@
-import { LocalEvent } from "@/lib/events";
+import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 
 export interface Account {
@@ -108,9 +108,16 @@ export function selectRoom(id: string | null): void {
   save();
 }
 
+// Events
 events.subscribe(LocalEvent.rooms_changed, (room_ids: string[]) => {
   const selected = getSelectedRoom();
   if (selected !== null && !room_ids.includes(selected)) {
+    selectRoom(null);
+  }
+});
+
+events.subscribe(ServerEventType.room_deleted, (event) => {
+  if (getSelectedRoom() === event.room_id) {
     selectRoom(null);
   }
 });

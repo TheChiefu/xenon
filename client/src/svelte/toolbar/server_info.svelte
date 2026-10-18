@@ -8,13 +8,26 @@
 </script>
 
 <style>
+  .server-info {
+    position: relative;
+  }
+
+  .reload {
+    height: 100%;
+    inset: 0;
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    cursor: pointer;
+  }
+
   .frame {
     height: 100%;
     filter: drop-shadow(var(--status-bar-width) 0 0 var(--status-color));
   }
 
   .status-online    { --status-color: var(--status-online); }
-  .status-offline   { --status-color: var(--status-offline); }
+  .status-offline   { --status-color: var(--status-busy); }
 
   .card {
     --point: 35px;
@@ -86,4 +99,7 @@
       {/if}
     </div>
   </div>
+  {#if !connected}
+    <button class="reload" type="button" title="Refresh to reconnect" onclick={() => location.reload()}></button>
+  {/if}
 </div>
