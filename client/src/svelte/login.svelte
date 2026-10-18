@@ -4,8 +4,7 @@
   import { failureText } from "@/lib/utils";
   import iconX from "@/assets/icons/x.svg?raw";
 
-  // Matches Bind::default() in: server/src/config.rs
-  export const DEFAULT_BASE_URL = "http://localhost:3000";
+  export const DEFAULT_BASE_URL = import.meta.env.DEV ? "" : location.origin; // Address the page was loaded from
   // User Credentials
   let username = $state("");
   let password = $state("");
