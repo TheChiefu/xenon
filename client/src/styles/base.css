@@ -75,7 +75,6 @@ select {
 
 label {
   display: block;
-  pointer-events: none;
 }
 
 video {

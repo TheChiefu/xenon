@@ -138,3 +138,9 @@
       <button onclick={saveSettings}>Save Changes</button>
     {/if}
 </div>
+
+<style>
+  label {
+    pointer-events: none;
+  }
+</style>

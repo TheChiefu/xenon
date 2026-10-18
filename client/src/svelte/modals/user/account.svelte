@@ -75,3 +75,9 @@
     <input id="delete-messages" type="checkbox" bind:checked={delete_history}/>
     <button class="full-row is-danger" onclick={deleteAccount}>Delete Account</button>
 </div>
+
+<style>
+  label {
+    pointer-events: none;
+  }
+</style>

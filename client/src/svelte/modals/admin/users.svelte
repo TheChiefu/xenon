@@ -75,6 +75,10 @@
 </script>
 
 <style>
+  label {
+    pointer-events: none;
+  }
+
   .search {
     display: flex;
     gap: var(--inline-gap);
