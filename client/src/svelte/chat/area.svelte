@@ -19,8 +19,9 @@
 
   let { roomId }: Props = $props();
 
-  // Pixels from the bottom still counted as at the bottom, since scrollTop can be fractional
-  const BOTTOM_MARGIN = 4;
+  
+  const BOTTOM_MARGIN = 4; // Pixels from the bottom still counted as at the bottom
+  const KEY_SCROLL_POS = "scroll_positions";
 
   const roomName: string = $derived(roomId === null ? "" : room.get(roomId)?.name ?? "");
   const roomMessages: MessageResponse[] = $derived(roomId === null ? [] : messages.get(roomId));
@@ -28,13 +29,18 @@
   const canDeleteAny: boolean = $derived(roomId !== null && canDeleteOthers(roomId));
 
   let list: HTMLDivElement | undefined = $state();
+  let content: HTMLDivElement | undefined = $state(); // Contains the messages
   let failure: string | null = $state(null);
 
   // Scroll position of each room left this session, keyed by room ID
-  const scrollPositions: Map<string, number> = new Map();
+  const scrollPositions: Map<string, number> = new Map(
+    JSON.parse(sessionStorage.getItem(KEY_SCROLL_POS) ?? "[]")
+  );
+
   let shownRoom: string | null = null;
   let restorePending = false;
   let atBottom = true;
+  let target: number | null = null; // Position being restored
 
   // Loads the selected room's newest page
   $effect(() => {
@@ -48,13 +54,9 @@
   // Before the list changes rooms, stores the scroll position of the room being left
   $effect.pre(() => {
     const nextRoom = roomId;
-
-    if (shownRoom !== null && list !== undefined) {
-      scrollPositions.set(shownRoom, list.scrollTop);
-    }
-
     shownRoom = nextRoom;
     restorePending = true;
+    target = null;
   });
 
   // After the list changes, restores a switched room's position, or follows new messages when at the bottom
@@ -65,7 +67,8 @@
 
     if (restorePending) {
       restorePending = false;
-      list.scrollTop = scrollPositions.get(roomId ?? "") ?? list.scrollHeight;
+      target = scrollPositions.get(roomId ?? "") ?? null;
+      list.scrollTop = target ?? list.scrollHeight;
       return;
     }
 
@@ -73,6 +76,38 @@
       list.scrollTop = list.scrollHeight;
     }
   });
+
+  // Re-applies the restored position as the messages grow, until it is reached
+  $effect(() => {
+    if (content === undefined) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      if (list !== undefined && target !== null) {
+        list.scrollTop = target;
+
+        if (Math.abs(list.scrollTop - target) < 1) {
+          target = null;
+        }
+      }
+    });
+
+    observer.observe(content);
+    return () => observer.disconnect();
+  });
+
+
+  // Methods
+
+  // Stores the shown room's scroll position
+  function savePositions(): void {
+    if (shownRoom !== null && list !== undefined) {
+      scrollPositions.set(shownRoom, list.scrollTop);
+      sessionStorage.setItem("scroll_positions", JSON.stringify([...scrollPositions]));
+    }
+  }
+
 
   async function load(id: string): Promise<void> {
     try {
@@ -203,21 +238,23 @@
     <h3>{roomName}</h3>
   </div>
 
-  <div class="messages" bind:this={list} onscroll={onScroll}>
-    {#if failure !== null}
-      <p>{failure}</p>
-    {/if}
+  <div class="messages" bind:this={list} onscroll={onScroll} onscrollend={savePositions}>
+    <div bind:this={content}>
+      {#if failure !== null}
+        <p>{failure}</p>
+      {/if}
 
-    {#each roomMessages as message (message.id)}
-      <Message
-        {message}
-        author={getAuthorName(message.author_id)}
-        canEdit={message.author_id === selfId}
-        canDelete={canDeleteAny || message.author_id === selfId}
-        onEdit={(body) => edit(message, body)}
-        onDelete={(skipConfirm) => remove(message, skipConfirm)}
-      />
-    {/each}
+      {#each roomMessages as message (message.id)}
+        <Message
+          {message}
+          author={getAuthorName(message.author_id)}
+          canEdit={message.author_id === selfId}
+          canDelete={canDeleteAny || message.author_id === selfId}
+          onEdit={(body) => edit(message, body)}
+          onDelete={(skipConfirm) => remove(message, skipConfirm)}
+        />
+      {/each}
+    </div>
   </div>
 
   {#if roomId !== null}
