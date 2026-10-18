@@ -1,7 +1,7 @@
 import type { FriendResponse } from "@/bindings/services/xbox";
 import { Platform } from "@/bindings/shared";
 import * as xboxAPI from "@/lib/api/xbox";
-import * as profile from "@/lib/profile.svelte";
+import * as profile from "@/lib/users/profile.svelte";
 
 // State //
 let friends: FriendResponse[] = $state([]);  // Friends from last load

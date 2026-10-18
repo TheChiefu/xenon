@@ -3,7 +3,7 @@ import type { Notify, Permission } from "@/bindings/shared";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
-import * as profile from "@/lib/profile.svelte";
+import * as profile from "@/lib/users/profile.svelte";
 import * as room from "@/lib/rooms/data.svelte";
 import * as members from "@/lib/rooms/members.svelte";
 import * as users from "@/lib/users/data.svelte";

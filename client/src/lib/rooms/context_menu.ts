@@ -1,5 +1,5 @@
 import type { Folder } from "@/bindings/shared";
-import type { MenuItem } from "@/lib/menu.svelte";
+import type { MenuItem } from "@/lib/display/menu.svelte";
 import type { RoomId } from "@/lib/rooms/data.svelte";
 import * as layout from "@/lib/rooms/layout.svelte";
 import { startCreation, startRename } from "@/lib/rooms/folders.svelte";

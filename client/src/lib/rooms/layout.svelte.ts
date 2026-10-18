@@ -3,7 +3,7 @@ import type { Folder, RoomListItem } from "@/bindings/shared";
 import * as roomsAPI from "@/lib/api/rooms";
 import { ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
-import * as preferences from "@/lib/preferences.svelte";
+import * as preferences from "@/lib/client/preferences.svelte";
 import * as room from "@/lib/rooms/data.svelte";
 import type { RoomId } from "@/lib/rooms/data.svelte";
 

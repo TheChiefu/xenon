@@ -2,7 +2,7 @@
 
 import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
 import { Device, GamePresence } from "@/bindings/sockets/events";
-import { AnimatePhotos } from "@/lib/settings.svelte";
+import { AnimatePhotos } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
 import icon_android from "@/assets/devices/android.svg?raw";

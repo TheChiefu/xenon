@@ -1,5 +1,5 @@
 import type { ErrorResponse } from "@/bindings/error";
-import * as session from "@/lib/session.svelte";
+import * as session from "@/lib/connection/session.svelte";
 import { MediaQuery } from "svelte/reactivity";
 
 // Types / Interfaces //
