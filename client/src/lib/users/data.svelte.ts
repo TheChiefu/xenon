@@ -5,8 +5,10 @@ import type { UserSummaryResponse } from "@/bindings/routes/users";
 import { Status } from "@/bindings/shared";
 import { GamePresence, type Device, type GameActivity } from "@/bindings/sockets/events";
 import * as usersAPI from "@/lib/api/users";
-import * as server from "@/lib/server.svelte";
+import { LocalEvent, ServerEventType } from "@/lib/events";
+import * as events from "@/lib/events";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
+import * as server from "@/lib/server.svelte"; // Dependency
 
 // A user's status and what they are connected from
 export interface Presence {
@@ -30,25 +32,37 @@ export function get(id: string): UserSummaryResponse | undefined {
 
 // Fetches every id not already held
 export async function load(ids: string[]): Promise<void> {
-  const info = server.getInfo();
-  if (info === null) {
+
+  // Find ids not already cached
+  const missing: string[] = [];
+  for (const id of new Set(ids)) {
+    if (!summaries.has(id)) {
+      missing.push(id);
+    }
+  }
+
+  // Skip lookup when every user is cached
+  if (missing.length === 0) {
     return;
   }
 
-  const perLookup: number = info.limit_users_lookup;
-  const missing: string[] = [...new Set(ids)].filter((id) => !summaries.has(id));
+  // Ids per lookup allowed by the server
+  const perLookup: number = server.getInfo()?.limit_users_lookup ?? 1;
 
   for (let start = 0; start < missing.length; start += perLookup) {
-    const fetched = await usersAPI.lookup({ ids: missing.slice(start, start + perLookup) });
+    const batch: string[] = missing.slice(start, start + perLookup);
+    const fetched = await usersAPI.lookup({ ids: batch });
 
+    // Cache each fetched summary and sync its avatar and banner files
     for (const user of fetched) {
       summaries.set(user.id, user);
+      loadProfileFiles(user.id);
     }
   }
 }
 
 // Replaces what is held, for a profile change the server reports
-export function set(user: UserSummaryResponse): void {
+export function cache(user: UserSummaryResponse): void {
   summaries.set(user.id, user);
 }
 
@@ -170,3 +184,64 @@ export function clear(): void {
   avatars.clear();
   banners.clear();
 }
+
+// EVENTS //
+
+// Replace all user statuses from snapshot
+events.subscribe(ServerEventType.presence_snapshot, (event) => {
+  clearPresences();
+
+  for (const user of event.users) {
+    setPresence(user.user_id, user.status, user.device);
+  }
+});
+
+// Update a user's status
+events.subscribe(ServerEventType.presence_updated, (event) => {
+  setPresence(event.user_id, event.status, event.device);
+});
+
+// Replace all game activities from snapshot
+events.subscribe(ServerEventType.game_presence_snapshot, (event) => {
+  clearActivities();
+
+  for (const user of event.users) {
+    setActivity(user.user_id, {
+      platform: user.platform,
+      status: user.status,
+      title: user.title,
+      detail: user.detail,
+    });
+  }
+});
+
+// Update a user's game activity
+events.subscribe(ServerEventType.game_presence_updated, (event) => {
+  setActivity(event.user_id, {
+    platform: event.platform,
+    status: event.status,
+    title: event.title,
+    detail: event.detail,
+  });
+});
+
+// Update a stored user's name, avatar and banner
+events.subscribe(ServerEventType.profile_updated, (event) => {
+  const summary = summaries.get(event.user_id);
+  if (summary === undefined) {
+    return;
+  }
+
+  cache({
+    id: event.user_id,
+    username: summary.username,
+    display_name: event.display_name,
+    avatar_file_id: event.avatar_file_id,
+    banner_file_id: event.banner_file_id,
+    global_role: summary.global_role,
+  });
+  loadProfileFiles(event.user_id);
+});
+
+// Clear all users on sign out
+events.subscribe(LocalEvent.signed_out, clear);

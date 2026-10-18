@@ -2,7 +2,8 @@
 
 import { Status } from "@/bindings/shared";
 import * as settings from "@/lib/settings.svelte";
-import { send } from "@/lib/socket.svelte";
+import { LocalEvent } from "@/lib/events";
+import * as events from "@/lib/events";
 
 const keyStatus = "default_status";
 const defaultStatus: Status = Status.online;
@@ -37,7 +38,7 @@ export function set(status: Status): void {
   isAutoAway = false;
   currentStatus = status;
   localStorage.setItem(keyStatus, status); // Set status preference on client
-  send({ type: "status", status: get() }); // Send server event about status
+  events.dispatch(LocalEvent.status_changed, get()); // Send server event about status
 }
 
 // IDLE //
@@ -45,7 +46,7 @@ export function set(status: Status): void {
 function onActivity(): void {
   if (isAutoAway) {
     isAutoAway = false;
-    send({ type: "status", status: get() });
+    events.dispatch(LocalEvent.status_changed, get());
   }
 
   scheduleAway();
@@ -76,7 +77,7 @@ function onAway(): void {
   }
 
   isAutoAway = true;
-  send({ type: "status", status: get() });
+  events.dispatch(LocalEvent.status_changed, get());
 }
 
 // STORAGE //

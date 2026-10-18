@@ -188,7 +188,6 @@
     {#if isRenaming(folder)}
         <input
             type="text"
-            autofocus
             value={folder.name}
             onkeydown={nameFinished}
             onblur={nameReset}
@@ -343,7 +342,6 @@
     {#if isCreating()}
         <input
             type="text"
-            autofocus
             onkeydown={nameFinished}
             onblur={nameReset}
         />

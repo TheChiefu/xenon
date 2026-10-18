@@ -1,6 +1,8 @@
 import type { RoomResponse } from "@/bindings/routes/rooms";
 import type { Folder, RoomListItem } from "@/bindings/shared";
 import * as roomsAPI from "@/lib/api/rooms";
+import { ServerEventType } from "@/lib/events";
+import * as events from "@/lib/events";
 import * as preferences from "@/lib/preferences.svelte";
 import * as room from "@/lib/rooms/data.svelte";
 import type { RoomId } from "@/lib/rooms/data.svelte";
@@ -182,4 +184,22 @@ function listContaining(entry: RoomListItem): RoomListItem[] {
     }
   }
   return layout;
+}
+
+// LISTENERS //
+
+// Reload room list on server events
+const reloadEvents: ServerEventType[] = [
+  ServerEventType.invited,
+  ServerEventType.invite_revoked,
+  ServerEventType.banned,
+  ServerEventType.member_joined,
+  ServerEventType.member_left,
+  ServerEventType.room_updated,
+  ServerEventType.room_deleted,
+  ServerEventType.resync,
+];
+
+for (const type of reloadEvents) {
+  events.subscribe(type, loadRooms);
 }

@@ -1,8 +1,15 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import type { Permission } from "@/bindings/shared";
 import * as roomsAPI from "@/lib/api/rooms";
-import * as users from "@/lib/users.svelte";
+import { LocalEvent, ServerEventType } from "@/lib/events";
+import * as events from "@/lib/events";
+import * as users from "@/lib/users/data.svelte";
 
+// Each member and what room they belong to
 const rooms: SvelteMap<string, SvelteSet<string>> = new SvelteMap();
+
+// Each member's permissions, keyed by room ID and then user ID
+const permissions: SvelteMap<string, SvelteMap<string, Permission[]>> = new SvelteMap();
 
 // LOADING //
 
@@ -17,6 +24,10 @@ export function get(roomId: string): string[] {
 
 export function has(roomId: string, userId: string): boolean {
   return rooms.get(roomId)?.has(userId) ?? false;
+}
+
+export function getPermissions(roomId: string, userId: string): Permission[] {
+  return permissions.get(roomId)?.get(userId) ?? [];
 }
 
 export async function load(roomId: string): Promise<void> {
@@ -41,16 +52,19 @@ export function add(roomId: string, userId: string): void {
 
 export function remove(roomId: string, userId: string): void {
   rooms.get(roomId)?.delete(userId);
+  permissions.get(roomId)?.delete(userId);
 }
 
 export function leave(roomId: string): void {
   rooms.delete(roomId);
+  permissions.delete(roomId);
 }
 
 // SESSION //
 
 export function clear(): void {
   rooms.clear();
+  permissions.clear();
 }
 
 // HELPERS //
@@ -63,5 +77,29 @@ async function loadRoom(roomId: string): Promise<void> {
   // Replaces the room's stored member IDs
   rooms.set(roomId, new SvelteSet(ids));
 
+  // Replaces the room's stored member permissions
+  permissions.set(roomId, new SvelteMap(entries.map((entry) => [entry.user_id, entry.permissions])));
+
   await users.load(ids);
 }
+
+// LISTENERS //
+
+// Add a member who joined
+events.subscribe(ServerEventType.member_joined, (event) => {
+  add(event.room_id, event.user_id);
+});
+
+// Remove a member who left
+events.subscribe(ServerEventType.member_left, (event) => {
+  remove(event.room_id, event.user_id);
+});
+
+// Remove the members of a deleted room
+events.subscribe(ServerEventType.room_deleted, (event) => {
+  leave(event.room_id);
+});
+
+// Clear all members on resync and sign out
+events.subscribe(ServerEventType.resync, clear);
+events.subscribe(LocalEvent.signed_out, clear);

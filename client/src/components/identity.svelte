@@ -1,12 +1,12 @@
 <script lang="ts">
   import * as session from "@/lib/session.svelte";
   import * as profile from "@/lib/profile.svelte";
-  import * as users from "@/lib/users.svelte";
+  import * as users from "@/lib/users/data.svelte";
   import * as status from "@/lib/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { GlobalRole, Status } from "@/bindings/shared";
   import * as av from "@/lib/av.svelte";
-  import * as confirm from "@/lib/confirm.svelte";
+  import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/transitions";
   import { Modal } from "@/lib/modals.svelte";
   import * as modals from "@/lib/modals.svelte";
@@ -38,7 +38,7 @@
   }
 
   async function doSignout() {
-    const result = await confirm.dialog(msg_sign_out);
+    const result = await events.confirm(msg_sign_out);
     if (result) {
       session.removeLoggedInAccount();
     }

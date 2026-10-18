@@ -3,6 +3,8 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { MessageResponse } from "@/bindings/routes/messages";
 import * as messagesAPI from "@/lib/api/messages";
+import { LocalEvent, ServerEventType } from "@/lib/events";
+import * as events from "@/lib/events";
 
 // Messages per room ID, each room's messages per message ID in the order they were added
 const rooms: SvelteMap<string, SvelteMap<string, MessageResponse>> = new SvelteMap();
@@ -85,3 +87,24 @@ async function loadRoom(roomId: string): Promise<void> {
 
   rooms.set(roomId, messages);
 }
+
+// EVENTS //
+
+// Store a new message
+events.subscribe(ServerEventType.message, (event) => {
+  add(event.message);
+});
+
+// Update an edited message
+events.subscribe(ServerEventType.message_edited, (event) => {
+  edit(event.room_id, event.message_id, event.body, event.edited_at);
+});
+
+// Remove a deleted message
+events.subscribe(ServerEventType.message_deleted, (event) => {
+  remove(event.room_id, event.message_id);
+});
+
+// Clear all messages on resync and sign out
+events.subscribe(ServerEventType.resync, clear);
+events.subscribe(LocalEvent.signed_out, clear);

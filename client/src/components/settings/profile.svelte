@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as profile from "@/lib/profile.svelte";
-  import * as users from "@/lib/users.svelte";
+  import * as users from "@/lib/users/data.svelte";
   import * as usersAPI from "@/lib/api/users";
   import * as filesAPI from "@/lib/api/files";
   import { failureText, type FetchedFile } from "@/lib/utils";
@@ -39,11 +39,6 @@
   const user_id: string = $derived(profile.get()?.id ?? "");
   const avatar: FetchedFile | null = $derived(getProfileFile(avatar_preview, avatar_removed, users.getAvatar(user_id)));
   const banner: FetchedFile | null = $derived(getProfileFile(banner_preview, banner_removed, users.getBanner(user_id)));
-
-  // Load stored avatar and banner of own user
-  $effect(() => {
-    users.loadProfileFiles(user_id);
-  });
 
   // HELPERS //
 

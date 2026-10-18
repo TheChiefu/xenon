@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { RegistrationCode } from "@/bindings/shared";
-  import { MSG_ERROR, MSG_REVOKE_CODE } from "@/lib/labels";
+  import { MSG_ERROR, MSG_REVOKE_CODE, refreshedText } from "@/lib/labels";
   import * as authAPI from "@/lib/api/auth";
-  import * as confirm from "@/lib/confirm.svelte";
-  import { DAY_MS, failureText, refreshedText } from "@/lib/utils";
+  import * as events from "@/lib/events";
+  import { DAY_MS, failureText } from "@/lib/utils";
 
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_x from "@/assets/icons/x.svg?raw";
@@ -43,7 +43,7 @@
   }
 
   async function revokeCode(code: string) {
-    if (!await confirm.dialog(MSG_REVOKE_CODE)) return;
+    if (!await events.confirm(MSG_REVOKE_CODE)) return;
 
     notify = "";
 

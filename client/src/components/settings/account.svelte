@@ -1,7 +1,7 @@
 <script lang="ts">
   import { MSG_SAVED, MSG_ERROR, MSG_ANONYMIZE, MSG_DELETE_ACCOUNT } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
-  import * as confirm from "@/lib/confirm.svelte";
+  import * as events from "@/lib/events";
   import * as session from "@/lib/session.svelte";
   import { failureText } from "@/lib/utils";
 
@@ -31,7 +31,7 @@
   }
 
   async function deleteAccount() {
-    const accepted = await confirm.dialog(MSG_DELETE_ACCOUNT);
+    const accepted = await events.confirm(MSG_DELETE_ACCOUNT);
 
     if (!accepted) {
       return;

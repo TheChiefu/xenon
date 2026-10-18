@@ -1,6 +1,5 @@
 import type { ErrorResponse } from "@/bindings/error";
 import * as session from "@/lib/session.svelte";
-import { MSG_REFRESHED } from "@/lib/labels";
 import { MediaQuery } from "svelte/reactivity";
 
 // Types / Interfaces //
@@ -38,12 +37,6 @@ export function cssTime(name: string): number {
 // Returns message of a caught failure
 export function failureText(failure: unknown): string {
     return failure instanceof Error ? failure.message : String(failure);
-}
-
-// Returns message for a successful refresh, stamped with the current time
-export function refreshedText(): string {
-    const now = new Date();
-    return `(${MSG_REFRESHED} ${now.toLocaleTimeString('en-US', { hour12: true })})`;
 }
 
 // Attaches the active session's address and bearer token, and throws the

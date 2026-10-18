@@ -4,8 +4,10 @@
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";
   import * as members from "@/lib/rooms/members.svelte";
-  import * as users from "@/lib/users.svelte";
+  import * as users from "@/lib/users/data.svelte";
   import * as settings from "@/lib/settings.svelte";
+  import { LocalEvent } from "@/lib/events";
+  import * as events from "@/lib/events";
 
   interface Props {
     roomId: string | null;
@@ -39,12 +41,6 @@
     }
 
     load(roomId);
-  });
-
-  $effect(() => {
-    for (const id of member_ids) {
-      users.loadProfileFiles(id);
-    }
   });
 
   async function load(id: string): Promise<void> {
@@ -241,7 +237,7 @@
     {@const banner = users.getBanner(id)}
     {@const presence = users.getPresence(id)}
     {@const activity = users.getActivity(id)}
-    <button class="member" {@attach settings.playOnHover}>
+    <button class="member" onclick={() => events.dispatch(LocalEvent.user_selected, id)} {@attach settings.playOnHover}>
       {#if banner !== undefined}
         {#if banner.mime.startsWith("video/")}
           <video class="banner" src={banner.url} {@attach settings.animatePhoto}></video>

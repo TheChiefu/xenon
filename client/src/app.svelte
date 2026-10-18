@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { untrack } from "svelte";
-
   import Login from "./views/login.svelte";
   import Popup from "./views/popup.svelte";
   import NewRoom from "./views/new_room.svelte";
   import Settings from "./views/settings.svelte";
   import Admin from "./views/admin.svelte";
+  import Profile from "./views/profile.svelte";
 
   import Toolbar from "./components/areas/toolbar.svelte";
   import BottomToolbar from "./components/toolbar/bottom_toolbar.svelte";
@@ -23,17 +22,15 @@
   import * as preferences from "./lib/preferences.svelte";
   import * as layout from "./lib/rooms/layout.svelte";
 
-  import * as messages from "./lib/messages.svelte";
-  import * as room from "./lib/rooms/data.svelte";
-  import * as users from "./lib/users.svelte";
-  import * as members from "./lib/rooms/members.svelte";
-
   import { Pane } from "./lib/panes.svelte";
   import * as panes from "./lib/panes.svelte";
   import { Modal } from "./lib/modals.svelte";
   import * as modals from "./lib/modals.svelte";
   import * as creation from "./lib/rooms/creation.svelte";
+  import * as profile_viewer from "./lib/users/profile_viewer.svelte";
   import * as confirm from "./lib/confirm.svelte";
+  import { LocalEvent } from "./lib/events";
+  import * as events from "./lib/events";
   import { COMPACT_CLASS, isCompact } from "./lib/utils";
   import type { ToolbarButton } from "./lib/toolbar";
   import * as xbox from "./lib/xbox.svelte";
@@ -124,19 +121,6 @@
     return close;
   });
 
-  // Removes everything stored for an account once its token is gone
-  $effect(() => {
-    if (session.getToken() !== null) return;
-
-    untrack(() => {
-      messages.clear();
-      room.clear();
-      users.clear();
-      members.clear();
-      modals.close();
-      creation.close();
-    });
-  });
 </script>
 
 
@@ -195,6 +179,10 @@
 
   {#if modals.isOpen(Modal.admin)}
     <Admin onClose={modals.close}/>
+  {/if}
+
+  {#if profile_viewer.isOpen()}
+    <Profile onClose={profile_viewer.close}/>
   {/if}
 
 {/if}

@@ -2,7 +2,7 @@
   import { AnimatePhotos } from "@/lib/settings.svelte";
   import * as settings from "@/lib/settings.svelte";
   import { LABELS_ANIMATE_PHOTOS, MSG_SAVED, MSG_ERROR, MSG_REMOVE_PUSH, MSG_DISABLE_NOTIFICATION } from "@/lib/labels";
-  import * as confirm from "@/lib/confirm.svelte";
+  import * as events from "@/lib/events";
   import * as notifications from "@/lib/notifications.svelte";
 
   // Notifications
@@ -44,7 +44,7 @@
   }
 
   async function unsubscribePush() {
-    const accepted = await confirm.dialog(MSG_REMOVE_PUSH);
+    const accepted = await events.confirm(MSG_REMOVE_PUSH);
 
     // If dialog is declined, cancel operation
     if (!accepted) {

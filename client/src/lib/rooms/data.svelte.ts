@@ -1,4 +1,6 @@
 import type { RoomResponse } from "@/bindings/routes/rooms";
+import { LocalEvent } from "@/lib/events";
+import * as events from "@/lib/events";
 
 // A room's id, which is how rooms are stored in the layout
 export type RoomId = string;
@@ -24,3 +26,6 @@ export function add(room: RoomResponse): void {
 export function clear(): void {
   rooms = new Map();
 }
+
+// Clear all rooms on sign out
+events.subscribe(LocalEvent.signed_out, clear);

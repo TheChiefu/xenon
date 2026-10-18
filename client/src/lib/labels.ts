@@ -103,7 +103,14 @@ export const MSG_ANONYMIZE = "Replaces your display name and releases your usern
 export const MSG_DELETE_ACCOUNT = "Are you sure you want to delete your account? This cannot be undone.";
 export const MSG_UNLINK_XBOX = "Are you sure you want to unlink your Xbox account?";
 export const MSG_REVOKE_CODE = "Are you sure you want to revoke this invite code?";
+export const MSG_DELETE_MESSAGE = "Are you sure you want to delete this message? This cannot be undone.";
 export const MSG_DELETE_USER = "Are you sure you want to delete this user? This cannot be undone.";
+
+// Returns message for a successful refresh, stamped with the current time
+export function refreshedText(): string {
+  const now = new Date();
+  return `(${MSG_REFRESHED} ${now.toLocaleTimeString('en-US', { hour12: true })})`;
+}
 
 export const DESCRIPTIONS_VISIBILITY: Record<Visibility, string> = {
   [Visibility.public]: "Listed in discovery, anyone can join",

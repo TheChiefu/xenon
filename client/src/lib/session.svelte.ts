@@ -1,3 +1,6 @@
+import { LocalEvent } from "@/lib/events";
+import * as events from "@/lib/events";
+
 export interface Account {
   username: string;
   url: string;
@@ -72,6 +75,7 @@ export function setCurrentLogin(key: string): void {
 export function clearCurrentLogin(): void {
   current_login = null;
   localStorage.removeItem(key_logged_in);
+  events.dispatch(LocalEvent.signed_out);
 }
 
 // REQUESTS //

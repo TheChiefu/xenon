@@ -1,0 +1,105 @@
+<script lang="ts">
+  // Modal window showing a user's public profile, for the user ID stored by the viewer
+
+  import type { UserProfileResponse } from "@/bindings/routes/users";
+  import ProfileCard from "@/components/profile_card.svelte";
+  import * as usersAPI from "@/lib/api/users";
+  import * as users from "@/lib/users/data.svelte";
+  import * as profile_viewer from "@/lib/users/profile_viewer.svelte";
+  import { dialogFly } from "@/lib/transitions";
+  import { failureText } from "@/lib/utils";
+  import icon_x from "@/assets/icons/x.svg?raw";
+
+  interface Props {
+    onClose: () => void;
+  }
+  let { onClose }: Props = $props();
+  let dialog = $state<HTMLDialogElement | null>(null);
+
+  let profile: UserProfileResponse | null = $state(null);
+  let failure: string | null = $state(null);
+
+  const userId: string | null = $derived(profile_viewer.getUserId());
+
+  $effect(() => {
+    dialog?.showModal();
+  });
+
+  $effect(() => {
+    if (userId === null) {
+      return;
+    }
+
+    load(userId);
+  });
+
+  async function load(id: string): Promise<void> {
+    try {
+      profile = await usersAPI.get(id);
+      failure = null;
+
+      await users.load([id]);
+    } catch (error) {
+      failure = failureText(error);
+    }
+  }
+
+  function cancel(event: Event) {
+    event.preventDefault();
+    onClose();
+  }
+
+  function formatDate(time: number): string {
+    return new Date(time).toLocaleDateString();
+  }
+</script>
+
+<style>
+  dialog {
+    padding: var(--dialog-padding);
+    border: 1px solid var(--border);
+    background: var(--component);
+    color: var(--text);
+  }
+
+  dialog::backdrop {
+    background: var(--modal-background)
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--section-gap);
+    border-bottom: 1px solid var(--border);
+  }
+</style>
+
+<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} transition:dialogFly={{ y: "1rem" }}>
+  <div class="header">
+    <h2>Profile</h2>
+    <button class="inherit" aria-label="Close" onclick={onClose}>
+      <span class="icon" aria-hidden="true">{@html icon_x}</span>
+    </button>
+  </div>
+
+  {#if failure !== null}
+    <p>{failure}</p>
+  {:else if profile !== null}
+    {@const presence = users.getPresence(profile.id)}
+    <ProfileCard
+      id={profile.id}
+      display_name={profile.display_name}
+      username={profile.username}
+      description={profile.description}
+      status={presence.status}
+      device={presence.device}
+      game={users.getActivity(profile.id) ?? null}
+      role={profile.global_role}
+      links={profile.linked_accounts}
+      created_at={formatDate(profile.created_at)}
+      deleted_at={profile.deleted_at === null ? null : formatDate(profile.deleted_at)}
+      avatar={users.getAvatar(profile.id) ?? null}
+      banner={users.getBanner(profile.id) ?? null}
+    />
+  {/if}
+</dialog>

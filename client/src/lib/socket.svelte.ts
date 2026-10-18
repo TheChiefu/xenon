@@ -1,10 +1,9 @@
+import type { Status } from "@/bindings/shared";
 import { Device, type ClientEvent, type ServerEvent } from "@/bindings/sockets/events";
-import * as layout from "@/lib/rooms/layout.svelte";
-import * as members from "@/lib/rooms/members.svelte";
-import * as messages from "@/lib/messages.svelte";
+import { LocalEvent } from "@/lib/events";
+import * as events from "@/lib/events";
 import * as session from "@/lib/session.svelte";
 import * as status from "@/lib/status.svelte";
-import * as users from "@/lib/users.svelte";
 
 let socket: WebSocket | null = null;
 let connected: boolean = $state(false);
@@ -78,115 +77,21 @@ export function send(event: ClientEvent): void {
 // EVENTS //
 
 function receive(data: string): void {
-  let event: ServerEvent;
+  let received: ServerEvent;
 
   try {
-    event = JSON.parse(data);
+    received = JSON.parse(data);
   } catch {
     return;
   }
 
-  // Needs to be manually updated right now (see if we can use a proper generated enum)
-  if (event.type === "presence_snapshot") {
-    users.clearPresences();
-
-    for (const user of event.users) {
-      users.setPresence(user.user_id, user.status, user.device);
-    }
-    return;
-  }
-
-  if (event.type === "presence_updated") {
-    users.setPresence(event.user_id, event.status, event.device);
-    return;
-  }
-
-  if (event.type === "game_presence_snapshot") {
-    users.clearActivities();
-
-    for (const user of event.users) {
-      users.setActivity(user.user_id, {
-        platform: user.platform,
-        status: user.status,
-        title: user.title,
-        detail: user.detail,
-      });
-    }
-    return;
-  }
-
-  if (event.type === "game_presence_updated") {
-    users.setActivity(event.user_id, {
-      platform: event.platform,
-      status: event.status,
-      title: event.title,
-      detail: event.detail,
-    });
-    return;
-  }
-
-  if (event.type === "profile_updated") {
-    const summary = users.get(event.user_id);
-    if (summary === undefined) {
-      return;
-    }
-
-    users.set({
-      id: event.user_id,
-      username: summary.username,
-      display_name: event.display_name,
-      avatar_file_id: event.avatar_file_id,
-      banner_file_id: event.banner_file_id,
-      global_role: summary.global_role,
-    });
-    return;
-  }
-
-  if (event.type === "message") {
-    messages.add(event.message);
-    return;
-  }
-
-  if (event.type === "message_edited") {
-    messages.edit(event.room_id, event.message_id, event.body, event.edited_at);
-    return;
-  }
-
-  if (event.type === "message_deleted") {
-    messages.remove(event.room_id, event.message_id);
-    return;
-  }
-
-  if (event.type === "member_joined") {
-    members.add(event.room_id, event.user_id);
-  }
-
-  if (event.type === "member_left") {
-    members.remove(event.room_id, event.user_id);
-  }
-
-  if (event.type === "room_deleted") {
-    members.leave(event.room_id);
-  }
-
-  if (event.type === "resync") {
-    messages.clear();
-    members.clear();
-  }
-
-  if (
-    event.type === "invited"
-    || event.type === "invite_revoked"
-    || event.type === "banned"
-    || event.type === "member_joined"
-    || event.type === "member_left"
-    || event.type === "room_updated"
-    || event.type === "room_deleted"
-    || event.type === "resync"
-  ) {
-    layout.loadRooms();
-  }
+  events.dispatch(received.type, received);
 }
+
+// Send user's new status to the server
+events.subscribe(LocalEvent.status_changed, (status: Status) => {
+  send({ type: "status", status });
+});
 
 // HELPERS //
 

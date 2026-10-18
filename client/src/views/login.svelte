@@ -227,7 +227,7 @@
                         <div class="field">
                             <label for="password">Password</label>
                             <input name="password" type="password" bind:value={password} required/>
-                            <small>Minimum/Maximum: Set by server owner</small>
+                            <small>Minimum/Maximum: Set by server maintainer</small>
                         </div>
                         <div class="field">
                             <label for="display-name">Display Name</label>

@@ -1,3 +1,6 @@
+import { LocalEvent } from "@/lib/events";
+import * as events from "@/lib/events";
+
 // Modal dialogs shown over the app, one at a time
 export enum Modal {
   settings = "settings",
@@ -19,3 +22,6 @@ export function open(modal: Modal): void {
 export function close(): void {
   current = null;
 }
+
+// Reset modal state on signout
+events.subscribe(LocalEvent.signed_out, close);

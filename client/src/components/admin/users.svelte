@@ -2,7 +2,7 @@
   import type { UserSummaryResponse } from "@/bindings/routes/users";
   import { LABELS_ROLE, MSG_ANONYMIZE, MSG_DELETE_USER, MSG_ERROR } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
-  import * as confirm from "@/lib/confirm.svelte";
+  import * as events from "@/lib/events";
   import { failureText } from "@/lib/utils";
 
   let users: UserSummaryResponse[] = $state([]);
@@ -57,7 +57,7 @@
     const anonymize = form.has("anonymize");
     const delete_history = form.has("delete_history");
 
-    const accepted = await confirm.dialog(`${MSG_DELETE_USER} (@${target.username})`);
+    const accepted = await events.confirm(`${MSG_DELETE_USER} (@${target.username})`);
     if (!accepted) return;
 
     notify = "";

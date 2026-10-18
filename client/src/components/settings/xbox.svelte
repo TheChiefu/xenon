@@ -1,11 +1,11 @@
 <script lang="ts">
   import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
-  import { MSG_SAVED, MSG_ERROR, MSG_UNLINK_XBOX } from "@/lib/labels";
-  import * as confirm from "@/lib/confirm.svelte";
+  import { MSG_SAVED, MSG_ERROR, MSG_UNLINK_XBOX, refreshedText } from "@/lib/labels";
+  import * as events from "@/lib/events";
   import { Platform } from "@/bindings/shared";
   import type { LinkResponse, XboxResponse } from "@/bindings/services/xbox";
   import * as xboxAPI from "@/lib/api/xbox";
-  import { failureText, refreshedText } from "@/lib/utils";
+  import { failureText } from "@/lib/utils";
   import * as profile from "@/lib/profile.svelte";
   import icon_link from "@/assets/icons/link.svg?raw";
   import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
@@ -65,7 +65,7 @@
   async function unlinkXboxAccount(): Promise<void> {
     xbox_notify = "";
 
-    const accepted = await confirm.dialog(MSG_UNLINK_XBOX);
+    const accepted = await events.confirm(MSG_UNLINK_XBOX);
 
     if (!accepted) {
       return;

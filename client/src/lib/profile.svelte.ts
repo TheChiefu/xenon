@@ -1,5 +1,5 @@
 import type { UserProfileResponse } from "@/bindings/routes/users";
-import * as users from "@/lib/users.svelte";
+import * as users from "@/lib/users/data.svelte";
 import { request } from "@/lib/utils";
 
 let profile: UserProfileResponse | null = $state(null);
@@ -15,7 +15,7 @@ export async function load(): Promise<void> {
   profile = fetched;
 
   // Add own summary to user summaries
-  users.set({
+  users.cache({
     id: fetched.id,
     username: fetched.username,
     display_name: fetched.display_name,
@@ -23,4 +23,5 @@ export async function load(): Promise<void> {
     banner_file_id: fetched.banner_file_id,
     global_role: fetched.global_role,
   });
+  users.loadProfileFiles(fetched.id);
 }

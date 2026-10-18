@@ -1,10 +1,16 @@
 <script lang="ts">
   import type { MessageResponse } from "@/bindings/routes/messages";
+  import { GlobalRole, Permission, Visibility } from "@/bindings/shared";
   import Composer from "@/components/composer.svelte";
   import Message from "@/components/message.svelte";
+  import * as messagesAPI from "@/lib/api/messages";
+  import * as events from "@/lib/events";
+  import { MSG_DELETE_MESSAGE } from "@/lib/labels";
   import * as messages from "@/lib/messages.svelte";
+  import * as profile from "@/lib/profile.svelte";
   import * as room from "@/lib/rooms/data.svelte";
-  import * as users from "@/lib/users.svelte";
+  import * as members from "@/lib/rooms/members.svelte";
+  import * as users from "@/lib/users/data.svelte";
   import { failureText } from "@/lib/utils";
 
   interface Props {
@@ -18,7 +24,8 @@
 
   const roomName: string = $derived(roomId === null ? "" : room.get(roomId)?.name ?? "");
   const roomMessages: MessageResponse[] = $derived(roomId === null ? [] : messages.get(roomId));
-  const authorIds: string[] = $derived(uniqueAuthors(roomMessages));
+  const selfId: string = $derived(profile.get()?.id ?? "");
+  const canDeleteAny: boolean = $derived(roomId !== null && canDeleteOthers(roomId));
 
   let list: HTMLDivElement | undefined = $state();
   let failure: string | null = $state(null);
@@ -36,18 +43,6 @@
     }
 
     load(roomId);
-  });
-
-  // Fetches summaries of authors not already stored
-  $effect(() => {
-    users.load(authorIds);
-  });
-
-  // Downloads each author's avatar
-  $effect(() => {
-    for (const id of authorIds) {
-      users.loadProfileFiles(id);
-    }
   });
 
   // Before the list changes rooms, stores the scroll position of the room being left
@@ -82,6 +77,54 @@
   async function load(id: string): Promise<void> {
     try {
       await messages.loadLatest(id);
+      await members.load(id);
+
+      // Load message authors
+      // Ones not in user cache are auto skipped when loading
+      const unknown: string[] = [];
+      for (const message of messages.get(id)) {
+          unknown.push(message.author_id);
+      }
+      await users.load(unknown);
+
+      failure = null;
+    } catch (error) {
+      failure = failureText(error);
+    }
+  }
+
+  // A message author's display name
+  // Marked when they are no longer in the room
+  function getAuthorName(authorId: string): string {
+    const name = users.getDisplayName(authorId);
+
+    if (roomId !== null && !members.has(roomId, authorId)) {
+      return `${name} (Left)`;
+    }
+
+    return name;
+  }
+
+  // Sends a message's new body, then stores the edit
+  async function edit(message: MessageResponse, body: string): Promise<void> {
+    try {
+      const response = await messagesAPI.edit(message.id, { body });
+      messages.edit(message.room_id, message.id, body, response.edited_at);
+      failure = null;
+    } catch (error) {
+      failure = failureText(error);
+    }
+  }
+
+  // Deletes a message, then removes it from the room
+  async function remove(message: MessageResponse, skipConfirm: boolean): Promise<void> {
+    if (!skipConfirm && !await events.confirm(MSG_DELETE_MESSAGE)) {
+      return;
+    }
+
+    try {
+      await messagesAPI.remove(message.id);
+      messages.remove(message.room_id, message.id);
       failure = null;
     } catch (error) {
       failure = failureText(error);
@@ -97,14 +140,21 @@
     atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < BOTTOM_MARGIN;
   }
 
-  // Each author ID once
-  function uniqueAuthors(fetched: MessageResponse[]): string[] {
-    const ids: Set<string> = new Set();
-    for (const message of fetched) {
-      ids.add(message.author_id);
+  // Whether the logged in user may delete messages written by others in the room
+  function canDeleteOthers(id: string): boolean {
+
+    // Members granted the delete permission in this room
+    const permissions = members.getPermissions(id, selfId);
+    const canDelete = permissions.includes(Permission.delete_msg);
+    if (canDelete) {
+      return true;
     }
 
-    return [...ids];
+    // Global admins in a public room
+    const isAdmin = profile.get()?.global_role === GlobalRole.admin;
+    const isPublic = room.get(id)?.visibility === Visibility.public;
+
+    return isAdmin && isPublic;
   }
 </script>
 
@@ -161,8 +211,11 @@
     {#each roomMessages as message (message.id)}
       <Message
         {message}
-        author={users.getDisplayName(message.author_id)}
-        avatar={users.getAvatar(message.author_id)?.url ?? ""}
+        author={getAuthorName(message.author_id)}
+        canEdit={message.author_id === selfId}
+        canDelete={canDeleteAny || message.author_id === selfId}
+        onEdit={(body) => edit(message, body)}
+        onDelete={(skipConfirm) => remove(message, skipConfirm)}
       />
     {/each}
   </div>

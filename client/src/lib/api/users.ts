@@ -1,5 +1,10 @@
-import type { DeleteAccountRequest, ProfilePatch, UserSummaryResponse, UsersLookup } from "@/bindings/routes/users";
+import type { DeleteAccountRequest, ProfilePatch, UserProfileResponse, UserSummaryResponse, UsersLookup } from "@/bindings/routes/users";
 import { request } from "@/lib/utils";
+
+export async function get(id: string): Promise<UserProfileResponse> {
+    const response = await request(`/users/${id}`);
+    return await response.json() as UserProfileResponse;
+}
 
 export async function lookup(body: UsersLookup): Promise<UserSummaryResponse[]> {
     const response = await request("/users/lookup", "POST", body);
