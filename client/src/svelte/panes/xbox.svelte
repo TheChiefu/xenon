@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FriendResponse } from "@/bindings/services/xbox";
   import { failureText } from "@/lib/utils";
-  import * as xbox from "@/lib/xbox.svelte";
+  import * as xbox from "@/lib/services/xbox.svelte";
   import icon_lock from "@/assets/icons/lock.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";

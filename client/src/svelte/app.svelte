@@ -10,11 +10,11 @@
 
   import Toolbar from "./toolbar/top.svelte";
   import BottomToolbar from "./toolbar/bottom.svelte";
-  import Container from "./panels/container.svelte";
-  import Rooms from "./panels/rooms.svelte";
-  import Members from "./panels/members.svelte";
+  import Container from "./panes/container.svelte";
+  import Rooms from "./panes/rooms.svelte";
+  import Members from "./panes/members.svelte";
   import Chat from "./chat/area.svelte";
-  import Xbox from "./panels/xbox.svelte";
+  import Xbox from "./panes/xbox.svelte";
   import ContextMenu from "./context_menu.svelte";
 
   import * as session from "@/lib/connection/session.svelte";
@@ -35,7 +35,7 @@
   import * as events from "@/lib/events";
   import { COMPACT_CLASS, isCompact } from "@/lib/utils";
   import type { ToolbarButton } from "@/lib/display/toolbar";
-  import * as xbox from "@/lib/xbox.svelte";
+  import * as xbox from "@/lib/services/xbox.svelte";
   import { Platform } from "@/bindings/shared";
   import { ICONS_PLATFORM } from "@/lib/labels";
 
