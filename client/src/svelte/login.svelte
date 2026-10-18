@@ -187,7 +187,7 @@
 
 <div class="login">
     <div class="login-card">
-        <img src="../../../public/icon-192.png" width="64" height="64" alt="Xenon Logo"/>
+        <img src="/icon-192.png" width="64" height="64" alt="Xenon Logo"/>
 
         <h2>Xenon</h2>
 
