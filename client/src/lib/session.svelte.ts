@@ -107,3 +107,10 @@ export function selectRoom(id: string | null): void {
   account.room = id;
   save();
 }
+
+events.subscribe(LocalEvent.rooms_changed, (room_ids: string[]) => {
+  const selected = getSelectedRoom();
+  if (selected !== null && !room_ids.includes(selected)) {
+    selectRoom(null);
+  }
+});

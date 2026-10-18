@@ -5,6 +5,8 @@
   import Settings from "./views/settings.svelte";
   import Admin from "./views/admin.svelte";
   import Profile from "./views/profile.svelte";
+  import Discover from "./views/discover.svelte";
+  import RoomSettings from "./views/room/settings.svelte";
 
   import Toolbar from "./components/areas/toolbar.svelte";
   import BottomToolbar from "./components/toolbar/bottom_toolbar.svelte";
@@ -90,6 +92,12 @@
     }
 
     return buttons;
+  });
+
+  // Close Xbox pane without a linked account
+  $effect(() => {
+    if (profile.get() === null) return;
+    if (!xbox.isLinked()) panes.setOpenState(Pane.xbox, false);
   });
 
   // Open loaded panes on their open/closed state
@@ -179,6 +187,14 @@
 
   {#if modals.isOpen(Modal.admin)}
     <Admin onClose={modals.close}/>
+  {/if}
+
+  {#if modals.isOpen(Modal.discover)}
+    <Discover onClose={modals.close}/>
+  {/if}
+
+  {#if modals.isOpen(Modal.room_settings)}
+    <RoomSettings onClose={modals.close}/>
   {/if}
 
   {#if profile_viewer.isOpen()}

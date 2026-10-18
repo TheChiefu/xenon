@@ -190,8 +190,6 @@ function listContaining(entry: RoomListItem): RoomListItem[] {
 
 // Reload room list on server events
 const reloadEvents: ServerEventType[] = [
-  ServerEventType.invited,
-  ServerEventType.invite_revoked,
   ServerEventType.banned,
   ServerEventType.member_joined,
   ServerEventType.member_left,

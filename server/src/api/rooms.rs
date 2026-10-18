@@ -21,6 +21,7 @@ pub struct Room {
     pub id: Uuid,
     pub name: String,
     pub visibility: Visibility,
+    pub default_permissions: Json<Vec<Permission>>,
     pub created_at: i64,
 }
 
@@ -42,7 +43,7 @@ pub async fn get(
     let mut conn = pool.acquire().await?;
     let room: Room = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.created_at
+        SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at
         FROM rooms r
         WHERE r.id = ?1
             AND (r.visibility IN (?2, ?3)
@@ -372,7 +373,7 @@ pub async fn list_mine(
     // Get list based on user's room access
     let rooms: Vec<Room> = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.created_at
+        SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at
         FROM rooms r JOIN room_access a ON a.room_id = r.id
         WHERE a.user_id = ?1
         ORDER BY r.id
@@ -402,7 +403,7 @@ pub async fn list_discoverable(
 
     let rooms: Vec<Room> = sqlx::query_as(
         "
-        SELECT r.id, r.name, r.visibility, r.created_at
+        SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at
         FROM rooms r
         WHERE r.visibility IN (?1, ?2)
             AND (?3 IS NULL OR r.id > ?3)

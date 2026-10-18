@@ -1,5 +1,5 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import type { Permission } from "@/bindings/shared";
+import type { Notify, Permission } from "@/bindings/shared";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -10,6 +10,8 @@ const rooms: SvelteMap<string, SvelteSet<string>> = new SvelteMap();
 
 // Each member's permissions, keyed by room ID and then user ID
 const permissions: SvelteMap<string, SvelteMap<string, Permission[]>> = new SvelteMap();
+
+const notifies: SvelteMap<string, Notify> = new SvelteMap();
 
 // LOADING //
 
@@ -28,6 +30,14 @@ export function has(roomId: string, userId: string): boolean {
 
 export function getPermissions(roomId: string, userId: string): Permission[] {
   return permissions.get(roomId)?.get(userId) ?? [];
+}
+
+export function getNotify(roomId: string): Notify | undefined {
+  return notifies.get(roomId);
+}
+
+export function setNotify(roomId: string, notify: Notify): void {
+  notifies.set(roomId, notify);
 }
 
 export async function load(roomId: string): Promise<void> {
@@ -58,6 +68,7 @@ export function remove(roomId: string, userId: string): void {
 export function leave(roomId: string): void {
   rooms.delete(roomId);
   permissions.delete(roomId);
+  notifies.delete(roomId);
 }
 
 // SESSION //
@@ -65,6 +76,7 @@ export function leave(roomId: string): void {
 export function clear(): void {
   rooms.clear();
   permissions.clear();
+  notifies.clear();
 }
 
 // HELPERS //
@@ -79,6 +91,12 @@ async function loadRoom(roomId: string): Promise<void> {
 
   // Replaces the room's stored member permissions
   permissions.set(roomId, new SvelteMap(entries.map((entry) => [entry.user_id, entry.permissions])));
+
+  for (const entry of entries) {
+    if (entry.notify !== null) {
+      notifies.set(roomId, entry.notify);
+    }
+  }
 
   await users.load(ids);
 }

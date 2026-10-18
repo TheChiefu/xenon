@@ -5,6 +5,8 @@ import * as events from "@/lib/events";
 export enum Modal {
   settings = "settings",
   admin = "admin",
+  discover = "discover",
+  room_settings = "room_settings",
 }
 
 // State //
@@ -23,5 +25,9 @@ export function close(): void {
   current = null;
 }
 
-// Reset modal state on signout
-events.subscribe(LocalEvent.signed_out, close);
+// Subscriptions
+events.subscribe(LocalEvent.signed_out, close); // Reset modal state on signout
+events.subscribe(LocalEvent.discover_requested, () => open(Modal.discover));
+events.subscribe(LocalEvent.settings_requested, () => open(Modal.settings));
+events.subscribe(LocalEvent.admin_requested, () => open(Modal.admin));
+events.subscribe(LocalEvent.room_settings_requested, () => open(Modal.room_settings));

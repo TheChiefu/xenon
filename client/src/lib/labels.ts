@@ -1,6 +1,6 @@
 // Text the client shows for each value
 
-import { GlobalRole, Permission, Platform, Status, Visibility } from "@/bindings/shared";
+import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
 import { Device, GamePresence } from "@/bindings/sockets/events";
 import { AnimatePhotos } from "@/lib/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
@@ -45,6 +45,12 @@ export const LABELS_DEVICE: Record<Device, string> = {
   [Device.desktop]: "Desktop",
   [Device.mobile]: "Phone",
   [Device.tablet]: "Tablet",
+};
+
+export const LABELS_NOTIFY: Record<Notify, string> = {
+  [Notify.all]: "Every message",
+  [Notify.mentions]: "Mentions only",
+  [Notify.none]: "Nothing",
 };
 
 export const LABELS_PERMISSION: Record<Permission, string> = {
@@ -105,6 +111,9 @@ export const MSG_UNLINK_XBOX = "Are you sure you want to unlink your Xbox accoun
 export const MSG_REVOKE_CODE = "Are you sure you want to revoke this invite code?";
 export const MSG_DELETE_MESSAGE = "Are you sure you want to delete this message? This cannot be undone.";
 export const MSG_DELETE_USER = "Are you sure you want to delete this user? This cannot be undone.";
+export const MSG_LEAVE_ROOM = "Are you sure you want to leave this room?";
+export const MSG_DELETE_ROOM = "Are you sure you want to delete this room? This cannot be undone.";
+export const MSG_PROMOTE_ADMIN = "Are you sure you want to make this user an admin? Admins cannot change each other's roles, so this cannot be undone.";
 
 // Returns message for a successful refresh, stamped with the current time
 export function refreshedText(): string {

@@ -1,6 +1,7 @@
 // What the client stores for each user
 
 import { SvelteMap } from "svelte/reactivity";
+import type { ServerInfo } from "@/bindings/routes/server";
 import type { UserSummaryResponse } from "@/bindings/routes/users";
 import { Status } from "@/bindings/shared";
 import { GamePresence, type Device, type GameActivity } from "@/bindings/sockets/events";
@@ -8,7 +9,6 @@ import * as usersAPI from "@/lib/api/users";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
-import * as server from "@/lib/server.svelte"; // Dependency
 
 // A user's status and what they are connected from
 export interface Presence {
@@ -22,6 +22,8 @@ const presences: SvelteMap<string, Presence> = new SvelteMap();
 const activities: SvelteMap<string, GameActivity> = new SvelteMap();
 const avatars: SvelteMap<string, FetchedFile> = new SvelteMap();
 const banners: SvelteMap<string, FetchedFile> = new SvelteMap();
+
+let per_lookup: number = 1;
 
 // SUMMARIES //
 
@@ -46,11 +48,8 @@ export async function load(ids: string[]): Promise<void> {
     return;
   }
 
-  // Ids per lookup allowed by the server
-  const perLookup: number = server.getInfo()?.limit_users_lookup ?? 1;
-
-  for (let start = 0; start < missing.length; start += perLookup) {
-    const batch: string[] = missing.slice(start, start + perLookup);
+  for (let start = 0; start < missing.length; start += per_lookup) {
+    const batch: string[] = missing.slice(start, start + per_lookup);
     const fetched = await usersAPI.lookup({ ids: batch });
 
     // Cache each fetched summary and sync its avatar and banner files
@@ -243,5 +242,7 @@ events.subscribe(ServerEventType.profile_updated, (event) => {
   loadProfileFiles(event.user_id);
 });
 
-// Clear all users on sign out
-events.subscribe(LocalEvent.signed_out, clear);
+events.subscribe(LocalEvent.signed_out, clear); // Clear all users on sign out
+events.subscribe(LocalEvent.server_info_loaded, (info: ServerInfo) => {
+  per_lookup = info.limit_users_lookup;
+});

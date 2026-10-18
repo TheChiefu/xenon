@@ -16,15 +16,18 @@ export function set(fetched: RoomResponse[]): void {
   for (const room of fetched) {
     rooms.set(room.id, room);
   }
+  events.dispatch(LocalEvent.rooms_changed, [...rooms.keys()]);
 }
 
 export function add(room: RoomResponse): void {
   rooms.set(room.id, room);
+  events.dispatch(LocalEvent.rooms_changed, [...rooms.keys()]);
 }
 
 // Removes every stored room
 export function clear(): void {
   rooms = new Map();
+  events.dispatch(LocalEvent.rooms_changed, []);
 }
 
 // Clear all rooms on sign out

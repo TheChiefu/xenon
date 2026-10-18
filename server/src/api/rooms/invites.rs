@@ -2,6 +2,7 @@
 
 use uuid::Uuid;
 
+use crate::api::rooms::bans;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::Permission;
@@ -43,11 +44,6 @@ pub struct Received {
 /// * `target_id` - Who is being invited.
 /// * `expire_delta` - How long (in ms) the invite lasts from now, or `None` to
 ///   never expire.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller lacks `Permission::Invite`, and
-/// `AppError::Validation` if the caller invites themselves.
 pub async fn create(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -66,8 +62,17 @@ pub async fn create(
         validate::expire_delta(delta)?;
     }
 
-    // Create invite
     let now = utils::now_ms();
+
+    if db::effective_permissions(&mut tx, room_id, target_id).await?.is_some() {
+        return Err(AppError::Validation("user is already a member".to_string()));
+    }
+
+    if bans::exists(&mut tx, room_id, target_id, now).await? {
+        return Err(AppError::Validation("user is banned from this room".to_string()));
+    }
+
+    // Create invite
     let expires_at = expire_delta.map(|delta| now + delta);
     sqlx::query(
         "

@@ -60,6 +60,7 @@ pub struct RoomResponse {
     pub id: Uuid,
     pub name: String,
     pub visibility: Visibility,
+    pub default_permissions: Vec<Permission>,
 }
 
 impl From<Room> for RoomResponse {
@@ -68,6 +69,7 @@ impl From<Room> for RoomResponse {
             id: room.id,
             name: room.name,
             visibility: room.visibility,
+            default_permissions: room.default_permissions.0,
         }
     }
 }
@@ -543,7 +545,8 @@ pub async fn leave_room(
 
     // The membership is already gone, so this reaches the remaining members
     let event = ServerEvent::MemberLeft { room_id, user_id };
-    registry::broadcast(&app_state, room_id, event).await;
+    registry::broadcast(&app_state, room_id, event.clone()).await;
+    registry::inform_user(&app_state, user_id, event);
 
     Ok(StatusCode::OK)
 }

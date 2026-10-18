@@ -1,6 +1,8 @@
 import type { ServerInfo } from "@/bindings/routes/server";
 import * as serverAPI from "@/lib/api/server";
 import * as session from "@/lib/session.svelte";
+import { LocalEvent } from "@/lib/events";
+import * as events from "@/lib/events";
 
 let info: ServerInfo | null = $state(null);
 
@@ -16,4 +18,5 @@ export async function loadInfo(): Promise<void> {
   }
 
   info = await serverAPI.getInfo(url);
+  events.dispatch(LocalEvent.server_info_loaded, info);
 }

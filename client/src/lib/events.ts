@@ -35,6 +35,12 @@ export enum LocalEvent {
   status_changed = "status_changed",
   user_selected = "user_selected",
   confirm_requested = "confirm_requested",
+  discover_requested = "discover_requested",
+  settings_requested = "settings_requested",
+  admin_requested = "admin_requested",
+  server_info_loaded = "server_info_loaded",
+  rooms_changed = "rooms_changed",
+  room_settings_requested = "room_settings_requested",
 }
 
 // A Yes/No question, answered by calling answer with the user's choice

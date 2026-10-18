@@ -31,4 +31,4 @@ export type RoomPatch = { name: string | null, visibility: Visibility | null, de
 /**
  * A room
  */
-export type RoomResponse = { id: string, name: string, visibility: Visibility, };
+export type RoomResponse = { id: string, name: string, visibility: Visibility, default_permissions: Array<Permission>, };

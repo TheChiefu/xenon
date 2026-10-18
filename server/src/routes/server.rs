@@ -21,8 +21,11 @@ pub struct ServerInfo {
     pub kind: String,
     pub description: String,
 
-    /// Ids one user lookup may carry
+    /// Limits sent to clients to
     pub limit_users_lookup: usize,
+    pub limit_message_page: i64,
+    pub limit_room_page: i64,
+    pub limit_users_page: i64,
 }
 
 // Routing Methods //
@@ -36,6 +39,9 @@ pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
         kind: config::get().info.kind.clone(),
         description: config::get().info.description.clone(),
         limit_users_lookup: config::get().limits.users_lookup,
+        limit_message_page: config::get().limits.message_page,
+        limit_room_page: config::get().limits.room_page,
+        limit_users_page: config::get().limits.users_page,
     };
 
     Ok((StatusCode::OK, Json(info)))

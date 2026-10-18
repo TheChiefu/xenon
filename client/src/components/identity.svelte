@@ -6,10 +6,9 @@
   import { LABELS_STATUS } from "@/lib/labels";
   import { GlobalRole, Status } from "@/bindings/shared";
   import * as av from "@/lib/av.svelte";
+  import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/transitions";
-  import { Modal } from "@/lib/modals.svelte";
-  import * as modals from "@/lib/modals.svelte";
 
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
@@ -29,12 +28,12 @@
   // Closes the menu and opens the settings
   function openSettings() {
     menuOpen = false;
-    modals.open(Modal.settings);
+    events.dispatch(LocalEvent.settings_requested);
   }
 
   function openAdmin() {
     menuOpen = false;
-    modals.open(Modal.admin);
+    events.dispatch(LocalEvent.admin_requested);
   }
 
   async function doSignout() {

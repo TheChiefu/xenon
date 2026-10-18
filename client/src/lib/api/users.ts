@@ -1,4 +1,4 @@
-import type { DeleteAccountRequest, ProfilePatch, UserProfileResponse, UserSummaryResponse, UsersLookup } from "@/bindings/routes/users";
+import type { DeleteAccountRequest, ProfilePatch, SetRoleRequest, UserProfileResponse, UserSummaryResponse, UsersLookup } from "@/bindings/routes/users";
 import { request } from "@/lib/utils";
 
 export async function get(id: string): Promise<UserProfileResponse> {
@@ -25,4 +25,8 @@ export async function deleteMe(anonymize: boolean, delete_history: boolean): Pro
 
 export async function deleteUser(id: string, body: DeleteAccountRequest): Promise<void> {
     await request(`/users/${id}`, "DELETE", body);
+}
+
+export async function setRole(id: string, body: SetRoleRequest): Promise<void> {
+    await request(`/users/${id}/role`, "PATCH", body);
 }

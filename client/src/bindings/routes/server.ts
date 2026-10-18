@@ -5,6 +5,6 @@
  */
 export type ServerInfo = { name: string, version: string, kind: string, description: string, 
 /**
- * Ids one user lookup may carry
+ * Limits sent to clients to
  */
-limit_users_lookup: number, };
+limit_users_lookup: number, limit_message_page: number, limit_room_page: number, limit_users_page: number, };

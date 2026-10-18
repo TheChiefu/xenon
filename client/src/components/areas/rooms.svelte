@@ -12,6 +12,8 @@
     import { folderCtx, paneCtx, roomCtx } from "@/lib/rooms/context_menu";
     import { nameFinished, isCreating, isRenaming, nameReset, startCreation } from "@/lib/rooms/folders.svelte";
     import * as creation from "@/lib/rooms/creation.svelte";
+    import { LocalEvent } from "@/lib/events";
+    import * as events from "@/lib/events";
     import icon_plus from "@/assets/icons/plus.svg?raw";
     import icon_compass from "@/assets/icons/compass.svg?raw";
     import icon_copy from "@/assets/icons/copy.svg?raw";
@@ -235,6 +237,7 @@
             class="icon-btn"
             aria-label="Discover rooms"
             title="Discover rooms"
+            onclick={() => events.dispatch(LocalEvent.discover_requested)}
         >
             <span class="icon" aria-hidden="true">{@html icon_compass}</span>
         </button>
@@ -305,6 +308,7 @@
                 class="icon-btn"
                 aria-label="Room settings"
                 title="Room settings"
+                onclick={() => events.dispatch(LocalEvent.room_settings_requested, session.getSelectedRoom())}
             >
                 <span class="icon" aria-hidden="true">{@html icon_gear}</span>
             </button>

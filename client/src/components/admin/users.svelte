@@ -1,41 +1,15 @@
 <script lang="ts">
   import type { UserSummaryResponse } from "@/bindings/routes/users";
-  import { LABELS_ROLE, MSG_ANONYMIZE, MSG_DELETE_USER, MSG_ERROR } from "@/lib/labels";
+  import { GlobalRole } from "@/bindings/shared";
+  import { LABELS_ROLE, MSG_ANONYMIZE, MSG_DELETE_USER, MSG_ERROR, MSG_PROMOTE_ADMIN } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
   import * as events from "@/lib/events";
+  import { UserSearch } from "@/lib/users/search.svelte";
   import { failureText } from "@/lib/utils";
 
-  let users: UserSummaryResponse[] = $state([]);
+  const user_search = new UserSearch();
   let selected: UserSummaryResponse | null = $state(null);
   let notify = $state("");
-
-  let last_search: string | undefined = undefined;
-
-  async function fetchUsers(username: string | undefined) {
-    notify = "";
-
-    try {
-      const fetched: UserSummaryResponse[] = [];
-      let page: UserSummaryResponse[];
-
-      do {
-        const last = fetched.at(-1);
-
-        page = await usersAPI.lookup({
-          username,
-          after: last === undefined ? undefined : last.id,
-        });
-
-        fetched.push(...page);
-      } while (page.length > 0);
-
-      users = fetched;
-      selected = null;
-      last_search = username;
-    } catch (failure) {
-      notify = `${MSG_ERROR}: ${failureText(failure)}`;
-    }
-  }
 
   async function search(event: SubmitEvent) {
     event.preventDefault();
@@ -44,7 +18,8 @@
     const form = new FormData(event.currentTarget);
     const text = String(form.get("username")).trim();
 
-    await fetchUsers(text === "" ? undefined : text);
+    await user_search.search(text === "" ? undefined : text);
+    selected = null;
   }
 
   async function deleteUser(event: SubmitEvent) {
@@ -64,8 +39,36 @@
 
     try {
       await usersAPI.deleteUser(target.id, { anonymize, delete_history });
-      await fetchUsers(last_search);
+      await user_search.refresh();
+      selected = null;
     } catch (failure) {
+      notify = `${MSG_ERROR}: ${failureText(failure)}`;
+    }
+  }
+
+  async function changeRole(event: Event) {
+    if (selected === null) return;
+    if (!(event.currentTarget instanceof HTMLSelectElement)) return;
+
+    const target = selected;
+    const select = event.currentTarget;
+    const role = select.value as GlobalRole;
+
+    if (role === GlobalRole.admin) {
+      const accepted = await events.confirm(`${MSG_PROMOTE_ADMIN} (@${target.username})`);
+      if (!accepted) {
+        select.value = target.global_role;
+        return;
+      }
+    }
+
+    notify = "";
+
+    try {
+      await usersAPI.setRole(target.id, { role });
+      target.global_role = role;
+    } catch (failure) {
+      select.value = target.global_role;
       notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }
   }
@@ -120,6 +123,12 @@
     user-select: none;
   }
 
+  .notify {
+    margin-top: var(--section-gap);
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
   .pane .grid-title:first-child {
     position: sticky;
     top: 0;
@@ -141,11 +150,15 @@
     <div class="list grid table">
       <span class="grid-heading">Username</span>
 
-      {#each users as user (user.id)}
+      {#each user_search.users as user (user.id)}
         <button class:is-active={selected?.id === user.id} onclick={() => selected = user}>
           {user.username}
         </button>
       {/each}
+
+      {#if !user_search.final_page}
+        <button onclick={() => user_search.loadMore()} disabled={user_search.pending}>Load More</button>
+      {/if}
     </div>
 
     {#if selected === null}
@@ -160,8 +173,12 @@
         <span>{selected.display_name}</span>
         <span class="grid-heading">Username</span>
         <span>@{selected.username}</span>
-        <span class="grid-heading">Role</span>
-        <span>{LABELS_ROLE[selected.global_role]}</span>
+        <label for="user-role" class="grid-heading">Role</label>
+        <select id="user-role" value={selected.global_role} onchange={changeRole} disabled={selected.global_role === GlobalRole.admin}>
+          {#each Object.values(GlobalRole) as role (role)}
+            <option value={role}>{LABELS_ROLE[role]}</option>
+          {/each}
+        </select>
 
         <div class="grid-title">
           <h4>Delete User</h4>
@@ -176,4 +193,12 @@
       </form>
     {/if}
   </div>
+
+  {#if user_search.error}
+    <span class="notify">{MSG_ERROR}: {user_search.error}</span>
+  {/if}
+
+  {#if notify}
+    <span class="notify">{notify}</span>
+  {/if}
 </div>
