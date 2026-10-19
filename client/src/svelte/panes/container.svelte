@@ -19,7 +19,10 @@
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border);
-    background: var(--component);
+    background: linear-gradient(
+      var(--component-gradient-top, var(--component)),
+      var(--component-gradient-bottom, var(--component))
+    );
     overflow: hidden;
   }
 

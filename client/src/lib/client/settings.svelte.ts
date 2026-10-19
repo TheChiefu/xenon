@@ -1,6 +1,7 @@
 // Client Settings - Adjustable by user
 
 import darkUrl from "@/styles/themes/dark.css?url";
+import sporeUrl from "@/styles/themes/spore.css?url";
 
 // THEMES //
 const keyTheme = "theme";
@@ -9,6 +10,7 @@ const themeStylesheetId = "theme-stylesheet";
 
 const builtinThemes: Record<string, string> = {
   dark: darkUrl,
+  spore: sporeUrl,
 };
 
 let currentTheme: string = $state(localStorage.getItem(keyTheme) ?? defaultTheme);

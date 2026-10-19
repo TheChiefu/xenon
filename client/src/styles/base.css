@@ -30,7 +30,10 @@ html, body, #app {
   margin: 0;
   height: 100%;
   font: 1rem system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--background);
+  background: linear-gradient(
+    var(--background-gradient-top, var(--background)),
+    var(--background-gradient-bottom, var(--background))
+  );
   color: var(--text);
 }
 
@@ -137,6 +140,7 @@ button.inherit {
 
 button:hover {
   background-color: var(--component-hover);
+  color: var(--btn-hover-text, inherit);
 }
 
 button:disabled {
@@ -189,6 +193,7 @@ button.is-danger:hover {
 
 .icon-btn:hover {
   background: var(--component-hover);
+  color: var(--btn-hover-text, inherit);
 }
 
 .icon-btn:disabled {

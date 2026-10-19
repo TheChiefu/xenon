@@ -114,6 +114,7 @@
 
     .selected {
         background-color: var(--btn-active);
+        color: var(--btn-active-text, inherit);
     }
 
     .nested {
