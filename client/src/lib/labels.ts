@@ -2,8 +2,9 @@
 
 import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
 import { Device, GamePresence } from "@/bindings/sockets/events";
-import { AnimatePhotos } from "@/lib/client/settings.svelte";
+import { AnimatePhotos, isLightScheme } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
+import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
 import icon_android from "@/assets/devices/android.svg?raw";
 import icon_desktop from "@/assets/devices/desktop.svg?raw";
@@ -27,7 +28,9 @@ export const ICONS_DEVICE: Record<Device, string> = {
 
 export const ICONS_PLATFORM: Record<Platform, string> = {
   [Platform.xbox]: icon_xbox,
-  [Platform.steam]: icon_steam,
+  get [Platform.steam]() {
+    return isLightScheme() ? icon_steam_outline : icon_steam;
+  },
 };
 
 export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {

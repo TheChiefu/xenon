@@ -1,6 +1,7 @@
 // Client Settings - Adjustable by user
 
 import darkUrl from "@/styles/themes/dark.css?url";
+import lightUrl from "@/styles/themes/light.css?url";
 import sporeUrl from "@/styles/themes/spore.css?url";
 
 // THEMES //
@@ -10,10 +11,12 @@ const themeStylesheetId = "theme-stylesheet";
 
 const builtinThemes: Record<string, string> = {
   dark: darkUrl,
+  light: lightUrl,
   spore: sporeUrl,
 };
 
 let currentTheme: string = $state(localStorage.getItem(keyTheme) ?? defaultTheme);
+let currentColorScheme: string = $state("dark");
 
 // Swap the theme stylesheet to the given theme name
 function applyTheme(theme: string): void {
@@ -31,6 +34,9 @@ function applyTheme(theme: string): void {
     document.head.appendChild(link);
   }
 
+  link.onload = () => {
+    currentColorScheme = getComputedStyle(document.documentElement).colorScheme;
+  };
   link.href = url;
 }
 
@@ -39,6 +45,10 @@ applyTheme(currentTheme);
 // The currently active theme name
 export function getTheme(): string {
   return currentTheme;
+}
+
+export function isLightScheme(): boolean {
+  return currentColorScheme === "light";
 }
 
 // Set the active theme and persist the selection

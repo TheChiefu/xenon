@@ -4,6 +4,7 @@
     --background-gradient-bottom: rgba(15, 24, 34, 1);
     --text: rgba(222, 232, 242, 1);
     --text-dim: rgba(160, 184, 206, 1);
+    --text-shadow: rgba(0, 0, 0, 0.5);
     --link: rgba(232, 190, 80, 1);
     --link-active: rgba(245, 210, 110, 1);
     --border: rgba(52, 82, 110, 1);
@@ -32,9 +33,9 @@
     --btn-hover-text: rgba(232, 190, 80, 1);
 
     --status-online: rgba(59, 165, 93, 1);
-    --status-busy: rgba(220, 70, 70, 1);
+    --status-busy: rgba(190, 0, 0, 1);
     --status-away: rgba(240, 166, 55, 1);
-    --status-offline: rgba(160, 184, 206, 1);
+    --status-offline: rgba(152, 162, 179, 1);
 
     color-scheme: dark;
 }

@@ -5,6 +5,7 @@
     --background: rgba(21, 24, 29, 1);
     --text: rgba(231, 234, 239, 1);
     --text-dim: rgba(152, 162, 179, 1);
+    --text-shadow: rgba(0, 0, 0, 0.5);
     --link: rgba(110, 168, 254, 1);
     --link-active: rgb(39, 125, 253);
     --border: rgba(47, 54, 65, 1);

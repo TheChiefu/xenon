@@ -1,0 +1,35 @@
+:root {
+    --background: rgba(212, 212, 212, 1);
+    --text: rgba(14, 14, 14, 1);
+    --text-dim: rgba(64, 64, 64, 1);
+    --text-shadow: rgba(255, 255, 255, 0.8);
+    --link: rgba(16, 76, 180, 1);
+    --link-active: rgba(8, 56, 140, 1);
+    --border: rgba(150, 150, 150, 1);
+    --border-dim: rgba(150, 150, 150, 0.6);
+    --danger: rgba(200, 30, 30, 1);
+    --btn-muted: rgba(200, 30, 30, 1);
+    --modal-background: rgba(0, 0, 0, 0.15);
+    --viewer-background: rgba(0, 0, 0, 0.85);
+
+    --component: rgba(246, 246, 246, 1);
+    --component-raised: rgba(198, 198, 198, 1);
+    --component-hover: rgba(186, 186, 186, 1);
+    --component-anim-time: 0.15s;
+
+    --btn-disabled: rgba(176, 176, 176, 1);
+    --btn-tab: rgba(194, 194, 194, 1);
+    --btn-tab-active: rgba(246, 246, 246, 1);
+    --btn-entry: rgba(246, 246, 246, 1);
+    --btn-entry-hover: rgba(220, 220, 220, 1);
+    --btn-action: rgba(80, 180, 245, 1);
+    --btn-action-hover: rgba(55, 160, 235, 1);
+    --btn-active: rgba(172, 172, 172, 1);
+
+    --status-online: rgba(59, 165, 93, 1);
+    --status-busy: rgba(190, 0, 0, 1);
+    --status-away: rgba(240, 166, 55, 1);
+    --status-offline: rgba(152, 162, 179, 1);
+
+    color-scheme: light;
+}
