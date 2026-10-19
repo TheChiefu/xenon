@@ -41,6 +41,7 @@ pub struct LoginRequest {
 pub struct CreateRegistrationCodeRequest {
     pub max_uses: Option<i64>,
     pub lifetime: Option<i64>,
+    pub length: Option<usize>,
 }
 
 /// DELETE body for revoking a registration code.
@@ -128,8 +129,15 @@ pub async fn create_registration_code(
     // Create registration code
     let max_uses = body.max_uses.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_MAX_USES);
     let lifetime = body.lifetime.unwrap_or(validate::REGISTRATION_CODE_LIFETIME_MS);
-    validate::registration_code_params(max_uses, lifetime)?;
-    let code = db::create_registration_code(&mut conn, caller_id, Some(max_uses), Some(lifetime)).await?;
+    let length = body.length.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_LENGTH);
+    validate::registration_code_params(max_uses, lifetime, length)?;
+    let code = db::create_registration_code(
+        &mut conn,
+        caller_id,
+        Some(max_uses),
+        Some(lifetime),
+        length
+    ).await?;
 
     Ok((StatusCode::CREATED, Json(CodeResponse { code })))
 }

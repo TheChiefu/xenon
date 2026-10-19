@@ -8,7 +8,7 @@ export type CodeResponse = { code: string, };
 /**
  * POST body for creating a registration code.
  */
-export type CreateRegistrationCodeRequest = { max_uses: number | null, lifetime: number | null, };
+export type CreateRegistrationCodeRequest = { max_uses: number | null, lifetime: number | null, length: number | null, };
 
 /**
  * POST body for starting a session.

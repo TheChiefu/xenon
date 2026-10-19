@@ -30,10 +30,11 @@
     const form = new FormData(event.currentTarget);
     const max_uses = Number(form.get("max_uses"));
     const lifetime = Number(form.get("days")) * DAY_MS;
+    const length = Number(form.get("length"));
     create_notify = "";
 
     try {
-      await authAPI.createRegistrationCode({ max_uses, lifetime });
+      await authAPI.createRegistrationCode({ max_uses, lifetime, length });
     } catch (failure) {
       create_notify = `${MSG_ERROR}: ${failureText(failure)}`;
       return;
@@ -101,6 +102,8 @@
     <input id="code-max-uses" name="max_uses" type="number" min="1" value="1" required/>
     <label for="code-days">Lifetime (Days)</label>
     <input id="code-days" name="days" type="number" min="1" value="7" required/>
+    <label for="code-length">Length</label>
+    <input id="code-length" name="length" type="number" min="4" max="64" value="12" required/>
     <span class="notify">{create_notify}</span>
     <button type="submit">Create</button>
   </form>

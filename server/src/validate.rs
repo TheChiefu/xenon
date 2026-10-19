@@ -11,6 +11,10 @@ pub const REGISTRATION_CODE_DEFAULT_MAX_USES: i64 = 1;
 /// How long a registration code lasts when the request names no lifetime.
 pub const REGISTRATION_CODE_LIFETIME_MS: i64 = db::DAY * 7;
 
+pub const REGISTRATION_CODE_DEFAULT_LENGTH: usize = 12;
+const REGISTRATION_CODE_LENGTH_MIN: usize = 4;
+const REGISTRATION_CODE_LENGTH_MAX: usize = 64;
+
 /// Filesystem limit on one path component.
 const FILE_NAME_MAX: usize = 255;
 
@@ -118,17 +122,8 @@ pub fn password(password: &str) -> Result<()> {
     Ok(())
 }
 
-/// Checks the use count and lifetime a registration code is created with.
-///
-/// # Arguments
-///
-/// * `max_uses` - How many registrations the code covers.
-/// * `lifetime` - How long (in ms) the code lasts.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if either value is below 1.
-pub fn registration_code_params(max_uses: i64, lifetime: i64) -> Result<()> {
+/// Checks the settings a registration code is created with
+pub fn registration_code_params(max_uses: i64, lifetime: i64, length: usize) -> Result<()> {
 
     if max_uses < 1 {
         return Err(AppError::Validation(
@@ -139,6 +134,15 @@ pub fn registration_code_params(max_uses: i64, lifetime: i64) -> Result<()> {
     if lifetime < 1 {
         return Err(AppError::Validation(
             "registration code error: lifetime must be at least 1 ms".to_string()
+        ));
+    }
+
+    let min = REGISTRATION_CODE_LENGTH_MIN;
+    let max = REGISTRATION_CODE_LENGTH_MAX;
+
+    if length < min || length > max {
+        return Err(AppError::Validation(
+            format!("registration code error: length must be between {min} and {max}")
         ));
     }
 
