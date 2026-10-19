@@ -100,7 +100,7 @@ async fn main() -> Result<()> {
 ///
 /// Returns `AppError::Hash` if the password cannot be hashed, and
 async fn ensure_account(pool: &SqlitePool) -> Result<()> {
-    let password = utils::generate_code();
+    let password = utils::generate_code(12); // Fixed, one time password
     let hash = utils::hash_password(&password)?;
     let username = "admin";
     let display_name = "Admin";

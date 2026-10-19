@@ -159,7 +159,7 @@ pub async fn create_registration_code(
     lifetime: Option<i64>,
 ) -> Result<String> {
 
-    let code = utils::generate_code();
+    let code = utils::generate_code(config::get().limits.registration_code_length);
     let now = utils::now_ms();
     let expires_at = lifetime.map(|ms| now.saturating_add(ms));
 

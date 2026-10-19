@@ -35,13 +35,12 @@ pub fn now_ms() -> i64 {
 }
 
 /// Generates a random code from uppercase alphanumerics.
-pub fn generate_code() -> String {
+pub fn generate_code(length: usize) -> String {
     const CODE_ALPHABET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const CODE_LEN: usize = 12;
 
-    let mut code = String::with_capacity(CODE_LEN);
+    let mut code = String::with_capacity(length);
 
-    for _ in 0..CODE_LEN {
+    for _ in 0..length {
         let random = OsRng.next_u32() as usize; // Random Number from 0 to 4 billion
         let index = random % CODE_ALPHABET.len();   // Condense to range (0..36)
         code.push(CODE_ALPHABET[index] as char);    // Pick random char from allowed array
