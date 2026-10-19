@@ -24,6 +24,21 @@
   // File input for selecting local files
   let file_input: HTMLInputElement | undefined = $state();
 
+  // Message text area, resized to fit its text
+  let text_input: HTMLTextAreaElement | undefined = $state();
+
+  // Resizes the text area to its content height whenever the text changes
+  $effect(() => {
+    text;
+    if (text_input === undefined) {
+      return;
+    }
+
+    // Reset first so the text area can also shrink, then add the border to the content height
+    text_input.style.height = "auto";
+    text_input.style.height = `${text_input.scrollHeight + text_input.offsetHeight - text_input.clientHeight}px`;
+  });
+
   // Local files waiting for upload on send
   let attachments: DraftAttachment[] = $state([]);
 
@@ -220,6 +235,9 @@
   textarea {
     flex: 1;
     resize: none;
+    box-sizing: border-box;
+    max-height: 20rem;
+    overflow-y: auto;
   }
 
   .send-btn {
@@ -260,10 +278,11 @@
     <textarea
       placeholder="Message"
       rows="2"
+      bind:this={text_input}
       bind:value={text}
       onpaste={onPaste}
       onkeydown={onKeydown}
-      ondragover={(event) => event.preventDefault}
+      ondragover={(event) => event.preventDefault()}
       ondrop={onDrop}
     ></textarea>
 

@@ -77,6 +77,10 @@
         font-weight: bold;
     }
 
+    .message-body {
+        white-space: pre-wrap;
+    }
+
     .message-body textarea {
         display: block;
         box-sizing: border-box;
