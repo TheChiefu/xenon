@@ -23,7 +23,7 @@ export type LoginResponse = { token: string, };
 /**
  * POST body for creating an account.
  */
-export type RegisterRequest = { registration_code: string, username: string, display_name: string, password: string, };
+export type RegisterRequest = { registration_code: string | null, username: string, display_name: string, password: string, };
 
 /**
  * Response carrying a new account's id and its first session token.

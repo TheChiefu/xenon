@@ -21,7 +21,7 @@ use crate::{api, db, validate};
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct RegisterRequest {
-    pub registration_code: String,
+    pub registration_code: Option<String>,
     pub username: String,
     pub display_name: String,
     pub password: String,
@@ -87,7 +87,7 @@ pub async fn register(
 
     let (id, token) = api::auth::register(
         &pool,
-        &body.registration_code,
+        body.registration_code.as_deref(),
         &body.username,
         &body.display_name,
         &body.password,

@@ -2,6 +2,7 @@
 
 use uuid::Uuid;
 
+use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::{GlobalRole, RegistrationCode};
@@ -34,10 +35,10 @@ pub async fn list_registration_codes(
     Ok(codes)
 }
 
-/// Creates an account from a registration code, returning its id and session token.
+/// Creates an account, returning its id and session token.
 pub async fn register(
     pool: &sqlx::SqlitePool,
-    code: &str,
+    code: Option<&str>,
     username: &str,
     display_name: &str,
     password: &str,
@@ -65,24 +66,28 @@ pub async fn register(
     }
 
     // Claim registration code
-    let claimed = sqlx::query(
-        "
-        UPDATE registration_codes SET uses = uses + 1
-        WHERE code = ?1
-            AND (expires_at IS NULL OR expires_at > ?2)
-            AND (max_uses IS NULL OR uses < max_uses)
-        ",
-    )
-    .bind(code.trim().to_ascii_uppercase())
-    .bind(utils::now_ms())
-    .execute(&mut *conn)
-    .await?
-    .rows_affected();
-    drop(conn);
+    if config::get().session.registration_code_required {
+        let code = code.ok_or(AppError::InvalidRegistrationCode)?;
 
-    if claimed == 0 {
-        return Err(AppError::InvalidRegistrationCode);
+        let claimed = sqlx::query(
+            "
+            UPDATE registration_codes SET uses = uses + 1
+            WHERE code = ?1
+                AND (expires_at IS NULL OR expires_at > ?2)
+                AND (max_uses IS NULL OR uses < max_uses)
+            ",
+        )
+        .bind(code.trim().to_ascii_uppercase())
+        .bind(utils::now_ms())
+        .execute(&mut *conn)
+        .await?
+        .rows_affected();
+
+        if claimed == 0 {
+            return Err(AppError::InvalidRegistrationCode);
+        }
     }
+    drop(conn);
 
     // Hash password for storage in DB
     let password_hash = utils::hash_password(password)?;

@@ -55,7 +55,8 @@
       const clean_url = (url || DEFAULT_BASE_URL).replace(/\/+$/, "");
 
       // Attempt to fetch via cleaned URL
-      const token = await register(username, password, display_name, registration_code, clean_url);
+      const code = registration_code.trim() || null;
+      const token = await register(username, password, display_name, code, clean_url);
       session.addAccount(username, clean_url, token);
       showForm = false;
     } catch (err) {
@@ -235,7 +236,7 @@
                         </div>
                         <div class="field">
                             <label for="registration-code">Registration Code</label>
-                            <input name="registration-code" bind:value={registration_code} required/>
+                            <input name="registration-code" bind:value={registration_code}/>
                             <small>Leave blank if not required</small>
                         </div>
                         <div class="field">

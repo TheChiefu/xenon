@@ -415,14 +415,17 @@ pub struct Session {
     /// Days that must elapse before an active session is extended again.
     /// Activity always extends expiry to `lifetime_days` from now, and this
     /// limits how often that write happens
-    pub renew_after_days_elapsed: i64
+    pub renew_after_days_elapsed: i64,
+
+    pub registration_code_required: bool
 }
 
 impl Default for Session {
     fn default() -> Self {
         Session {
             lifetime_days: 30,
-            renew_after_days_elapsed: 1
+            renew_after_days_elapsed: 1,
+            registration_code_required: true
         }
     }
 }

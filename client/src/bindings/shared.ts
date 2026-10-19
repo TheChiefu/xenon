@@ -11,14 +11,14 @@ export enum Status { "online" = "online", "busy" = "busy", "away" = "away", "off
 export enum Platform { "xbox" = "xbox", "steam" = "steam" }
 
 /**
- * A user's server-wide role
- */
-export enum GlobalRole { "admin" = "admin", "member" = "member", "visitor" = "visitor" }
-
-/**
  * How a room is discovered and entered
  */
 export enum Visibility { "public" = "public", "hidden" = "hidden" }
+
+/**
+ * A user's server-wide role
+ */
+export enum GlobalRole { "admin" = "admin", "member" = "member", "visitor" = "visitor" }
 
 export type AttachmentRequest = { file_id: string, spoiler: boolean, };
 
