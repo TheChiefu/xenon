@@ -46,6 +46,21 @@
 
         return `${year}-${month}-${day} ${hours}:${minutes}${period}`;
     }
+
+    // Determine how deletions are handled
+    function handleDelete(event: MouseEvent): void {
+        
+        // Callback not given, skip
+        if (!onDelete) return;
+
+        // Modifier key used, skip confirm dialog
+        if (event.shiftKey) {
+            return onDelete(true);
+        }
+
+        onDelete(false)
+    }
+
 </script>
 
 <style>
@@ -176,7 +191,7 @@
             <button onclick={startEdit}>Edit</button>
             {/if}
             {#if canDelete}
-            <button onclick={(event) => onDelete?.(event.ctrlKey)}>Delete</button>
+            <button onclick={handleDelete}>Delete</button>
             {/if}
         </div>
 

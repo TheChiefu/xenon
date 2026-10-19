@@ -2,7 +2,7 @@
 
 import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
 import { Device, GamePresence } from "@/bindings/sockets/events";
-import { AnimatePhotos, isLightScheme } from "@/lib/client/settings.svelte";
+import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";
 import icon_xbox from "@/assets/platforms/xbox.svg?raw";
@@ -101,6 +101,12 @@ export const LABELS_VISIBILITY: Record<Visibility, string> = {
   [Visibility.public]: "Public",
   [Visibility.locked]: "Locked",
   [Visibility.hidden]: "Hidden",
+};
+
+export const LABELS_SEND_KEY: Record<SendKey, string> = {
+  [SendKey.Enter]: "Enter",
+  [SendKey.CtrlEnter]: "Ctrl+Enter",
+  [SendKey.ShiftEnter]: "Shift+Enter",
 };
 
 export const MSG_SAVED = "Changes Saved";

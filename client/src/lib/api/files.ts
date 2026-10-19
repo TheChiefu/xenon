@@ -20,6 +20,20 @@ export async function upload(file: File): Promise<FileResponse> {
     return await response.json() as FileResponse;
 }
 
+// Generate a new random file name with optional prefix 
+export function generateName(file: File, prefix=""): File {
+    const rand = crypto.randomUUID();
+    const name = prefix ? `${prefix}_${rand}` : rand;
+    const ext = file.type.split('/').at(-1);
+
+    return new File(
+        [file], `${name}.${ext}`, {
+            type: file.type,
+            lastModified: file.lastModified
+        }
+    )
+}
+
 events.subscribe(LocalEvent.server_info_loaded, (info: ServerInfo) => {
     max_bytes = info.limit_file_bytes_max;
 });

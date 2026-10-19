@@ -1,13 +1,43 @@
 <script lang="ts">
   import { MSG_ERROR } from "@/lib/labels";
+  import * as members from "@/lib/rooms/members.svelte";
   import * as settings from "@/lib/rooms/settings.svelte";
   import * as users from "@/lib/users/data.svelte";
   import { UserSearch } from "@/lib/users/search.svelte";
+  import { DAY_MS } from "@/lib/utils";
   import icon_x from "@/assets/icons/x.svg?raw";
 
   const user_search = new UserSearch();
 
+  let expire_days: number | undefined = $state(undefined);
+
   settings.loadInvites();
+
+  function isMember(user_id: string): boolean {
+    const room = settings.getRoom();
+    if (room === undefined) return false;
+
+    return members.has(room.id, user_id);
+  }
+
+  function isInvited(user_id: string): boolean {
+    for (const entry of settings.getInvites()) {
+      if (entry.user_id === user_id) return true;
+    }
+
+    return false;
+  }
+
+  // Milliseconds until a new invite expires, null for never
+  function expireDelta(): number | null {
+    if (expire_days === undefined) return null;
+
+    return expire_days * DAY_MS;
+  }
+
+  function invite(user_id: string): void {
+    settings.invite(user_id, expireDelta());
+  }
 
   async function search(event: SubmitEvent) {
     event.preventDefault();
@@ -77,6 +107,11 @@
         <h3>Invite User</h3>
       </div>
 
+      <div class="fields">
+        <label for="invite-days">Expires In (Days)</label>
+        <input id="invite-days" type="number" min="1" placeholder="Never" bind:value={expire_days}/>
+      </div>
+
       <form class="search" onsubmit={search}>
         <input name="username" type="search" placeholder="Username"/>
         <button type="submit" disabled={user_search.pending}>Search</button>
@@ -89,7 +124,13 @@
         {#each user_search.users as user (user.id)}
           <span>@{user.username}</span>
           <span>
-            <button onclick={() => settings.invite(user.id)} disabled={settings.isPending()}>Invite</button>
+            {#if isMember(user.id)}
+              Member
+            {:else if isInvited(user.id)}
+              Invited
+            {:else}
+              <button onclick={() => invite(user.id)} disabled={settings.isPending()}>Invite</button>
+            {/if}
           </span>
         {/each}
 

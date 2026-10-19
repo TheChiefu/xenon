@@ -42,6 +42,11 @@
     dialog?.showModal();
   });
 
+  // Clear room ID on close
+  $effect(() => {
+    return settings.close;
+  });
+
   // Close when room is removed from room list
   $effect(() => {
     if (settings.getRoom() === undefined) {

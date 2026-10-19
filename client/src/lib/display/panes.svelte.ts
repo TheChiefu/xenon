@@ -5,6 +5,7 @@ export enum Pane {
   room = "room",
   members = "members",
   xbox = "xbox",
+  inbox = "inbox",
 }
 
 interface Definition {
@@ -24,6 +25,9 @@ const PANES: Record<Pane, Definition> = {
   [Pane.xbox]: {
     open: false,
   },
+  [Pane.inbox]: {
+    open: false,
+  },
 };
 
 const open: Record<Pane, boolean> = $state({
@@ -31,6 +35,7 @@ const open: Record<Pane, boolean> = $state({
   [Pane.room]: initialOpen(Pane.room),
   [Pane.members]: initialOpen(Pane.members),
   [Pane.xbox]: initialOpen(Pane.xbox),
+  [Pane.inbox]: initialOpen(Pane.inbox),
 });
 
 function openKey(pane: Pane): string {

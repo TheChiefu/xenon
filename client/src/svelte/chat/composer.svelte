@@ -3,6 +3,8 @@
   import * as filesAPI from "@/lib/api/files";
   import * as messagesAPI from "@/lib/api/messages";
   import * as messages from "@/lib/messages/data.svelte";
+  import * as settings from "@/lib/client/settings.svelte";
+  import { SendKey } from "@/lib/client/settings.svelte";
   import { failureText } from "@/lib/utils";
   import DraftAttachmentRow, { type DraftAttachment } from "./draft_attachment.svelte";
 
@@ -35,14 +37,59 @@
     attachments = [];
   });
 
-  // Ctrl+Enter sends, Enter alone adds a new line
+  // EVENTS //
+
+  // Determine how key events are handled
   function onKeydown(event: KeyboardEvent): void {
-    if (event.key !== "Enter" || !event.ctrlKey) {
-      return;
+
+    // Only send on allowed modifier combinations
+    if (isSendKey(event)) {
+      event.preventDefault();
+      send();
+    }
+  }
+
+  // Handle drag and drop of files into text area
+  function onDrop(event: DragEvent) {
+
+    const files = event.dataTransfer?.files;
+
+    // Nothing to parse
+    if (!files || files.length === 0) { return; }
+
+    // Read all dropped files
+    event.preventDefault();
+    addFiles(files);
+  }
+
+  // Handle pasting events into text area
+  function onPaste(event: ClipboardEvent) {
+
+    const files = event.clipboardData?.files;
+
+    // Just text, passthrough as normal
+    if (!files || files.length === 0) { return; }
+
+    // Parse files
+    event.preventDefault();
+    addFiles(files);
+  }
+
+  // METHODS //
+
+  function isSendKey(event: KeyboardEvent): boolean {
+    if (event.key !== "Enter" || event.isComposing) {
+      return false;
     }
 
-    event.preventDefault();
-    send();
+    switch (settings.getSendKey()) {
+      case SendKey.Enter:
+        return !event.ctrlKey && !event.shiftKey;
+      case SendKey.CtrlEnter:
+        return event.ctrlKey;
+      case SendKey.ShiftEnter:
+        return event.shiftKey;
+    }
   }
 
   // Posts the text and attachments
@@ -99,15 +146,22 @@
     return text.trim() !== "" || attachments.length > 0;
   }
 
-  // Adds selected local files as attachments
-  function addFiles(): void {
+  function onPickFiles(): void {
     if (file_input === undefined || file_input.files === null) {
       return;
     }
 
+    addFiles(file_input.files);
+
+    // Clear the input so the same file can be selected again
+    file_input.value = "";
+  }
+
+  // Adds selected local files as attachments
+  function addFiles(files: FileList): void {
     const limit = messagesAPI.attachmentLimit();
 
-    for (const file of file_input.files) {
+    for (const file of files) {
 
       // Stop at the server's attachment limit
       if (limit !== null && attachments.length >= limit) {
@@ -117,9 +171,6 @@
 
       attachments.push({ file: file, id: null, spoiler: false });
     }
-
-    // Clear the input so the same file can be selected again
-    file_input.value = "";
   }
 
   // Removes an attachment
@@ -200,7 +251,15 @@
       <span class="icon" aria-hidden="true">{@html icon_clip}</span>
     </button>
 
-    <textarea placeholder="Message" rows="2" bind:value={text} onkeydown={onKeydown}></textarea>
+    <textarea
+      placeholder="Message"
+      rows="2"
+      bind:value={text}
+      onpaste={onPaste}
+      onkeydown={onKeydown}
+      ondragover={(event) => event.preventDefault}
+      ondrop={onDrop}
+    ></textarea>
 
     <button
       class="icon-btn is-action send-btn"
@@ -213,5 +272,6 @@
     </button>
   </div>
 
-  <input type="file" multiple bind:this={file_input} onchange={addFiles} hidden/>
+  <!-- Hidden file input picker uses to bind to -->
+  <input type="file" multiple bind:this={file_input} onchange={onPickFiles} hidden/>
 </div>

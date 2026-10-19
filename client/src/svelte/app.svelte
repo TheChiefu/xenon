@@ -16,6 +16,7 @@
   import Members from "./panes/members.svelte";
   import Chat from "./chat/area.svelte";
   import Xbox from "./panes/xbox.svelte";
+  import Inbox from "./panes/inbox.svelte";
   import ContextMenu from "./context_menu.svelte";
 
   import * as session from "@/lib/connection/session.svelte";
@@ -24,6 +25,7 @@
   import * as profile from "@/lib/users/profile.svelte";
   import * as preferences from "@/lib/client/preferences.svelte";
   import * as layout from "@/lib/rooms/layout.svelte";
+  import * as invites from "@/lib/rooms/invites.svelte";
 
   import { Pane } from "@/lib/display/panes.svelte";
   import * as panes from "@/lib/display/panes.svelte";
@@ -44,6 +46,7 @@
   import icon_search from "@/assets/icons/search.svg?raw";
   import icon_menu from "@/assets/icons/menu.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
+  import icon_inbox from "@/assets/icons/inbox.svg?raw";
 
   // Room shown by chat and members
   const roomId: string | null = $derived(session.getSelectedRoom());
@@ -54,6 +57,7 @@
     [Pane.room]: false,
     [Pane.members]: false,
     [Pane.xbox]: false,
+    [Pane.inbox]: false,
   });
 
   // Pane toggles, laid out by whichever toolbar is shown
@@ -79,6 +83,14 @@
         icon: icon_users,
         active: panes.isOpen(Pane.members),
         onclick: () => panes.toggle(Pane.members),
+      },
+      {
+        pane: Pane.inbox,
+        label: "Inbox",
+        icon: icon_inbox,
+        active: panes.isOpen(Pane.inbox),
+        badge: invites.getInvites().length,
+        onclick: () => panes.toggle(Pane.inbox),
       },
     ];
 
@@ -126,7 +138,8 @@
     server.loadInfo()
       .then(profile.load)
       .then(preferences.load)
-      .then(layout.loadRooms);
+      .then(layout.loadRooms)
+      .then(invites.load);
 
     return close;
   });
@@ -162,6 +175,12 @@
 
       <!-- Chat Box: Always loaded-->
       <Chat {roomId}/>
+
+      {#if opened[Pane.inbox]}
+        <Container pane={Pane.inbox}>
+          <Inbox/>
+        </Container>
+      {/if}
 
       <!-- Xbox Navigator-->
       {#if opened[Pane.xbox]}

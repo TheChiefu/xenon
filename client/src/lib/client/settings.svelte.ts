@@ -164,3 +164,36 @@ function readAwayMinutes(): number {
 
   return stored;
 }
+
+// SEND KEY //
+export enum SendKey{
+  Enter = "enter",
+  CtrlEnter = "ctrl-enter",
+  ShiftEnter = "shift-enter",
+}
+
+const keySendKey = "send_key";
+const defaultSendKey: SendKey = SendKey.Enter;
+
+let currentSendKey: SendKey = $state(readSendKey());
+
+export function getSendKey(): SendKey {
+  return currentSendKey;
+}
+
+export function setSendKey(value: SendKey): void {
+  currentSendKey = value;
+  localStorage.setItem(keySendKey, value);
+}
+
+function readSendKey(): SendKey {
+  const stored = localStorage.getItem(keySendKey);
+  const values: string[] = Object.values(SendKey);
+
+  // Fallback on unknown
+  if (stored === null || !values.includes(stored)) {
+    return defaultSendKey;
+  }
+
+  return stored as SendKey;
+}

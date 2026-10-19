@@ -1,7 +1,7 @@
 import type { BanResponse, IssuedInviteResponse, RoomPatch, RoomResponse } from "@/bindings/routes/rooms";
-import type { Notify, Permission } from "@/bindings/shared";
+import { Permission, type Notify } from "@/bindings/shared";
 import * as roomsAPI from "@/lib/api/rooms";
-import { LocalEvent } from "@/lib/events";
+import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 import * as profile from "@/lib/users/profile.svelte";
 import * as room from "@/lib/rooms/data.svelte";
@@ -84,16 +84,36 @@ export async function loadInvites(): Promise<boolean> {
   });
 }
 
-export async function invite(user_id: string): Promise<boolean> {
+// Invites a user to the open room
+// - user_id: Id of the user to invite
+// - expire_delta: Milliseconds until the invite expires, or null for never
+export async function invite(user_id: string, expire_delta: number | null): Promise<boolean> {
   const id = room_id;
   if (id === null) return false;
-  return await run(() => roomsAPI.invite(id, user_id, null)) && await loadInvites();
+  return await run(() => roomsAPI.invite(id, user_id, expire_delta)) && await loadInvites();
 }
 
+// Revokes an invite the open room sent
 export async function revokeInvite(user_id: string): Promise<boolean> {
   const id = room_id;
   if (id === null) return false;
-  return await run(() => roomsAPI.revokeInvite(id, user_id)) && await loadInvites();
+
+  // Remove revoked invite from list
+  if (await run(() => roomsAPI.revokeInvite(id, user_id))) {
+    invites = invites.filter((entry) => entry.user_id !== user_id);
+    return true;
+  }
+
+  // Reload list on failure to drop invites already accepted or declined
+  const failure = error;
+  await loadInvites();
+  error = failure;
+  return false;
+}
+
+// Clears room ID
+export function close(): void {
+  room_id = null;
 }
 
 export async function loadBans(): Promise<boolean> {
@@ -126,6 +146,13 @@ async function run(action: () => Promise<void>): Promise<boolean> {
     pending = false;
   }
 }
+
+// Reload sent invites when an invitee joins the open room
+events.subscribe(ServerEventType.member_joined, (event) => {
+  if (event.room_id !== room_id) return;
+  if (!getPermissions().includes(Permission.invite)) return;
+  loadInvites();
+});
 
 events.subscribe(LocalEvent.room_settings_requested, (id: string) => {
   room_id = id;

@@ -30,10 +30,14 @@
   }
 
   .pane-btn {
+    position: relative;
+  }
+
+  .pane-btn > .icon {
     opacity: 0.4;
   }
 
-  .pane-btn.open {
+  .pane-btn.open > .icon {
     opacity: 1;
   }
 
@@ -49,6 +53,9 @@
     onclick={button.onclick}
   >
     <span class="icon" aria-hidden="true">{@html button.icon}</span>
+    {#if button.badge !== undefined && button.badge > 0}
+      <span class="badge" aria-hidden="true">{button.badge}</span>
+    {/if}
   </button>
 {/snippet}
 

@@ -6,5 +6,6 @@ export interface ToolbarButton {
   label: string;        // Accessible name and tooltip
   icon: string;         // Raw SVG markup
   active: boolean;      // Whether the pane is open
+  badge?: number;
   onclick: () => void;
 }

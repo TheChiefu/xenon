@@ -108,7 +108,7 @@
     }
   }
 
-
+  // Load messages and member within a room
   async function load(id: string): Promise<void> {
     try {
       await messages.loadLatest(id);

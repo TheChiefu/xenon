@@ -1,4 +1,4 @@
-import type { BanResponse, CreateRoomRequest, CreateRoomResponse, DiscoverableRoomResponse, IssuedInviteResponse, MemberResponse, RoomAccessPatch, RoomPatch, RoomResponse } from "@/bindings/routes/rooms";
+import type { BanResponse, CreateRoomRequest, CreateRoomResponse, DiscoverableRoomResponse, IssuedInviteResponse, MemberResponse, ReceivedInviteResponse, RoomAccessPatch, RoomPatch, RoomResponse } from "@/bindings/routes/rooms";
 import { request } from "@/lib/utils";
 
 export async function create(body: CreateRoomRequest): Promise<CreateRoomResponse> {
@@ -63,6 +63,15 @@ export async function invite(room_id: string, invitee: string, expire_delta: num
 
 export async function revokeInvite(room_id: string, user_id: string): Promise<void> {
     await request(`/rooms/${room_id}/invites/${user_id}`, "DELETE");
+}
+
+export async function listMyInvites(): Promise<ReceivedInviteResponse[]> {
+    const response = await request("/me/invites");
+    return await response.json() as ReceivedInviteResponse[];
+}
+
+export async function declineInvite(room_id: string): Promise<void> {
+    await request(`/me/invites/${room_id}`, "DELETE");
 }
 
 export async function listBans(room_id: string): Promise<BanResponse[]> {

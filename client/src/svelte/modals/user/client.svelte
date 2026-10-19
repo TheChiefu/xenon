@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { AnimatePhotos } from "@/lib/client/settings.svelte";
+  import { AnimatePhotos, SendKey } from "@/lib/client/settings.svelte";
   import * as settings from "@/lib/client/settings.svelte";
-  import { LABELS_ANIMATE_PHOTOS, MSG_SAVED, MSG_ERROR, MSG_REMOVE_PUSH, MSG_DISABLE_NOTIFICATION } from "@/lib/labels";
+  import { LABELS_ANIMATE_PHOTOS, LABELS_SEND_KEY, MSG_SAVED, MSG_ERROR, MSG_REMOVE_PUSH, MSG_DISABLE_NOTIFICATION } from "@/lib/labels";
   import * as events from "@/lib/events";
   import * as notifications from "@/lib/client/notifications.svelte";
 
@@ -12,11 +12,13 @@
   let client_theme = $state(settings.getTheme());
   let client_animate = $state(settings.getAnimatePhotos());
   let client_away_minutes = $state<number | null>(settings.getAwayMinutes());
+  let client_send_key = $state(settings.getSendKey());
   let client_notify = $state("");
 
   function savePreferences() {
     settings.setTheme(client_theme);
     settings.setAnimatePhotos(client_animate);
+    settings.setSendKey(client_send_key);
 
     if (client_away_minutes !== null) {
       settings.setAwayMinutes(client_away_minutes);
@@ -96,6 +98,13 @@
   <select id="animate-photos" bind:value={client_animate}>
       {#each Object.values(AnimatePhotos) as value}
           <option {value}>{LABELS_ANIMATE_PHOTOS[value]}</option>
+      {/each}
+  </select>
+
+  <label for="send-key">Send Message Key</label>
+  <select id="send-key" bind:value={client_send_key}>
+      {#each Object.values(SendKey) as value}
+          <option {value}>{LABELS_SEND_KEY[value]}</option>
       {/each}
   </select>
 
