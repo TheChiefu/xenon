@@ -70,9 +70,15 @@
     // Just text, passthrough as normal
     if (!files || files.length === 0) { return; }
 
+    // Rename files to append "clipboard" to them and by random UUID
+    const renamed: File[] = [];
+    for (const file of files) {
+      renamed.push(filesAPI.generateName(file, "clipboard"));
+    }
+
     // Parse files
     event.preventDefault();
-    addFiles(files);
+    addFiles(renamed);
   }
 
   // METHODS //
@@ -158,7 +164,7 @@
   }
 
   // Adds selected local files as attachments
-  function addFiles(files: FileList): void {
+  function addFiles(files: Iterable<File>): void {
     const limit = messagesAPI.attachmentLimit();
 
     for (const file of files) {
