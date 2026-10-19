@@ -62,7 +62,7 @@ CREATE TABLE room_access (
     room_id     BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     user_id     BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     permissions TEXT NOT NULL,
-    notify      TEXT NOT NULL DEFAULT 'none',
+    notify      TEXT NOT NULL DEFAULT 'all',
     granted_at  INTEGER NOT NULL,
     PRIMARY KEY (room_id, user_id)
 ) STRICT;
