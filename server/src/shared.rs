@@ -31,8 +31,6 @@ pub enum Visibility {
     /// Self service
     Public,
     /// Invite only
-    Locked,
-    /// Invite only
     Hidden,
 }
 

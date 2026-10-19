@@ -99,7 +99,6 @@ export const LABELS_GAME_PRESENCE: Record<GamePresence, string> = {
 
 export const LABELS_VISIBILITY: Record<Visibility, string> = {
   [Visibility.public]: "Public",
-  [Visibility.locked]: "Locked",
   [Visibility.hidden]: "Hidden",
 };
 
@@ -132,6 +131,5 @@ export function refreshedText(): string {
 
 export const DESCRIPTIONS_VISIBILITY: Record<Visibility, string> = {
   [Visibility.public]: "Listed in discovery, anyone can join",
-  [Visibility.locked]: "Listed in discovery, joining needs an invite",
   [Visibility.hidden]: "Not listed, joining needs an invite",
 };

@@ -590,7 +590,7 @@ pub async fn get_room(
     Ok(Json(RoomResponse::from(room)))
 }
 
-/// Gets one page of the Public and Locked rooms on the server
+/// Gets one page of the Public rooms on the server
 ///
 /// # Arguments
 ///

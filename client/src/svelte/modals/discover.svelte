@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Visibility } from "@/bindings/shared";
   import { DESCRIPTIONS_VISIBILITY, LABELS_VISIBILITY, MSG_ERROR } from "@/lib/labels";
   import { dialogFly } from "@/lib/display/transitions";
   import * as discovery from "@/lib/rooms/discovery.svelte";
@@ -90,10 +89,8 @@
         <span>
           {#if discovery.isJoined(entry.id)}
             <span class="status">Joined</span>
-          {:else if entry.visibility === Visibility.public}
-            <button onclick={() => discovery.join(entry.id)} disabled={discovery.isPending()}>Join</button>
           {:else}
-            <span class="status">Invite Only</span>
+            <button onclick={() => discovery.join(entry.id)} disabled={discovery.isPending()}>Join</button>
           {/if}
         </span>
       {/each}

@@ -69,7 +69,7 @@ CREATE TABLE room_access (
 
 CREATE INDEX room_access_user ON room_access(user_id);
 
--- Pending invitations to Locked and Hidden rooms
+-- Pending invitations to rooms
 -- A row means invited, not joined
 CREATE TABLE room_invites (
     room_id     BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,

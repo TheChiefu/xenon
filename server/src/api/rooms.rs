@@ -46,13 +46,12 @@ pub async fn get(
         SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at
         FROM rooms r
         WHERE r.id = ?1
-            AND (r.visibility IN (?2, ?3)
-            OR EXISTS(SELECT 1 FROM room_access a WHERE a.room_id = r.id AND a.user_id = ?4))
+            AND (r.visibility = ?2
+            OR EXISTS(SELECT 1 FROM room_access a WHERE a.room_id = r.id AND a.user_id = ?3))
         "
     )
     .bind(room_id)
     .bind(Visibility::Public)
-    .bind(Visibility::Locked)
     .bind(caller_id)
     .fetch_optional(&mut *conn)
     .await?
@@ -292,7 +291,7 @@ pub async fn join(
 
     let now = utils::now_ms();
 
-    // Public is self service. Locked and Hidden require an invite, and a
+    // Public is self service. Hidden requires an invite, and a
     // missing room is treated as closed
     let requires_invite = match visibility {
         Some(Visibility::Public) => false,
@@ -386,7 +385,7 @@ pub async fn list_mine(
     Ok(rooms)
 }
 
-/// Lists one page of the discoverable rooms, meaning Public and Locked.
+/// Lists one page of the discoverable rooms, meaning Public
 ///
 /// # Arguments
 ///
@@ -405,14 +404,13 @@ pub async fn list_discoverable(
         "
         SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at
         FROM rooms r
-        WHERE r.visibility IN (?1, ?2)
-            AND (?3 IS NULL OR r.id > ?3)
+        WHERE r.visibility = ?1
+            AND (?2 IS NULL OR r.id > ?2)
         ORDER BY id
-        LIMIT ?4
+        LIMIT ?3
         "
     )
     .bind(Visibility::Public)
-    .bind(Visibility::Locked)
     .bind(after)
     .bind(limit)
     .fetch_all(&mut *conn)

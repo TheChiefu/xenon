@@ -178,9 +178,7 @@
         oncontextmenu={(event) => menu.open(event, roomCtx(roomId))}
     >
         {data?.name}
-        {#if data?.visibility === Visibility.locked}
-            <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.locked]}>{@html icon_lock}</span>
-        {:else if data?.visibility === Visibility.hidden}
+        {#if data?.visibility === Visibility.hidden}
             <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.hidden]}>{@html icon_eye_off}</span>
         {/if}
     </button>
