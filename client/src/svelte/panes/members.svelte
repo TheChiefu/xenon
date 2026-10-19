@@ -16,14 +16,6 @@
 
   let { roomId, open }: Props = $props();
 
-  // Order in list of status in terms of position
-  const ORDER_STATUS: Record<Status, number> = {
-    [Status.online]: 0,
-    [Status.busy]: 1,
-    [Status.away]: 2,
-    [Status.offline]: 3,
-  };
-
   const member_ids: string[] = $derived.by(() => {
     if (roomId === null) {
       return [];
@@ -65,15 +57,6 @@
 
   // Compare to members to see who is before or after the other
   function compareMembers(a: string, b: string): number {
-
-    // Determine state difference
-    const status_a = ORDER_STATUS[users.getPresence(a).status];
-    const status_b = ORDER_STATUS[users.getPresence(b).status];
-    if (status_a !== status_b) {
-      return status_a - status_b;
-    }
-
-    // Sort by display name
     const name_a = users.getDisplayName(a);
     const name_b = users.getDisplayName(b);
     return name_a.localeCompare(name_b);
@@ -138,6 +121,10 @@
 
   .member:hover {
     background-color: var(--component-hover);
+  }
+
+  .member.offline {
+    opacity: 0.5;
   }
 
   /* Behind the row's contents, above the row's own background */
@@ -237,7 +224,13 @@
     {@const banner = users.getBanner(id)}
     {@const presence = users.getPresence(id)}
     {@const activity = users.getActivity(id)}
-    <button class="member" onclick={() => events.dispatch(LocalEvent.user_selected, id)} {@attach settings.playOnHover}>
+    {@const offline = presence.status === Status.offline}
+    <button
+      class="member"
+      class:offline
+      onclick={() => events.dispatch(LocalEvent.user_selected, id)}
+      {@attach settings.playOnHover}
+    >
       {#if banner !== undefined}
         {#if banner.mime.startsWith("video/")}
           <video class="banner" src={banner.url} {@attach settings.animatePhoto}></video>
