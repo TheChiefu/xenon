@@ -356,7 +356,7 @@ async fn notify_users(
         room_id,
         room: announcement.room_name,
         author: announcement.author,
-        body: announcement.body,
+        body: send::shorten(&announcement.body),
         renotify: false
     };
 

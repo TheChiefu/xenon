@@ -40,6 +40,18 @@ pub async fn ensure_keypair(pool: &SqlitePool) -> Result<()> {
     store::set_keypair(pool, public_key.as_bytes(), secret.to_bytes().as_slice()).await
 }
 
+/// Cuts a message body to fit in a push payload
+pub fn shorten(body: &str) -> String {
+
+    // Keeps the encrypted payload under 3800 bytes
+    let max_chars = 500;
+
+    match body.char_indices().nth(max_chars) {
+        Some((index, _)) => format!("{}...", &body[..index]),
+        None => body.to_string()
+    }
+}
+
 /// Spawns a task notifying users with no socket
 pub fn notify_offline(app_state: &AppState, payload: Payload, user_ids: Vec<Uuid>) {
     if user_ids.is_empty() {
