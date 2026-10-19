@@ -44,6 +44,12 @@
     onClose();
   }
 
+  function pressAway(event: PointerEvent) {
+    if (event.button === 0 && (event.target === dialog || event.target === stage)) {
+      onClose();
+    }
+  }
+
   // Zooms by a factor, keeping a point on the stage in place
   // - factor: Amount the zoom level is multiplied by
   // - point: Position in the window that stays in place
@@ -171,17 +177,18 @@
   .stage {
     width: 100%;
     height: 100%;
-    display: grid;
-    place-items: center;
     overflow: hidden;
     touch-action: none;
-    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .stage img {
     max-width: 100%;
     max-height: 100%;
     user-select: none;
+    cursor: grab;
   }
 
   .controls {
@@ -195,7 +202,7 @@
   }
 </style>
 
-<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} transition:dialogFly={{ y: "1rem" }}>
+<dialog bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
   {#if image !== null}
     <div
       class="stage"
