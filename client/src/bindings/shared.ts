@@ -40,7 +40,7 @@ export type RoomListItem = string | Folder;
 /**
  * POST body for a message search
  */
-export type SearchRequest = { text: string | null, file: string | null, room: string | null, author: string | null, from: number | null, to: number | null, before: number | null, };
+export type SearchRequest = { text: string | null, file: string | null, room: string | null, author: string | null, from: number | null, to: number | null, page: number, };
 
 export enum Notify { "none" = "none", "mentions" = "mentions", "all" = "all" }
 

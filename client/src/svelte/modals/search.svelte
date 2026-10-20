@@ -26,15 +26,16 @@
   let toDay: string = $state("");
 
   let active: SearchRequest | null = $state(null);
-  let pages: SearchResult[][] = $state([]);
-  let current: number = $state(0);
+  let results: SearchResult[] = $state([]);
+  let total: number = $state(0);
+  let current: number = $state(1);
   let searched: boolean = $state(false);
-  let more: boolean = $state(false);
   let pending: boolean = $state(false);
   let failure: string | null = $state(null);
   let showResults: boolean = $state(false);
 
   const roomChoices = $derived(rooms.list().toSorted((a, b) => a.name.localeCompare(b.name)));
+  const pageCount = $derived(Math.ceil(total / (searchAPI.pageSize() ?? 1)));
 
   $effect(() => {
     dialog?.showModal();
@@ -64,27 +65,25 @@
   async function search(event: SubmitEvent): Promise<void> {
     event.preventDefault();
 
-    // To includes its whole day so it sends the next midnight
     active = {
       text: msg.trim() || null,
       file: file.trim() || null,
       room: room || null,
       author: author.trim() || null,
       from: fromDay ? dayStart(fromDay, 0) : null,
-      to: toDay ? dayStart(toDay, 1) : null,
-      before: null,
+      to: toDay ? dayStart(toDay, 1) : null, // Next midnight, includes whole day
+      page: 1,
     };
 
-    pages = [];
-    current = 0;
+    results = [];
+    total = 0;
     searched = false;
-    more = false;
     showResults = true;
-    await loadMore();
+    await loadPage(1);
   }
 
-  // Adds the next batch of matches
-  async function loadMore(): Promise<void> {
+  // Shows one page of the current search
+  async function loadPage(page: number): Promise<void> {
     if (active === null) {
       return;
     }
@@ -94,29 +93,24 @@
     failure = null;
 
     try {
-      const batch = await searchAPI.messages({ ...request, before: pages.at(-1)?.at(-1)?.seq ?? null });
+      const response = await searchAPI.messages({ ...request, page });
 
-      // Drop batch from a replaced search
+      // Drop page from a replaced search
       if (request !== active) {
         return;
       }
 
       // Load authors not yet known
       const authors: string[] = [];
-      for (const result of batch) {
+      for (const result of response.results) {
         authors.push(result.author_id);
       }
       await users.load(authors);
 
-      // Each batch is a page, shown once loaded
-      if (batch.length > 0) {
-        pages.push(batch);
-        current = pages.length - 1;
-      }
-
-      // Full batch means more may exist
+      results = response.results;
+      total = response.total;
+      current = page;
       searched = true;
-      more = batch.length === searchAPI.pageSize();
     } catch (error) {
       failure = failureText(error);
     } finally {
@@ -143,12 +137,17 @@
   .filters form {
     border: none;
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(10rem, 1fr);
     align-content: start;
     align-items: center;
     gap: 0.5rem;
     flex: 1;
     min-height: 0;
+  }
+
+  .filters input, .filters select, .filters textarea {
+    width: 0;
+    min-width: 100%;
   }
 
   .filters button {
@@ -245,7 +244,7 @@
 
       <form class="grid" onsubmit={search}>
         <label for="search-message">Message</label>
-        <input id="search-message" bind:value={msg} minlength="3"/>
+        <textarea id="search-message" bind:value={msg} minlength="3"></textarea>
 
         <label for="search-file">File</label>
         <input id="search-file" bind:value={file} minlength="3"/>
@@ -291,11 +290,11 @@
         <span class="grid-heading">Message</span>
         <span class="grid-heading">Date</span>
 
-        {#if searched && pages.length === 0}
+        {#if searched && total === 0}
           <span class="notify empty">No Results</span>
         {/if}
 
-        {#each pages[current] ?? [] as result (result.id)}
+        {#each results as result (result.id)}
           <span>{rooms.get(result.room_id)?.name ?? ""}</span>
           <span>{users.getDisplayName(result.author_id)}</span>
           <span class="message">
@@ -308,15 +307,13 @@
         {/each}
       </div>
 
-      <div class="pages">
-        {#each pages as _, index}
-          <button class:is-active={index === current} onclick={() => current = index}>{index + 1}</button>
-        {/each}
-
-        {#if more}
-          <button onclick={loadMore} disabled={pending}>Load More</button>
-        {/if}
-      </div>
+      {#if pageCount > 1}
+        <div class="pages">
+          {#each { length: pageCount }, index}
+            <button class:is-active={index + 1 === current} onclick={() => loadPage(index + 1)} disabled={pending}>{index + 1}</button>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 </dialog>

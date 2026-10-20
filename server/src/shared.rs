@@ -171,5 +171,5 @@ pub struct SearchRequest {
     pub author: Option<String>, // Exact search
     pub from: Option<i64>,
     pub to: Option<i64>, // Exclusive
-    pub before: Option<i64>, // Seq of the last result already received
+    pub page: i64, // Starts at 1
 }

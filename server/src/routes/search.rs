@@ -31,6 +31,14 @@ pub struct SearchResult {
     pub files: Vec<String>, // Attached file names matching the file filter
 }
 
+/// One page of matches and how many matches there are in total
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/search.ts"))]
+pub struct SearchResponse {
+    pub results: Vec<SearchResult>,
+    pub total: i64,
+}
+
 impl From<Found> for SearchResult {
     fn from(found: Found) -> Self {
         Self {
@@ -53,14 +61,14 @@ pub async fn messages(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Json(body): Json<SearchRequest>,
-) -> Result<Json<Vec<SearchResult>>> {
+) -> Result<Json<SearchResponse>> {
 
-    let found = api::messages::search::search(&pool, user_id, &body).await?;
+    let page = api::messages::search::search(&pool, user_id, &body).await?;
 
-    let mut results = Vec::with_capacity(found.len());
-    for entry in found {
+    let mut results = Vec::with_capacity(page.found.len());
+    for entry in page.found {
         results.push(SearchResult::from(entry));
     }
 
-    Ok(Json(results))
+    Ok(Json(SearchResponse { results, total: page.total }))
 }

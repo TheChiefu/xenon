@@ -256,7 +256,7 @@ dialog {
 }
 
 dialog.menu {
-  width: 50rem;
+  width: 55rem;
   height: 36rem;
   padding: var(--dialog-padding);
   border: 1px solid var(--border);

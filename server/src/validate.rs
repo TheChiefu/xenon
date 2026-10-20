@@ -276,6 +276,13 @@ pub fn search(request: &SearchRequest) -> Result<()> {
         search_length("file", file, FILE_NAME_MAX)?;
     }
 
+    // Page number
+    if request.page < 1 {
+        return Err(AppError::Validation(
+            "search error: page must be at least 1".to_string()
+        ));
+    }
+
     // Date range order
     if let (Some(from), Some(to)) = (request.from, request.to) {
         if from >= to {

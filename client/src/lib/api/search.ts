@@ -1,4 +1,4 @@
-import type { SearchResult } from "@/bindings/routes/search";
+import type { SearchResponse } from "@/bindings/routes/search";
 import type { ServerInfo } from "@/bindings/routes/server";
 import type { SearchRequest } from "@/bindings/shared";
 import { LocalEvent } from "@/lib/events";
@@ -11,9 +11,9 @@ export function pageSize(): number | null {
     return page_size;
 }
 
-export async function messages(body: SearchRequest): Promise<SearchResult[]> {
+export async function messages(body: SearchRequest): Promise<SearchResponse> {
     const response = await request("/search", "POST", body);
-    return await response.json() as SearchResult[];
+    return await response.json() as SearchResponse;
 }
 
 // Events
