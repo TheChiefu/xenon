@@ -1,1 +1,8 @@
-# Test Files/Folders 
+# Test Files/Folders
+
+# Server run outside server/
+*.db
+*.db-shm
+*.db-wal
+config.toml
+*.log

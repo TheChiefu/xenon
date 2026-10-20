@@ -29,22 +29,36 @@ use crate::state::AppState;
 #[tokio::main]
 async fn main() -> Result<()> {
 
-    // Read configuration file (create defaults if not existing)
     let config_path = std::env::var("XENON_CONFIG").unwrap_or_else(|_| "config.toml".into());
-    config::init(&config_path);
-    println!("{}", config::get().uploads.file_size_max.to_int());
-
-    // Setup tracing
-    init_tracing();
-    tracing::info!("loaded configuration file: {config_path}");
 
     // When args provided, run CLI commands instead of booting server
     let args: Vec<String> = std::env::args().skip(1).collect();
     if !args.is_empty() {
+
+        // Exit if the config file is missing, instead of writing defaults
+        if !Path::new(&config_path).exists() {
+            eprintln!("no config file at {config_path}");
+            std::process::exit(1);
+        }
+        config::init(&config_path);
+
+        // Exit if the database is missing, instead of creating an empty one
+        let db_path = &config::get().database.path;
+        if !Path::new(db_path).exists() {
+            eprintln!("no database at {db_path}");
+            std::process::exit(1);
+        }
+
         let pool = connect_database().await?;
         return cli::run(&pool, &args).await;
     }
 
+    // Read configuration file (create defaults if not existing)
+    config::init(&config_path);
+
+    // Setup tracing
+    init_tracing();
+    tracing::info!("loaded configuration file: {config_path}");
     tracing::info!("starting server");
 
     // Check if file directory is setup
