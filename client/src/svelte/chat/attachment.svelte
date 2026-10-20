@@ -1,5 +1,7 @@
 <script lang="ts">
+import { onDestroy } from "svelte";
 import type { AttachmentResponse } from "@/bindings/routes/messages";
+import type { ActionReturn } from "svelte/action";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
 import Image from "./image.svelte";
 import Video from "./video.svelte";
@@ -14,10 +16,10 @@ let revealed = $state(false);
 let file: FetchedFile | null = $state(null);
 const size = $derived(attachment.byte_size);
 
-// Fetches the file, revoking its URL once the attachment is removed
-$effect(() => {
-    let removed = false;
+let removed = false;
 
+// Fetches the file once the attachment is on screen
+function load(): void {
     fetchFileBlob(attachment.id).then((fetched) => {
 
         // Revoke a URL fetched after the attachment was removed
@@ -28,14 +30,33 @@ $effect(() => {
 
         file = fetched;
     });
+}
 
-    return () => {
-        removed = true;
-
-        if (file !== null) {
-            URL.revokeObjectURL(file.url);
+// Fetch file once visible
+function lazyLoad(node: HTMLElement): ActionReturn {
+    const observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+            observer.disconnect();
+            load();
         }
+    });
+
+    observer.observe(node);
+
+    return {
+        destroy() {
+            observer.disconnect();
+        },
     };
+}
+
+// Revokes the file's URL once the attachment is removed
+onDestroy(() => {
+    removed = true;
+
+    if (file !== null) {
+        URL.revokeObjectURL(file.url);
+    }
 });
 
 </script>
@@ -59,7 +80,7 @@ $effect(() => {
 
 </style>
 
-<div class="attachment">
+<div class="attachment" use:lazyLoad>
 
     {#if attachment.spoiler && !revealed}
         <button onclick={() => revealed = true}>Spoiler ({attachment.mime} - {size})</button>
