@@ -47,8 +47,8 @@ const INLINE_CODE: RegExp = /`([^`\n]+)`/y;
 function patternToMsgPart(pattern: RegExp, match: RegExpExecArray): MessagePart {
     switch (pattern) {
         case BLOCK_CODE: return {
-            kind: 'block',
-            content: match[1] // ```code block```
+            kind: 'block', // ```code block```
+            content: match[1].replace(/^\n/, '').replace(/\n$/, '') // Remove automatic newlines
         };
         case INLINE_CODE: return {
             kind: 'code',

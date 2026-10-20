@@ -47,6 +47,28 @@ hr {
     border-top: 1px solid var(--component-raised);
 }
 
+pre {
+    border-inline: 0.5rem ridge var(--component);
+    background-color: var(--component-raised);
+    padding: 0.4rem;
+    margin: 0.25rem 0;
+    color: var(--text-dim);
+}
+
+code {
+  background-color: var(--component-raised);
+  padding: 0 0.25rem 0 0.25rem;
+  color: var(--text-dim);
+}
+
+pre code {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
+
 input {
   width: 100%;
   padding: var(--control-padding) calc(var(--control-padding) * 2);

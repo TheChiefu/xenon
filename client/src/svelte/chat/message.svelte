@@ -64,6 +64,7 @@
 </script>
 
 <style>
+
     .message {
         margin: 0 var(--control-padding) var(--control-padding);
         padding: var(--section-padding);
@@ -71,7 +72,7 @@
     }
 
     .message-header button {
-        padding: 0;
+        padding: 0 0 0.5rem 0;
         border: 0;
         background: none;
         font-weight: bold;
@@ -87,6 +88,11 @@
         width: 100%;
         min-height: 4rem;
         resize: vertical;
+    }
+
+    .edited {
+        cursor: help;
+        user-select: none;
     }
 
     .edit-actions {
@@ -140,7 +146,7 @@
     <div class="message-header">
             <button onclick={() => events.dispatch(LocalEvent.user_selected, message.author_id)}>{author}</button>
             {#if editedAt}
-            <span title="Edited at: {editedAt.toLocaleString()}"> (edited)</span>
+            <span class="edited" title="Edited at: {editedAt.toLocaleString()}"> (edited)</span>
             {/if}
             {#if debugging}
             <span>Sequence: {message.seq}</span>
