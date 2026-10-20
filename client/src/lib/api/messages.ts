@@ -5,9 +5,14 @@ import * as events from "@/lib/events";
 import { request } from "@/lib/utils";
 
 let max_attachments: number | null = null;
+let page_size: number | null = null;
 
 export function attachmentLimit(): number | null {
     return max_attachments;
+}
+
+export function pageSize(): number | null {
+    return page_size;
 }
 
 export async function fetch(roomId: string, before?: number, after?: number): Promise<MessageResponse[]> {
@@ -51,4 +56,5 @@ export async function remove(messageId: string): Promise<void> {
 // Events
 events.subscribe(LocalEvent.server_info_loaded, (info: ServerInfo) => {
     max_attachments = info.limit_attachments_per_message_max;
+    page_size = info.limit_message_page;
 });

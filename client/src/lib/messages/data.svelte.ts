@@ -9,7 +9,13 @@ import * as events from "@/lib/events";
 // Messages per room ID, each room's messages per message ID in the order they were added
 const rooms: SvelteMap<string, SvelteMap<string, MessageResponse>> = new SvelteMap();
 
+const olderMessagesRemain: SvelteMap<string, boolean> = new SvelteMap();
+
 // LOADING //
+
+export function hasOlderMessages(roomId: string): boolean {
+  return olderMessagesRemain.get(roomId) ?? false;
+}
 
 // A room's stored messages
 export function get(roomId: string): MessageResponse[] {
@@ -21,13 +27,28 @@ export function get(roomId: string): MessageResponse[] {
   return [...messages.values()];
 }
 
-// Fetches a room's newest page, unless the room is already stored
+// Fetches a room's newest batch, unless the room is already stored
 export async function loadLatest(roomId: string): Promise<void> {
   if (rooms.has(roomId)) {
     return;
   }
 
-  await loadRoom(roomId);
+  const fetched = await messagesAPI.fetch(roomId);
+  rooms.set(roomId, toMap(fetched));
+  olderMessagesRemain.set(roomId, fetched.length === messagesAPI.pageSize());
+}
+
+export async function loadOlder(roomId: string): Promise<void> {
+  const oldest = get(roomId)[0];
+  if (oldest === undefined) {
+    return;
+  }
+
+  const fetched = await messagesAPI.fetch(roomId, oldest.seq);
+
+  // Read after the request so messages that arrived meanwhile are kept
+  rooms.set(roomId, toMap([...fetched, ...get(roomId)]));
+  olderMessagesRemain.set(roomId, fetched.length === messagesAPI.pageSize());
 }
 
 // EVENTS //
@@ -72,20 +93,18 @@ export function remove(roomId: string, messageId: string): void {
 // Removes every stored room
 export function clear(): void {
   rooms.clear();
+  olderMessagesRemain.clear();
 }
 
 // HELPERS //
 
-// Fetches a room's newest page and stores it in place of what the room had
-async function loadRoom(roomId: string): Promise<void> {
-  const fetched = await messagesAPI.fetch(roomId);
-
+function toMap(list: MessageResponse[]): SvelteMap<string, MessageResponse> {
   const messages: SvelteMap<string, MessageResponse> = new SvelteMap();
-  for (const message of fetched) {
+  for (const message of list) {
     messages.set(message.id, message);
   }
 
-  rooms.set(roomId, messages);
+  return messages;
 }
 
 // EVENTS //

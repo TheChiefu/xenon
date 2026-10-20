@@ -12,6 +12,7 @@
   import * as members from "@/lib/rooms/members.svelte";
   import * as users from "@/lib/users/data.svelte";
   import { failureText } from "@/lib/utils";
+  import icon_arrow_up from "@/assets/icons/arrow-up.svg?raw";
 
   interface Props {
     roomId: string | null;
@@ -113,15 +114,33 @@
     try {
       await messages.loadLatest(id);
       await members.load(id);
+      await loadAuthors(id);
 
-      // Load message authors
-      // Ones not in user cache are auto skipped when loading
-      const unknown: string[] = [];
-      for (const message of messages.get(id)) {
-          unknown.push(message.author_id);
-      }
-      await users.load(unknown);
+      failure = null;
+    } catch (error) {
+      failure = failureText(error);
+    }
+  }
 
+  // Load message authors
+  // Ones not in user cache are auto skipped when loading
+  async function loadAuthors(id: string): Promise<void> {
+    const unknown: string[] = [];
+    for (const message of messages.get(id)) {
+        unknown.push(message.author_id);
+    }
+    await users.load(unknown);
+  }
+
+  // Adds the page before the oldest message shown
+  async function showOlder(): Promise<void> {
+    if (roomId === null) {
+      return;
+    }
+
+    try {
+      await messages.loadOlder(roomId);
+      await loadAuthors(roomId);
       failure = null;
     } catch (error) {
       failure = failureText(error);
@@ -236,6 +255,11 @@
 
   <div class="header">
     <h3>{roomName}</h3>
+    {#if roomId !== null && messages.hasOlderMessages(roomId)}
+      <button class="icon-btn" aria-label="Load More" title="Load More" onclick={showOlder}>
+        <span class="icon" aria-hidden="true">{@html icon_arrow_up}</span>
+      </button>
+    {/if}
   </div>
 
   <div class="messages" bind:this={list} onscroll={onScroll} onscrollend={savePositions}>
