@@ -3,7 +3,7 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use sqlx::pool::PoolConnection;
 use sqlx::{Sqlite, SqlitePool};
@@ -54,7 +54,35 @@ pub struct UserStatus {
 /// - broadcast: a single send reaches every subscriber. Sockets subscribe on connect and their
 ///   subscription ends when they drop. The map keeps the channel after its
 ///   last subscriber leaves.
-pub type Registry = Arc<RwLock<HashMap<Uuid, Connected>>>;
+#[derive(Clone, Default)]
+pub struct Registry {
+    connected: Arc<RwLock<HashMap<Uuid, Connected>>>
+}
+
+impl Registry {
+
+    /// Takes the read lock, recovering it if a writer panicked while holding it.
+    fn read_lock(&self) -> RwLockReadGuard<'_, HashMap<Uuid, Connected>> {
+        match self.connected.read() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                tracing::warn!("registry lock was poisoned, recovering");
+                poisoned.into_inner()
+            }
+        }
+    }
+
+    /// Takes the write lock, recovering it if a writer panicked while holding it.
+    fn write_lock(&self) -> RwLockWriteGuard<'_, HashMap<Uuid, Connected>> {
+        match self.connected.write() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                tracing::warn!("registry lock was poisoned, recovering");
+                poisoned.into_inner()
+            }
+        }
+    }
+}
 
 /// Whether a socket is the only one its user holds.
 #[derive(PartialEq, Eq)]
@@ -89,7 +117,7 @@ pub fn subscribe(
     status: Status,
     device: Option<SocketDevice>,
 ) -> (broadcast::Receiver<String>, Joined) {
-    let mut reg = write_lock(state);
+    let mut reg = state.registry.write_lock();
 
     let mut joined = Joined::Additional;
     let connected = match reg.entry(user_id) {
@@ -100,7 +128,7 @@ pub fn subscribe(
         // The user has no channel, create one and initial prefered status of user
         Entry::Vacant(entry) => {
             joined = Joined::First;
-            let buffer = config::get().limits.message_buffer;
+            let buffer = config::get().sockets.event_queue_size;
             let (sender, _) = broadcast::channel(buffer);
             entry.insert(Connected { events: sender, status, devices: Vec::new() })
         }
@@ -130,7 +158,7 @@ pub fn unsubscribe(
 ) -> Option<Status> {
     drop(receiver);
 
-    let mut reg = write_lock(state);
+    let mut reg = state.registry.write_lock();
 
     let connected = match reg.get_mut(&user_id) {
         Some(connected) => connected,
@@ -173,7 +201,7 @@ pub fn statuses_of(
     state: &AppState,
     users: &[Uuid],
 ) -> Vec<UserStatus> {
-    let reg = read_lock(state);
+    let reg = state.registry.read_lock();
 
     let mut found = Vec::new();
     for user_id in users {
@@ -209,7 +237,7 @@ pub fn set_status(
     user_id: Uuid,
     status: Status,
 ) -> Option<Status> {
-    let mut reg = write_lock(state);
+    let mut reg = state.registry.write_lock();
     let connected = reg.get_mut(&user_id)?;
 
     let previous = connected.status;
@@ -317,7 +345,7 @@ pub fn inform_users(
         }
     };
 
-    let reg = read_lock(state);
+    let reg = state.registry.read_lock();
 
     for user_id in users {
         if let Some(connected) = reg.get(user_id) {
@@ -331,7 +359,7 @@ pub fn offline_users(
     state: &AppState,
     users: &[Uuid],
 ) -> Vec<Uuid> {
-    let reg = read_lock(state);
+    let reg = state.registry.read_lock();
 
     let mut found = Vec::new();
     for user_id in users {
@@ -362,28 +390,6 @@ async fn acquire_retrying(
                 attempt += 1;
             }
             Err(e) => return Err(e),
-        }
-    }
-}
-
-/// Takes the read lock, recovering it if a writer panicked while holding it.
-fn read_lock(state: &AppState) -> std::sync::RwLockReadGuard<'_, HashMap<Uuid, Connected>> {
-    match state.registry.read() {
-        Ok(guard) => guard,
-        Err(poisoned) => {
-            tracing::warn!("registry lock was poisoned, recovering");
-            poisoned.into_inner()
-        }
-    }
-}
-
-/// Takes the write lock, recovering it if a writer panicked while holding it.
-fn write_lock(state: &AppState) -> std::sync::RwLockWriteGuard<'_, HashMap<Uuid, Connected>> {
-    match state.registry.write() {
-        Ok(guard) => guard,
-        Err(poisoned) => {
-            tracing::warn!("registry lock was poisoned, recovering");
-            poisoned.into_inner()
         }
     }
 }

@@ -186,7 +186,7 @@ pub async fn get_users(
             }
 
             // Reject more ids than the lookup limit
-            let max = config::get().limits.users_lookup;
+            let max = config::get().responses.users_per_lookup;
             if ids.len() > max {
                 return Err(AppError::Validation(format!("at most {max} ids per lookup")));
             }
@@ -196,7 +196,7 @@ pub async fn get_users(
 
         // Search users by username prefix, one page at a time
         None => {
-            let max = config::get().limits.users_page;
+            let max = config::get().responses.users_per_page;
             let limit = body.limit.unwrap_or(max).clamp(1, max);
 
             api::users::by_username_prefix(&pool, body.username, body.after, limit).await?

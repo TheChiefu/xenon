@@ -74,7 +74,7 @@ where
         .join(Uuid::now_v7().to_string());
 
     // Read stream into tmp file
-    let max_bytes = config::get().limits.file_bytes_max;
+    let max_bytes = config::get().uploads.file_size_max;
     let stream = match read_stream(reader, &tmp_path, max_bytes).await {
         Ok(val) => val,
         Err(e) => {

@@ -51,7 +51,7 @@ pub async fn tls(app: Router, bind_addr: SocketAddr) {
     axum_server::from_tcp_rustls(listener, tls)
         .expect("failed to accept on bound listener")
         .handle(handle)
-        .serve(app.into_make_service())
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .expect("failed to serve axum application");
 }
@@ -76,7 +76,7 @@ pub async fn plaintext(app: Router, bind_addr: SocketAddr) {
 
     tracing::info!("listening on {bind_addr}");
 
-    axum::serve(listener, app)
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(crate::shutdown_signal())
         .await
         .expect("failed to serve axum application");

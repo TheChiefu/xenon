@@ -203,7 +203,7 @@ pub async fn fetch(
     let mut messages: Vec<Message> = sqlx::query_as(query)
     .bind(room_id)
     .bind(anchor)
-    .bind(config::get().limits.message_page)
+    .bind(config::get().responses.messages_per_page)
     .fetch_all(&mut *conn)
     .await?;
 
@@ -403,7 +403,7 @@ fn validate_post(body: Option<&str>, attachments: &[AttachmentRequest]) -> Resul
     }
 
     // Over allowed attachment limit
-    let max_attachments = config::get().limits.attachments_per_message_max;
+    let max_attachments = config::get().uploads.attachments_per_message_max;
     if attachments.len() > max_attachments {
         let err = format!("too many attachments, max allowed: {max_attachments}");
         return Err(AppError::Validation(err));

@@ -41,13 +41,13 @@ pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
         version: env!("CARGO_PKG_VERSION").to_string(),
         kind: config::get().info.kind.clone(),
         description: config::get().info.description.clone(),
-        limit_users_lookup: config::get().limits.users_lookup,
-        limit_message_page: config::get().limits.message_page,
-        limit_search_page: config::get().limits.search_page,
-        limit_room_page: config::get().limits.room_page,
-        limit_users_page: config::get().limits.users_page,
-        limit_file_bytes_max: config::get().limits.file_bytes_max.to_int(),
-        limit_attachments_per_message_max: config::get().limits.attachments_per_message_max,
+        limit_users_lookup: config::get().responses.users_per_lookup,
+        limit_message_page: config::get().responses.messages_per_page,
+        limit_search_page: config::get().responses.search_results_per_page,
+        limit_room_page: config::get().responses.rooms_per_page,
+        limit_users_page: config::get().responses.users_per_page,
+        limit_file_bytes_max: config::get().uploads.file_size_max.to_int(),
+        limit_attachments_per_message_max: config::get().uploads.attachments_per_message_max,
     };
 
     Ok((StatusCode::OK, Json(info)))

@@ -134,7 +134,7 @@ async fn count_unread(
     .bind(position.room_id)
     .bind(position.last_read_seq)
     .bind(user_id)
-    .bind(config::get().limits.room_read_max)
+    .bind(config::get().responses.unread_count_max)
     .fetch_one(&mut *conn)
     .await?;
 

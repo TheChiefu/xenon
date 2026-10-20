@@ -44,7 +44,7 @@ pub async fn search(
     let total: i64 = count.build_query_scalar().fetch_one(&mut *conn).await?;
 
     // Build page query
-    let size = config::get().limits.search_page;
+    let size = config::get().responses.search_results_per_page;
     let mut builder = sqlx::QueryBuilder::new(
         "SELECT m.seq, m.id, m.room_id, m.author_id, m.body, m.created_at, m.edited_at "
     );

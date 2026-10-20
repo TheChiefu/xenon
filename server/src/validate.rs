@@ -33,8 +33,8 @@ const SEARCH_TEXT_MIN: usize = 3;
 /// holds anything but lowercase letters, digits, underscores, and hyphens.
 pub fn username(name: &str) -> Result<()> {
     let len = name.chars().count();
-    let min = config::get().limits.username_min;
-    let max = config::get().limits.username_max;
+    let min = config::get().lengths.username_min;
+    let max = config::get().lengths.username_max;
 
     // Enforce length limits
     if len < min || len > max {
@@ -68,8 +68,8 @@ pub fn username(name: &str) -> Result<()> {
 /// Returns `AppError::Validation` if the name is outside its length limits.
 pub fn display_name(name: &str) -> Result<()> {
     let len = name.chars().count();
-    let min = config::get().limits.display_name_min;
-    let max = config::get().limits.display_name_max;
+    let min = config::get().lengths.display_name_min;
+    let max = config::get().lengths.display_name_max;
 
     if len < min || len > max {
         return Err(AppError::Validation(
@@ -91,7 +91,7 @@ pub fn display_name(name: &str) -> Result<()> {
 /// Returns `AppError::Validation` if the description is over the length limit.
 pub fn profile_description(text: &str) -> Result<()> {
     let len = text.chars().count();
-    let max = config::get().limits.profile_description_max;
+    let max = config::get().lengths.profile_description_max;
 
     if len > max {
         return Err(AppError::Validation(
@@ -113,8 +113,8 @@ pub fn profile_description(text: &str) -> Result<()> {
 /// Returns `AppError::Validation` if the password is outside its length limits.
 pub fn password(password: &str) -> Result<()> {
     let len = password.chars().count();
-    let min = config::get().limits.password_min;
-    let max = config::get().limits.password_max;
+    let min = config::get().lengths.password_min;
+    let max = config::get().lengths.password_max;
 
     if len < min || len > max {
         return Err(AppError::Validation(
@@ -182,7 +182,7 @@ pub fn expire_delta(delta: i64) -> Result<()> {
 /// Returns `AppError::Validation` if the name is over the length limit.
 pub fn room_name(name: &str) -> Result<()> {
     let len = name.chars().count();
-    let max = config::get().limits.room_name_max;
+    let max = config::get().lengths.room_name_max;
 
     if len > max {
         return Err(AppError::Validation(
@@ -241,7 +241,7 @@ pub fn file_name(path: &str) -> Result<String> {
 /// Returns `AppError::Validation` if the body is over the length limit.
 pub fn message_body(content: &str) -> Result<()> {
     let len = content.chars().count();
-    let max = config::get().limits.message_body_max;
+    let max = config::get().lengths.message_body_max;
     if len > max {
         return Err(AppError::Validation(
             format!("message error: outside of max character limit ({max})")
@@ -268,7 +268,7 @@ pub fn search(request: &SearchRequest) -> Result<()> {
 
     // Message body text
     if let Some(text) = &request.text {
-        search_length("text", text, config::get().limits.message_body_max)?;
+        search_length("text", text, config::get().lengths.message_body_max)?;
     }
 
     // File name text
@@ -320,7 +320,7 @@ fn search_length(field: &str, text: &str, max: usize) -> Result<()> {
 /// Returns `AppError::Validation` if the reason is over the length limit.
 pub fn ban_reason(reason: &str) -> Result<()> {
     let len = reason.chars().count();
-    let max = config::get().limits.message_body_max;
+    let max = config::get().lengths.message_body_max;
     if len > max {
         return Err(AppError::Validation(
             format!("ban reason error: outside of max character limit ({max})")

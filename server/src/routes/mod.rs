@@ -8,9 +8,10 @@ mod search;
 mod server;
 mod users;
 
+use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
-use axum::extract::{DefaultBodyLimit, FromRef, FromRequestParts};
+use axum::extract::{ConnectInfo, DefaultBodyLimit, FromRef, FromRequestParts};
 use axum::http;
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::request::Parts;
@@ -63,6 +64,41 @@ where
             .ok_or(AppError::InvalidCredentials)?;
 
         Ok(AuthUser(user_id, session_hash))
+    }
+}
+
+/// Address of the client that sent the request
+pub struct ClientIp(pub IpAddr);
+
+impl<S> FromRequestParts<S> for ClientIp
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self> {
+
+        // Connecting IP, where an IPv6 listener reports an IPv4 client as
+        // ::ffff:a.b.c.d and it is converted to a.b.c.d
+        let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>()
+            .expect("router served with connect info")
+            .0
+            .ip()
+            .to_canonical();
+
+        // Not from a listed proxy, return the client's own IP
+        if !config::get().bind.trusted_proxies.contains(&peer) {
+            return Ok(ClientIp(peer));
+        }
+
+        // Last address in the last X-Forwarded-For header
+        let forwarded = parts.headers.get_all("x-forwarded-for").iter().last()
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.rsplit(',').next())
+            .and_then(|address| address.trim().parse::<IpAddr>().ok());
+
+        // Forwarded client IP, or the proxy's IP if none was read
+        Ok(ClientIp(forwarded.map_or(peer, |address| address.to_canonical())))
     }
 }
 

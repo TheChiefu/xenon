@@ -2,27 +2,30 @@
 //! - the database
 //! - who is connected
 
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-
 use axum::extract::FromRef;
 use sqlx::SqlitePool;
-use uuid::Uuid;
 
-use crate::sockets::events::GameActivity;
+use crate::ratelimit::{LoginFailures, RegisterLimit};
+use crate::sockets::game_presence::ReportedGames;
 use crate::sockets::registry::Registry;
 
-/// Cloned per request.
+/// Cloned per request
 ///
-/// `FromRef` generates a per-field accessor, letting handlers keep asking for
-/// `State<SqlitePool>`.
+/// `FromRef` generates a per-field accessor
+/// letting handlers keep asking for `State<SqlitePool>`
 #[derive(Clone, FromRef)]
 pub struct AppState {
     pub pool: SqlitePool,
     pub registry: Registry,
 
     /// What each user's linked account last reported
-    pub game_presence: Arc<RwLock<HashMap<Uuid, GameActivity>>>
+    pub game_presence: ReportedGames,
+
+    /// Registration attempts each IP has made
+    pub register_limit: RegisterLimit,
+
+    /// Failed logins each account has made since its last successful login
+    pub login_failures: LoginFailures
 }
 
 impl AppState {
@@ -36,7 +39,9 @@ impl AppState {
         AppState {
             pool,
             registry: Registry::default(),
-            game_presence: Arc::new(RwLock::new(HashMap::new()))
+            game_presence: ReportedGames::default(),
+            register_limit: RegisterLimit::default(),
+            login_failures: LoginFailures::default(),
         }
     }
 }

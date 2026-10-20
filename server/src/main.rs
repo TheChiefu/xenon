@@ -1,8 +1,10 @@
 mod api;
 mod bytesize;
+mod cli;
 mod config;
 mod db;
 mod error;
+mod ratelimit;
 mod routes;
 mod serve;
 mod services;
@@ -30,39 +32,25 @@ async fn main() -> Result<()> {
     // Read configuration file (create defaults if not existing)
     let config_path = std::env::var("XENON_CONFIG").unwrap_or_else(|_| "config.toml".into());
     config::init(&config_path);
-    println!("{}", config::get().limits.file_bytes_max.to_int());
+    println!("{}", config::get().uploads.file_size_max.to_int());
 
     // Setup tracing
     init_tracing();
     tracing::info!("loaded configuration file: {config_path}");
+
+    // When args provided, run CLI commands instead of booting server
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if !args.is_empty() {
+        let pool = connect_database().await?;
+        return cli::run(&pool, &args).await;
+    }
+
     tracing::info!("starting server");
 
     // Check if file directory is setup
     ensure_files();
 
-    // Set DB options and properties
-    let database = &config::get().database;
-    let db_path = &database.path;
-    let options = SqliteConnectOptions::new()
-        .filename(db_path)
-        .create_if_missing(true)
-        .foreign_keys(true)
-        .journal_mode(SqliteJournalMode::Wal) // Write-Ahead Logging
-        .synchronous(SqliteSynchronous::Full)
-        .busy_timeout(Duration::from_secs(database.busy_timeout_seconds))
-        .pragma("secure_delete", "ON");
-
-    let pool = SqlitePoolOptions::new()
-        .max_connections(database.max_connections)
-        .min_connections(database.min_connections)
-        .acquire_timeout(Duration::from_secs(database.acquire_timeout_seconds))
-        .idle_timeout(database.idle_timeout())
-        .connect_with(options)
-        .await?;
-
-    // Create initial DB if it does not already exists
-    sqlx::migrate!().run(&pool).await?;
-    tracing::info!("connected to database: {db_path}");
+    let pool = connect_database().await?;
 
     // Ensure bootstrap account is created with admin access
     ensure_account(&pool).await?;
@@ -88,6 +76,36 @@ async fn main() -> Result<()> {
 
     Ok(())
 
+}
+
+/// Opens the database, creating it and its tables if they do not exist
+async fn connect_database() -> Result<SqlitePool> {
+
+    // Set DB options and properties
+    let database = &config::get().database;
+    let db_path = &database.path;
+    let options = SqliteConnectOptions::new()
+        .filename(db_path)
+        .create_if_missing(true)
+        .foreign_keys(true)
+        .journal_mode(SqliteJournalMode::Wal) // Write-Ahead Logging
+        .synchronous(SqliteSynchronous::Full)
+        .busy_timeout(Duration::from_secs(database.busy_timeout_seconds))
+        .pragma("secure_delete", "ON");
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(database.max_connections)
+        .min_connections(database.min_connections)
+        .acquire_timeout(Duration::from_secs(database.acquire_timeout_seconds))
+        .idle_timeout(database.idle_timeout())
+        .connect_with(options)
+        .await?;
+
+    // Create initial DB if it does not already exists
+    sqlx::migrate!().run(&pool).await?;
+    tracing::info!("connected to database: {db_path}");
+
+    Ok(pool)
 }
 
 /// Creates the bootstrap account, printing its generated password once.

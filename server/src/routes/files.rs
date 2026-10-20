@@ -80,7 +80,7 @@ pub async fn upload(
 
     // Reject a body over the body limit before reading it
     if bytes > max_body_bytes() {
-        return Err(AppError::TooLarge(config::get().limits.file_bytes_max));
+        return Err(AppError::TooLarge(config::get().uploads.file_size_max));
     }
 
     // Reject unallowed roles to upload
@@ -150,6 +150,6 @@ pub async fn download(
 /// Sits above `file_bytes_max` so the streaming read rejects the file first.
 pub fn max_body_bytes() -> usize {
     let headroom_bytes = bytesize::MEBIBYTE;
-    let max_file_bytes = config::get().limits.file_bytes_max.to_int();
+    let max_file_bytes = config::get().uploads.file_size_max.to_int();
     (headroom_bytes + max_file_bytes) as usize
 }

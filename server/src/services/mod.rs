@@ -24,7 +24,7 @@ pub fn init() {
 
 /// Builds outbound HTTP client with request timeout, exits server if it cannot be built
 fn build_client() -> Client {
-    let timeout = Duration::from_secs(config::get().limits.request_timeout_seconds);
+    let timeout = Duration::from_secs(config::get().services.request_timeout_seconds);
 
     let built = Client::builder()
         .timeout(timeout)

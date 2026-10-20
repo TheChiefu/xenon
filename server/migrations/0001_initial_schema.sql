@@ -20,6 +20,7 @@ CREATE TABLE files (
 
 -- username is restricted to lowercase, so UNIQUE rejects 'Alice' while 'alice'
 -- exists.
+-- locked refuses new logins until unlocked, existing sessions are unaffected
 CREATE TABLE users (
     id              BLOB PRIMARY KEY,
     username        TEXT NOT NULL UNIQUE,
@@ -30,7 +31,8 @@ CREATE TABLE users (
     password_hash   TEXT,
     global_role     TEXT NOT NULL,
     created_at      INTEGER NOT NULL,
-    deleted_at      INTEGER
+    deleted_at      INTEGER,
+    locked          INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
 -- One row per user, created alongside them

@@ -11,8 +11,9 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::error::{AppError, Result};
+use crate::ratelimit::{LoginFailures, RegisterLimit};
 use crate::shared::{GlobalRole, RegistrationCode};
-use crate::routes::AuthUser;
+use crate::routes::{AuthUser, ClientIp};
 use crate::{api, db, validate};
 
 // Data Structs //
@@ -82,9 +83,14 @@ pub struct CodeResponse {
 /// * `pool` - Pool of SQL connections.
 /// * `body` - Details for the new account.
 pub async fn register(
+    ClientIp(ip): ClientIp,
+    State(register_limit): State<RegisterLimit>,
     State(pool): State<SqlitePool>,
     Json(body): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegisterResponse>)> {
+
+    // Count the attempt against the client's IP
+    register_limit.check(ip)?;
 
     let (id, token) = api::auth::register(
         &pool,
@@ -104,11 +110,12 @@ pub async fn register(
 /// * `pool` - Pool of SQL connections.
 /// * `body` - Credentials to authenticate with.
 pub async fn login(
+    State(login_failures): State<LoginFailures>,
     State(pool): State<SqlitePool>,
     Json(body): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>> {
 
-    let token = api::auth::login(&pool, &body.username, &body.password).await?;
+    let token = api::auth::login(&pool, &login_failures, &body.username, &body.password).await?;
 
     Ok(Json(LoginResponse { token }))
 }

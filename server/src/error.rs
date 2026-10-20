@@ -31,6 +31,7 @@ pub enum AppError {
     UsernameTaken,
     Forbidden,
     NotFound,
+    TooManyRequests,
     TooLarge(ByteSize),
     Db(sqlx::Error),
     Hash(argon2::password_hash::Error),
@@ -54,6 +55,7 @@ impl fmt::Display for AppError {
             AppError::Io(e) => write!(f, "i/o error: {e}"),
             AppError::Http(e) => write!(f, "http error: {e}"),
             AppError::NotFound => write!(f, "not found"),
+            AppError::TooManyRequests => write!(f, "too many requests, try again later"),
             AppError::Xbox(failure) => write!(f, "{failure}"),
         }
     }
@@ -127,6 +129,7 @@ impl IntoResponse for AppError {
             AppError::TooLarge(_) => (StatusCode::PAYLOAD_TOO_LARGE, self.to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
+            AppError::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
 
             // Microsoft or Xbox rejected request, or could not be reached
             AppError::Xbox(Failure::Dead(_)) => (StatusCode::BAD_REQUEST, self.to_string()),

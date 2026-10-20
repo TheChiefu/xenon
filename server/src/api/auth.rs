@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::ratelimit::LoginFailures;
 use crate::shared::{GlobalRole, RegistrationCode};
 use crate::utils;
 use crate::validate;
@@ -219,32 +220,18 @@ pub async fn revoke_session(
     Ok(())
 }
 
-/// Verifies credentials and returns a new session token.
-///
-/// An unknown username runs `burn_verify`, so it costs the same time as a wrong
-/// password and both return the same error.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `username` - Login name to authenticate.
-/// * `password` - Password to verify against the stored hash.
-///
-/// # Errors
-///
-/// Returns `AppError::InvalidCredentials` if the username is unknown or the
-/// password does not match, and `AppError::Hash` if the stored hash is
-/// unreadable.
+/// Verifies credentials and returns a new session token, locking the account after repeated failures
 pub async fn login(
     pool: &sqlx::SqlitePool,
+    failures: &LoginFailures,
     username: &str,
     password: &str,
 ) -> Result<String> {
 
     // Username lookup
-    let lookup = sqlx::query_as::<_, (Uuid, Option<String>)>(
+    let lookup = sqlx::query_as::<_, (Uuid, Option<String>, bool)>(
         "
-        SELECT id, password_hash
+        SELECT id, password_hash, locked
         FROM users
         WHERE username = ?1 AND deleted_at IS NULL
         "
@@ -253,14 +240,14 @@ pub async fn login(
     .fetch_one(pool)
     .await;
 
-    // Attempt to retrieve username and password hash
-    let (user_id, stored_hash) = match lookup {
+    // Attempt to retrieve username, password hash, and lock
+    let (user_id, stored_hash, locked) = match lookup {
 
         // Found creds
-        Ok((id, Some(hash))) => (id, hash),
+        Ok((id, Some(hash), locked)) => (id, hash, locked),
 
         // Not found, burn cycles to mask kind of API call
-        Ok((_, None)) | Err(sqlx::Error::RowNotFound) => {
+        Ok((_, None, _)) | Err(sqlx::Error::RowNotFound) => {
             utils::burn_verify(password);
             return Err(AppError::InvalidCredentials);
         }
@@ -272,9 +259,29 @@ pub async fn login(
     // Verify Password:
     // `?` is the corrupt-stored-hash case (server fault)
     // `false` is an incorrect password
-    if !utils::verify_password(password, &stored_hash)? {
+    let verified = utils::verify_password(password, &stored_hash)?;
+
+    // Locked account returns the same error as a wrong password
+    if locked {
         return Err(AppError::InvalidCredentials);
     }
+
+    if !verified {
+
+        // Lock the account once its failed logins reach the configured limit
+        if failures.record_failure(user_id) {
+            sqlx::query("UPDATE users SET locked = 1 WHERE id = ?1")
+                .bind(user_id)
+                .execute(pool)
+                .await?;
+
+            tracing::warn!("account {user_id} locked after repeated failed logins");
+        }
+
+        return Err(AppError::InvalidCredentials);
+    }
+
+    failures.clear(user_id);
 
     // Create session key
     let mut conn = pool.acquire().await?;
