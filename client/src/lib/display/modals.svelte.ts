@@ -7,6 +7,7 @@ export enum Modal {
   admin = "admin",
   discover = "discover",
   room_settings = "room_settings",
+  search = "search",
 }
 
 // State //
@@ -31,3 +32,4 @@ events.subscribe(LocalEvent.discover_requested, () => open(Modal.discover));
 events.subscribe(LocalEvent.settings_requested, () => open(Modal.settings));
 events.subscribe(LocalEvent.admin_requested, () => open(Modal.admin));
 events.subscribe(LocalEvent.room_settings_requested, () => open(Modal.room_settings));
+events.subscribe(LocalEvent.search_requested, () => open(Modal.search));

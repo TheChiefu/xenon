@@ -112,7 +112,7 @@ pub async fn mark(
     Ok(())
 }
 
-/// Counts messages past a read position that are not deleted or the user's own, up to max
+/// Counts messages past a read position that are not the user's own, up to max
 async fn count_unread(
     conn: &mut sqlx::SqliteConnection,
     position: &Position,
@@ -126,7 +126,6 @@ async fn count_unread(
             FROM messages
             WHERE room_id = ?1
                 AND seq > ?2
-                AND deleted_at IS NULL
                 AND author_id <> ?3
             LIMIT ?4
         )

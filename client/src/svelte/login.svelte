@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { login, register } from "@/lib/api/auth";
+  import { login, register, signOut } from "@/lib/api/auth";
   import * as session from "@/lib/connection/session.svelte";
+  import type { Account } from "@/lib/connection/session.svelte";
   import { failureText } from "@/lib/utils";
   import iconX from "@/assets/icons/x.svg?raw";
 
@@ -77,8 +78,16 @@
   }
 
   // Prompt before removing a saved login
-  function confirmRemoveLogin(key: string, username: string) {
-    if (confirm(`Remove ${username}?`)) {
+  async function confirmRemoveLogin(key: string, account: Account) {
+    if (confirm(`Remove ${account.username}?`)) {
+
+      // Revoke session on server
+      try {
+        await signOut(account.url, account.token);
+      } catch {
+        // Failure still removes login
+      }
+
       session.removeAccount(key);
     }
   }
@@ -271,7 +280,11 @@
                             <button class="is-entry login-entry-main" onclick={() => session.setCurrentLogin(key)}>
                                 @{entry.username}<br/>{entry.url}
                             </button>
-                            <button class="inherit is-danger is-entry" aria-label="Remove {entry.username}" onclick={() => confirmRemoveLogin(key, entry.username)}>
+                            <button
+                                class="inherit is-danger is-entry"
+                                aria-label="Remove {entry.username}"
+                                onclick={() => confirmRemoveLogin(key, entry)}
+                            >
                                 <span class="icon" aria-hidden="true">{@html iconX}</span>
                             </button>
                         </div>

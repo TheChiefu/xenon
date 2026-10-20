@@ -33,10 +33,7 @@
 
     const createdAt = $derived(new Date(Number(message.created_at)));
     const editedAt = $derived(message.edited_at ? new Date(Number(message.edited_at)) : null);
-    const deletedAt = $derived(message.deleted_at ? new Date(Number(message.deleted_at)) : null);
     const parts = $derived(message.body !== null ? parse(message.body) : []);
-
-    let debugging = false;
 
     function formatTime(date: Date): string {
         const year = date.getFullYear();
@@ -150,11 +147,6 @@
             {#if editedAt}
             <span class="edited" title="Edited at: {editedAt.toLocaleString()}"> (edited)</span>
             {/if}
-            {#if debugging}
-            <span>Sequence: {message.seq}</span>
-            <span>ID: {message.id}</span>
-            <span>Room ID: {message.room_id}</span>
-            {/if}
         </div>
 
     <!-- Body -->
@@ -212,10 +204,6 @@
         </div>
 
         <time datetime={createdAt.toISOString()}>{formatTime(createdAt)}</time>
-
-        {#if debugging}
-        <time datetime={deletedAt?.toISOString()}>{deletedAt?.toLocaleString()}</time>
-        {/if}
 
     </div>
 

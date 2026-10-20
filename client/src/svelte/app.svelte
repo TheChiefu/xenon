@@ -8,6 +8,7 @@
   import ImageViewer from "./modals/image_viewer.svelte";
   import Discover from "./modals/discover.svelte";
   import RoomSettings from "./modals/room/settings.svelte";
+  import Search from "./modals/search.svelte";
 
   import Toolbar from "./toolbar/top.svelte";
   import BottomToolbar from "./toolbar/bottom.svelte";
@@ -35,15 +36,12 @@
   import * as profile_viewer from "@/lib/users/profile_viewer.svelte";
   import * as image_viewer from "@/lib/display/image_viewer.svelte";
   import * as confirm from "@/lib/display/confirm.svelte";
-  import { LocalEvent } from "@/lib/events";
-  import * as events from "@/lib/events";
   import { COMPACT_CLASS, isCompact } from "@/lib/utils";
   import type { ToolbarButton } from "@/lib/display/toolbar";
   import * as xbox from "@/lib/services/xbox.svelte";
   import { Platform } from "@/bindings/shared";
   import { ICONS_PLATFORM } from "@/lib/labels";
 
-  import icon_search from "@/assets/icons/search.svg?raw";
   import icon_menu from "@/assets/icons/menu.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
   import icon_inbox from "@/assets/icons/inbox.svg?raw";
@@ -53,7 +51,6 @@
 
   // Keep track of which panes are open or not
   const opened: Record<Pane, boolean> = $state({
-    [Pane.search]: false,
     [Pane.room]: false,
     [Pane.members]: false,
     [Pane.xbox]: false,
@@ -63,13 +60,6 @@
   // Pane toggles, laid out by whichever toolbar is shown
   const paneButtons: ToolbarButton[] = $derived.by(() => {
     const buttons: ToolbarButton[] = [
-      {
-        pane: Pane.search,
-        label: "Search",
-        icon: icon_search,
-        active: panes.isOpen(Pane.search),
-        onclick: () => {},
-      },
       {
         pane: Pane.room,
         label: "Rooms",
@@ -216,6 +206,10 @@
 
   {#if modals.isOpen(Modal.room_settings)}
     <RoomSettings onClose={modals.close}/>
+  {/if}
+
+  {#if modals.isOpen(Modal.search)}
+    <Search onClose={modals.close}/>
   {/if}
 
   {#if profile_viewer.isOpen()}

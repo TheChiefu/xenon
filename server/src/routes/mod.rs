@@ -4,6 +4,7 @@ mod auth;
 mod files;
 pub mod messages;
 mod rooms;
+mod search;
 mod server;
 mod users;
 
@@ -88,6 +89,7 @@ pub fn router(state: AppState) -> Router {
             .delete(users::delete_me)
         )
         .route("/me/password", patch(users::update_my_password))
+        .route("/me/session", delete(users::sign_out))
         .route("/me/preferences",
             get(users::get_preferences)
             .patch(users::update_preferences)
@@ -133,6 +135,9 @@ pub fn router(state: AppState) -> Router {
             .delete(messages::delete_message)
             .patch(messages::update_message)
         )
+
+        // Search (QUERY once axum supports it, see /users/lookup)
+        .route("/search", post(search::messages))
 
         // Files
         .route("/files",

@@ -272,7 +272,7 @@ pub async fn update(
 /// * `pool` - Pool of SQL connections.
 /// * `user_id` - Account being closed.
 /// * `anonymize` - Whether the names are replaced and the username released.
-/// * `delete_history` - Whether every message the account wrote is tombstoned.
+/// * `delete_history` - Whether every message the account wrote is deleted.
 pub async fn delete(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
@@ -283,7 +283,7 @@ pub async fn delete(
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     if delete_history {
-        tombstone_messages(&mut tx, user_id).await?;
+        delete_messages(&mut tx, user_id).await?;
     }
 
     let rooms = leave_every_room(&mut tx, user_id).await?;
@@ -297,8 +297,7 @@ pub async fn delete(
 
 /// Closes someone else's account.
 ///
-/// The messages are always kept: destroying another member's history is a
-/// room's decision, made through its own wipe.
+/// The messages are always kept.
 ///
 /// # Arguments
 ///
@@ -386,35 +385,19 @@ pub async fn set_role(
 
 // Helper Methods //
 
-/// Tombstones every message an account wrote, destroying the text.
+/// Deletes every message an account wrote.
 ///
 /// # Arguments
 ///
 /// * `conn` - Connection to SQL DB.
-/// * `user_id` - Author whose messages are tombstoned.
-async fn tombstone_messages(
+/// * `user_id` - Author whose messages are deleted.
+async fn delete_messages(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
 ) -> Result<()> {
 
-    sqlx::query(
-        "
-        DELETE FROM message_attachments
-        WHERE message_id IN (SELECT id FROM messages WHERE author_id = ?1)
-        "
-    )
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
-
-    // Tombstoned rather than deleted, so an offline client learns they are gone
-    sqlx::query(
-        "
-        UPDATE messages SET body = NULL, deleted_at = ?1
-        WHERE author_id = ?2 AND deleted_at IS NULL
-        "
-    )
-    .bind(utils::now_ms())
+    // Attachments cascade
+    sqlx::query("DELETE FROM messages WHERE author_id = ?1")
     .bind(user_id)
     .execute(&mut *conn)
     .await?;

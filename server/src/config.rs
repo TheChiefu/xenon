@@ -202,6 +202,10 @@ impl Config {
             return Err("limits.message_page must be at least 1".to_string());
         }
 
+        if self.limits.search_page < 1 {
+            return Err("limits.search_page must be at least 1".to_string());
+        }
+
         if self.limits.room_page < 1 {
             return Err("limits.room_page must be at least 1".to_string());
         }
@@ -496,6 +500,7 @@ pub struct Limits {
     pub file_bytes_max: ByteSize,
     pub attachments_per_message_max: usize,
     pub message_page: i64,
+    pub search_page: i64,
     pub room_page: i64,
     pub users_page: i64,
     pub users_lookup: usize,
@@ -519,6 +524,7 @@ impl Default for Limits {
             file_bytes_max: ByteSize::from_int(25 * MEBIBYTE),
             attachments_per_message_max: 10,
             message_page: 200,
+            search_page: 50,
             room_page: 200,
             users_page: 25,
             users_lookup: 500,

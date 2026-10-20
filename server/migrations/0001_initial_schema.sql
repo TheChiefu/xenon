@@ -4,10 +4,13 @@
 -- Timestamps are Unix milliseconds, set in Rust by now_ms().
 
 
+-- Tables --
+
 -- Content addressed: sha256 is both the dedup key and the path on disk.
 -- filename is the first uploader's name. mime is sniffed from the bytes.
 CREATE TABLE files (
-    id          BLOB PRIMARY KEY,
+    seq         INTEGER PRIMARY KEY,
+    id          BLOB NOT NULL UNIQUE,
     sha256      BLOB NOT NULL UNIQUE,
     filename    TEXT NOT NULL,
     mime        TEXT NOT NULL,
@@ -67,8 +70,6 @@ CREATE TABLE room_access (
     PRIMARY KEY (room_id, user_id)
 ) STRICT;
 
-CREATE INDEX room_access_user ON room_access(user_id);
-
 -- Pending invitations to rooms
 -- A row means invited, not joined
 CREATE TABLE room_invites (
@@ -107,42 +108,8 @@ CREATE TABLE messages (
     body          TEXT,
     client_nonce  BLOB NOT NULL,
     created_at    INTEGER NOT NULL,
-    edited_at     INTEGER,
-    deleted_at    INTEGER
+    edited_at     INTEGER
 ) STRICT;
-
-CREATE INDEX messages_room ON messages(room_id, seq);
-CREATE UNIQUE INDEX message_nonce ON messages(author_id, client_nonce);
-
-CREATE TRIGGER messages_author_is_member BEFORE INSERT ON messages
-WHEN NOT EXISTS (
-    SELECT 1 FROM room_access a
-    WHERE a.room_id = new.room_id AND a.user_id = new.author_id
-)
-BEGIN SELECT RAISE(ABORT, 'author is not a member of this room');
-END;
-
-CREATE TRIGGER messages_author_live BEFORE INSERT ON messages
-WHEN (SELECT deleted_at FROM users WHERE id = new.author_id) IS NOT NULL
-BEGIN SELECT RAISE(ABORT, 'author is deleted');
-END;
-
-CREATE VIRTUAL TABLE messages_fts USING fts5(
-    body, content = 'messages', content_rowid = 'seq', tokenize = 'trigram'
-);
-
-CREATE TRIGGER messages_fts_insert AFTER INSERT ON messages BEGIN
-    INSERT INTO messages_fts(rowid, body) VALUES (new.seq, new.body);
-END;
-
-CREATE TRIGGER messages_fts_delete AFTER DELETE ON messages BEGIN
-    INSERT INTO messages_fts(messages_fts, rowid, body) VALUES ('delete', old.seq, old.body);
-END;
-
-CREATE TRIGGER messages_fts_update AFTER UPDATE OF body ON messages BEGIN
-    INSERT INTO messages_fts(messages_fts, rowid, body) VALUES ('delete', old.seq, old.body);
-    INSERT INTO messages_fts(rowid, body) VALUES (new.seq, new.body);
-END;
 
 -- ordinal is the display order
 CREATE TABLE message_attachments (
@@ -154,9 +121,6 @@ CREATE TABLE message_attachments (
     UNIQUE (message_id, file_id)
 ) STRICT;
 
--- Finds the messages a file is attached to
-CREATE INDEX message_attachments_file ON message_attachments(file_id);
-
 -- A user's library of files
 CREATE TABLE user_files (
     user_id   BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -164,9 +128,6 @@ CREATE TABLE user_files (
     added_at  INTEGER NOT NULL,
     PRIMARY KEY (user_id, file_id)
 ) STRICT;
-
--- Finds the users who have a file in their library
-CREATE INDEX user_files_file ON user_files(file_id);
 
 -- Server registration codes
 CREATE TABLE registration_codes (
@@ -200,3 +161,80 @@ CREATE TABLE xbox_accounts (
     honor_cloaked INTEGER NOT NULL DEFAULT 1
 ) STRICT;
 
+
+-- Indexes --
+
+CREATE INDEX room_access_user ON room_access(user_id);
+
+CREATE INDEX messages_room ON messages(room_id, seq);
+CREATE UNIQUE INDEX message_nonce ON messages(author_id, client_nonce);
+
+-- Finds an author's messages newest first (seq is the rowid, so already in order)
+CREATE INDEX messages_author ON messages(author_id);
+
+-- Finds the messages a file is attached to
+CREATE INDEX message_attachments_file ON message_attachments(file_id);
+
+-- Finds the users who have a file in their library
+CREATE INDEX user_files_file ON user_files(file_id);
+
+
+-- Triggers --
+
+CREATE TRIGGER messages_author_is_member BEFORE INSERT ON messages
+WHEN NOT EXISTS (
+    SELECT 1 FROM room_access a
+    WHERE a.room_id = new.room_id AND a.user_id = new.author_id
+)
+BEGIN SELECT RAISE(ABORT, 'author is not a member of this room');
+END;
+
+CREATE TRIGGER messages_author_live BEFORE INSERT ON messages
+WHEN (SELECT deleted_at FROM users WHERE id = new.author_id) IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'author is deleted');
+END;
+
+
+-- Search --
+
+-- Message bodies
+CREATE VIRTUAL TABLE messages_fts USING fts5(
+    body, content = 'messages', content_rowid = 'seq', tokenize = 'trigram'
+);
+
+-- Removes deleted text from the index immediately
+INSERT INTO messages_fts(messages_fts, rank) VALUES ('secure-delete', 1);
+
+CREATE TRIGGER messages_fts_insert AFTER INSERT ON messages BEGIN
+    INSERT INTO messages_fts(rowid, body) VALUES (new.seq, new.body);
+END;
+
+CREATE TRIGGER messages_fts_delete AFTER DELETE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, body) VALUES ('delete', old.seq, old.body);
+END;
+
+CREATE TRIGGER messages_fts_update AFTER UPDATE OF body ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, body) VALUES ('delete', old.seq, old.body);
+    INSERT INTO messages_fts(rowid, body) VALUES (new.seq, new.body);
+END;
+
+-- File names
+CREATE VIRTUAL TABLE files_fts USING fts5(
+    filename, content = 'files', content_rowid = 'seq', tokenize = 'trigram'
+);
+
+-- Removes deleted names from the index immediately
+INSERT INTO files_fts(files_fts, rank) VALUES ('secure-delete', 1);
+
+CREATE TRIGGER files_fts_insert AFTER INSERT ON files BEGIN
+    INSERT INTO files_fts(rowid, filename) VALUES (new.seq, new.filename);
+END;
+
+CREATE TRIGGER files_fts_delete AFTER DELETE ON files BEGIN
+    INSERT INTO files_fts(files_fts, rowid, filename) VALUES ('delete', old.seq, old.filename);
+END;
+
+CREATE TRIGGER files_fts_update AFTER UPDATE OF filename ON files BEGIN
+    INSERT INTO files_fts(files_fts, rowid, filename) VALUES ('delete', old.seq, old.filename);
+    INSERT INTO files_fts(rowid, filename) VALUES (new.seq, new.filename);
+END;

@@ -11,6 +11,10 @@ export function get(id: RoomId): RoomResponse | undefined {
   return rooms.get(id);
 }
 
+export function list(): RoomResponse[] {
+  return [...rooms.values()];
+}
+
 export function set(fetched: RoomResponse[]): void {
   rooms = new Map();
   for (const room of fetched) {

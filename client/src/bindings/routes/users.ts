@@ -10,7 +10,7 @@ export type DeleteAccountRequest = {
  */
 anonymize: boolean, 
 /**
- * Tombstones every message the account wrote
+ * Deletes every message the account wrote
  */
 delete_history: boolean, };
 

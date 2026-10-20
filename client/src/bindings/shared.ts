@@ -11,14 +11,14 @@ export enum Status { "online" = "online", "busy" = "busy", "away" = "away", "off
 export enum Platform { "xbox" = "xbox", "steam" = "steam" }
 
 /**
- * How a room is discovered and entered
- */
-export enum Visibility { "public" = "public", "hidden" = "hidden" }
-
-/**
  * A user's server-wide role
  */
 export enum GlobalRole { "admin" = "admin", "member" = "member", "visitor" = "visitor" }
+
+/**
+ * How a room is discovered and entered
+ */
+export enum Visibility { "public" = "public", "hidden" = "hidden" }
 
 export type AttachmentRequest = { file_id: string, spoiler: boolean, };
 
@@ -37,6 +37,11 @@ export type RegistrationCode = { code: string, created_by: string, created_at: n
  */
 export type RoomListItem = string | Folder;
 
-export enum Permission { "post" = "post", "attach" = "attach", "commands" = "commands", "delete_msg" = "delete_msg", "invite" = "invite", "rename" = "rename", "ban" = "ban", "grant" = "grant", "delete_room" = "delete_room", "connect" = "connect", "speak" = "speak", "mute" = "mute", "video" = "video", "screenshare" = "screenshare" }
+/**
+ * POST body for a message search
+ */
+export type SearchRequest = { text: string | null, file: string | null, room: string | null, author: string | null, from: number | null, to: number | null, before: number | null, };
 
 export enum Notify { "none" = "none", "mentions" = "mentions", "all" = "all" }
+
+export enum Permission { "post" = "post", "attach" = "attach", "commands" = "commands", "delete_msg" = "delete_msg", "invite" = "invite", "rename" = "rename", "ban" = "ban", "grant" = "grant", "delete_room" = "delete_room", "connect" = "connect", "speak" = "speak", "mute" = "mute", "video" = "video", "screenshare" = "screenshare" }

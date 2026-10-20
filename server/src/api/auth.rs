@@ -199,6 +199,26 @@ pub async fn change_password(
     Ok(())
 }
 
+/// Revokes a single session
+pub async fn revoke_session(
+    pool: &sqlx::SqlitePool,
+    session_hash: &[u8],
+) -> Result<()> {
+
+    sqlx::query(
+        "
+        UPDATE sessions SET revoked_at = ?1
+        WHERE token_hash = ?2 AND revoked_at IS NULL
+        "
+    )
+    .bind(utils::now_ms())
+    .bind(session_hash)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 /// Verifies credentials and returns a new session token.
 ///
 /// An unknown username runs `burn_verify`, so it costs the same time as a wrong

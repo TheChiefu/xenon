@@ -35,6 +35,14 @@ export async function login(username: string, password: string, url: string): Pr
     return (data as LoginResponse).token;
 }
 
+// Revokes an account's session on its server
+export async function signOut(url: string, token: string): Promise<void> {
+    await fetch(`${url}/me/session`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+    });
+}
+
 export async function register(
     username: string,
     password: string,

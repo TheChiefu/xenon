@@ -24,6 +24,7 @@ pub struct ServerInfo {
     /// Limits sent to clients to
     pub limit_users_lookup: usize,
     pub limit_message_page: i64,
+    pub limit_search_page: i64,
     pub limit_room_page: i64,
     pub limit_users_page: i64,
     pub limit_file_bytes_max: i64,
@@ -42,6 +43,7 @@ pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
         description: config::get().info.description.clone(),
         limit_users_lookup: config::get().limits.users_lookup,
         limit_message_page: config::get().limits.message_page,
+        limit_search_page: config::get().limits.search_page,
         limit_room_page: config::get().limits.room_page,
         limit_users_page: config::get().limits.users_page,
         limit_file_bytes_max: config::get().limits.file_bytes_max.to_int(),

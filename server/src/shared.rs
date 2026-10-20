@@ -160,3 +160,16 @@ pub struct AttachmentRequest {
     #[serde(default)]
     pub spoiler: bool,
 }
+
+/// POST body for a message search
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
+pub struct SearchRequest {
+    pub text: Option<String>,
+    pub file: Option<String>,
+    pub room: Option<String>, // Exact search
+    pub author: Option<String>, // Exact search
+    pub from: Option<i64>,
+    pub to: Option<i64>, // Exclusive
+    pub before: Option<i64>, // Seq of the last result already received
+}

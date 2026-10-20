@@ -42,6 +42,7 @@ export enum LocalEvent {
   server_info_loaded = "server_info_loaded",
   rooms_changed = "rooms_changed",
   room_settings_requested = "room_settings_requested",
+  search_requested = "search_requested",
 }
 
 // A Yes/No question, answered by calling answer with the user's choice

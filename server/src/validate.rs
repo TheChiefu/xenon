@@ -3,7 +3,7 @@
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::RoomListItem;
+use crate::shared::{RoomListItem, SearchRequest};
 
 /// How many registrations a code covers when the request names no count.
 pub const REGISTRATION_CODE_DEFAULT_MAX_USES: i64 = 1;
@@ -17,6 +17,9 @@ const REGISTRATION_CODE_LENGTH_MAX: usize = 64;
 
 /// Filesystem limit on one path component.
 const FILE_NAME_MAX: usize = 255;
+
+/// Shortest text the trigram search index can match
+const SEARCH_TEXT_MIN: usize = 3;
 
 /// Checks a login name's length and character set.
 ///
@@ -242,6 +245,57 @@ pub fn message_body(content: &str) -> Result<()> {
     if len > max {
         return Err(AppError::Validation(
             format!("message error: outside of max character limit ({max})")
+        ));
+    }
+
+    Ok(())
+}
+
+/// Checks a search has at least one filter and that each filter is usable
+pub fn search(request: &SearchRequest) -> Result<()> {
+    let has_filter = request.text.is_some()
+        || request.file.is_some()
+        || request.room.is_some()
+        || request.author.is_some()
+        || request.from.is_some()
+        || request.to.is_some();
+
+    if !has_filter {
+        return Err(AppError::Validation(
+            "search error: needs at least one filter".to_string()
+        ));
+    }
+
+    // Message body text
+    if let Some(text) = &request.text {
+        search_length("text", text, config::get().limits.message_body_max)?;
+    }
+
+    // File name text
+    if let Some(file) = &request.file {
+        search_length("file", file, FILE_NAME_MAX)?;
+    }
+
+    // Date range order
+    if let (Some(from), Some(to)) = (request.from, request.to) {
+        if from >= to {
+            return Err(AppError::Validation(
+                "search error: date range must start before it ends".to_string()
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+/// Checks searched text against the trigram minimum and its field's maximum
+fn search_length(field: &str, text: &str, max: usize) -> Result<()> {
+    let len = text.chars().count();
+    let min = SEARCH_TEXT_MIN;
+
+    if len < min || len > max {
+        return Err(AppError::Validation(
+            format!("search error: {field} must be between {min} and {max} characters")
         ));
     }
 

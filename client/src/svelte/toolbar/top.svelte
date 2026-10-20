@@ -3,6 +3,9 @@
   import ServerInfo from "./server_info.svelte";
   import { Pane } from "@/lib/display/panes.svelte";
   import type { ToolbarButton } from "@/lib/display/toolbar";
+  import { LocalEvent } from "@/lib/events";
+  import * as events from "@/lib/events";
+  import icon_search from "@/assets/icons/search.svg?raw";
 
   interface Props {
     buttons: ToolbarButton[];
@@ -69,21 +72,17 @@
 
   <ServerInfo/>
 
-  <!-- Search -->
-  {#each buttons as button}
-    {#if button.pane === Pane.search}
-      {@render toggle(button)}
-    {/if}
-  {/each}
-
   <div class="spacer"></div>
 
-  <!-- Other Panes -->
+  <!-- Panes -->
   {#each buttons as button}
-    {#if button.pane !== Pane.search}
-      {@render toggle(button)}
-    {/if}
+    {@render toggle(button)}
   {/each}
+
+  <!-- Search -->
+  <button class="icon-btn" aria-label="Search messages" title="Search messages" onclick={() => events.dispatch(LocalEvent.search_requested)}>
+    <span class="icon" aria-hidden="true">{@html icon_search}</span>
+  </button>
 
   <div class="toolbar-user">
     <Identity/>

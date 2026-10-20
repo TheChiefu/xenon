@@ -1,5 +1,7 @@
 <script lang="ts">
   import * as session from "@/lib/connection/session.svelte";
+  import * as notifications from "@/lib/client/notifications.svelte";
+  import { signOut } from "@/lib/api/auth";
   import * as profile from "@/lib/users/profile.svelte";
   import * as users from "@/lib/users/data.svelte";
   import * as status from "@/lib/users/status.svelte";
@@ -39,6 +41,20 @@
   async function doSignout() {
     const result = await events.confirm(msg_sign_out);
     if (result) {
+
+      // Unsubscribe from push notifications
+      await notifications.disablePush();
+
+      // Revoke session on server
+      const account = session.getLoggedInAccount();
+      if (account !== null) {
+        try {
+          await signOut(account.url, account.token);
+        } catch {
+          // Failure still signs out
+        }
+      }
+
       session.removeLoggedInAccount();
     }
   }

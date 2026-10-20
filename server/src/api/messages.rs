@@ -1,6 +1,7 @@
 //! The `messages` table.
 
 pub mod attachments;
+pub mod search;
 
 use uuid::Uuid;
 
@@ -24,7 +25,6 @@ pub struct Message {
     pub body: Option<String>,
     pub created_at: i64,
     pub edited_at: Option<i64>,
-    pub deleted_at: Option<i64>,
 }
 
 // Data Structs //
@@ -133,8 +133,7 @@ pub async fn post(
             author_id,
             body: body.map(str::to_string),
             created_at: now,
-            edited_at: None,
-            deleted_at: None
+            edited_at: None
         })
     };
 
@@ -184,17 +183,17 @@ pub async fn fetch(
     // Two directions from the anchor: below it descending, above it ascending
     let query = if older {
         "
-        SELECT seq, id, room_id, author_id, body, created_at, edited_at, deleted_at
+        SELECT seq, id, room_id, author_id, body, created_at, edited_at
         FROM messages
-        WHERE room_id = ?1 AND seq < ?2 AND deleted_at IS NULL
+        WHERE room_id = ?1 AND seq < ?2
         ORDER BY seq DESC
         LIMIT ?3
         "
     } else {
         "
-        SELECT seq, id, room_id, author_id, body, created_at, edited_at, deleted_at
+        SELECT seq, id, room_id, author_id, body, created_at, edited_at
         FROM messages
-        WHERE room_id = ?1 AND seq > ?2 AND deleted_at IS NULL
+        WHERE room_id = ?1 AND seq > ?2
         ORDER BY seq
         LIMIT ?3
         "
@@ -242,7 +241,7 @@ pub async fn get(
 
     let message: Message = sqlx::query_as(
         "
-        SELECT seq, id, room_id, author_id, body, created_at, edited_at, deleted_at
+        SELECT seq, id, room_id, author_id, body, created_at, edited_at
         FROM messages
         WHERE id = ?1
         "
@@ -263,9 +262,7 @@ pub async fn get(
     Ok((message, files))
 }
 
-/// Tombstones a message, returning the room it was in.
-///
-/// The row stays, with its body and attachments cleared.
+/// Deletes a message, returning the room it was in.
 ///
 /// # Arguments
 ///
@@ -297,27 +294,8 @@ pub async fn delete(
         return Err(AppError::Forbidden);
     }
 
-    // Tombstone the message
-    let now = utils::now_ms();
-    let tombstone_msg = sqlx::query(
-        "
-        UPDATE messages
-        SET body = NULL, deleted_at = ?1
-        WHERE id = ?2 AND deleted_at IS NULL
-        "
-    )
-    .bind(now)
-    .bind(message_id)
-    .execute(&mut *tx)
-    .await?;
-
-    // Message already deleted, so nothing below should run
-    if tombstone_msg.rows_affected() == 0 {
-        return Ok(room_id);
-    }
-
-    // Clear its attachments
-    sqlx::query("DELETE FROM message_attachments WHERE message_id = ?1")
+    // Delete message (attachments cascade)
+    sqlx::query("DELETE FROM messages WHERE id = ?1")
     .bind(message_id)
     .execute(&mut *tx)
     .await?;
@@ -342,7 +320,7 @@ pub async fn delete(
 /// Returns `AppError::Validation` if the new body is over the length limit, or
 /// is absent on a message that carries no attachments; `AppError::Forbidden` if
 /// the caller is not the author; and `AppError::NotFound` if the message does
-/// not exist or is already a tombstone.
+/// not exist.
 pub async fn edit(
     pool: &sqlx::SqlitePool,
     message_id: Uuid,
@@ -384,11 +362,11 @@ pub async fn edit(
 
     // Update message
     let now = utils::now_ms();
-    let edited = sqlx::query(
+    sqlx::query(
         "
         UPDATE messages
         SET body = ?1, edited_at = ?2
-        WHERE id = ?3 AND deleted_at IS NULL
+        WHERE id = ?3
         "
     )
     .bind(body)
@@ -396,11 +374,6 @@ pub async fn edit(
     .bind(message_id)
     .execute(&mut *tx)
     .await?;
-
-    // The guard above matched nothing, so the message is already a tombstone
-    if edited.rows_affected() == 0 {
-        return Err(AppError::NotFound);
-    }
 
     // Commit transaction
     tx.commit().await?;
@@ -468,7 +441,7 @@ async fn fetch_by_nonce(
 
     let message = sqlx::query_as::<_, Message>(
         "
-        SELECT seq, id, room_id, author_id, body, created_at, edited_at, deleted_at
+        SELECT seq, id, room_id, author_id, body, created_at, edited_at
         FROM messages
         WHERE author_id = ?1 AND client_nonce = ?2
         "
@@ -498,7 +471,7 @@ async fn fetch_by_id(
 
     let message: Option<Message> = sqlx::query_as(
         "
-        SELECT seq, id, room_id, author_id, body, created_at, edited_at, deleted_at
+        SELECT seq, id, room_id, author_id, body, created_at, edited_at
         FROM messages
         WHERE id = ?1
         "

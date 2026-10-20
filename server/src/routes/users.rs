@@ -122,7 +122,7 @@ pub struct DeleteAccountRequest {
     #[serde(default)]
     pub anonymize: bool,
 
-    /// Tombstones every message the account wrote
+    /// Deletes every message the account wrote
     #[serde(default)]
     pub delete_history: bool,
 }
@@ -352,6 +352,15 @@ pub async fn update_my_password(
     )
     .await?;
 
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Revokes the session the request authenticated with
+pub async fn sign_out(
+    AuthUser(_, session_hash): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<StatusCode> {
+    api::auth::revoke_session(&pool, &session_hash).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

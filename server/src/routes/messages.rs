@@ -78,7 +78,6 @@ pub struct MessageResponse {
     pub body: Option<String>,
     pub created_at: i64,
     pub edited_at: Option<i64>,
-    pub deleted_at: Option<i64>,
     pub attachments: Vec<AttachmentResponse>
 }
 
@@ -121,7 +120,6 @@ impl MessageResponse {
             body: message.body,
             created_at: message.created_at,
             edited_at: message.edited_at,
-            deleted_at: message.deleted_at,
             attachments
         }
     }
