@@ -14,7 +14,7 @@ use axum::http;
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::request::Parts;
 use axum::http::Method;
-use axum::routing::{delete, get, patch, post};
+use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use sqlx::SqlitePool;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -93,6 +93,7 @@ pub fn router(state: AppState) -> Router {
             .patch(users::update_preferences)
         )
         .route("/me/rooms", get(rooms::list_my_rooms))
+        .route("/me/read", get(rooms::list_my_reads))
         .route("/me/invites", get(rooms::list_my_invites))
         .route("/me/invites/{room_id}", delete(rooms::decline_invite))
 
@@ -108,6 +109,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/rooms/{id}/join", post(rooms::join_room))
         .route("/rooms/{id}/leave", post(rooms::leave_room))
+        .route("/rooms/{id}/read", put(rooms::mark_read))
         .route("/rooms/{id}/messages",
             post(messages::post_message)
             .get(messages::fetch_messages)

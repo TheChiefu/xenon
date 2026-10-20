@@ -41,6 +41,12 @@
     opacity: 1;
   }
 
+  .pane-btn > .badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
 </style>
 
 <!-- Pane Toggle -->

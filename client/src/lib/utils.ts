@@ -10,7 +10,7 @@ export interface FetchedFile {
     mime: string;
 }
 
-export type Method = "GET" | "POST" | "PATCH" | "DELETE" | "QUERY";
+export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "QUERY";
 
 export const DAY_MS = 86400000;
 
@@ -58,7 +58,13 @@ export function failureText(failure: unknown): string {
 
 // Attaches the active session's address and bearer token, and throws the
 // server's error message on a failing status
-export async function request(path: string, method?: Method, body?: unknown): Promise<Response> {
+// Keepalive lets the request finish after the page closes
+export async function request(
+    path: string,
+    method?: Method,
+    body?: unknown,
+    keepalive?: boolean
+): Promise<Response> {
     const url = session.getUrl();
     const token = session.getToken();
 
@@ -81,6 +87,7 @@ export async function request(path: string, method?: Method, body?: unknown): Pr
         method,
         headers,
         body: payload,
+        keepalive,
     });
 
     // Failure throws error message from server

@@ -5,6 +5,7 @@ import { ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 import * as preferences from "@/lib/client/preferences.svelte";
 import * as room from "@/lib/rooms/data.svelte";
+import * as read from "@/lib/rooms/read.svelte";
 import type { RoomId } from "@/lib/rooms/data.svelte";
 
 // Note: any bare "string" types are assumed to be room rows
@@ -80,6 +81,7 @@ export async function loadRooms(): Promise<void> {
   const storedLayout = stored ? JSON.parse(stored) as RoomListItem[] : [];
 
   room.set(fetched);
+  await read.load();
 
   const seenIds: Set<RoomId> = new Set();
   layout = [];

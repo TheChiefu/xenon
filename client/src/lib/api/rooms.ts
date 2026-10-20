@@ -1,4 +1,5 @@
 import type { BanResponse, CreateRoomRequest, CreateRoomResponse, DiscoverableRoomResponse, IssuedInviteResponse, MemberResponse, ReceivedInviteResponse, RoomAccessPatch, RoomPatch, RoomResponse } from "@/bindings/routes/rooms";
+import type { ReadRequest, ReadResponse } from "@/bindings/routes/rooms";
 import { request } from "@/lib/utils";
 
 export async function create(body: CreateRoomRequest): Promise<CreateRoomResponse> {
@@ -19,6 +20,16 @@ export async function listMembers(roomId: string): Promise<MemberResponse[]> {
 export async function listMyRooms(): Promise<RoomResponse[]> {
     const response = await request("/me/rooms");
     return await response.json() as RoomResponse[];
+}
+
+export async function listMyReads(): Promise<ReadResponse[]> {
+    const response = await request("/me/read");
+    return await response.json() as ReadResponse[];
+}
+
+export async function markRead(room_id: string, last_read_seq: number, keepalive: boolean): Promise<void> {
+    const body: ReadRequest = { last_read_seq };
+    await request(`/rooms/${room_id}/read`, "PUT", body, keepalive);
 }
 
 export async function listDiscoverable(after?: string): Promise<DiscoverableRoomResponse[]> {

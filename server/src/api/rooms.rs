@@ -3,6 +3,7 @@
 pub mod bans;
 pub mod invites;
 pub mod access;
+pub mod read;
 
 use sqlx::types::Json;
 use uuid::Uuid;
@@ -203,6 +204,9 @@ pub async fn create(
     .execute(&mut *tx)
     .await?;
 
+    // Start the creator's read position
+    read::start(&mut tx, room_id, caller_id).await?;
+
     // If no errors, commit transaction
     tx.commit().await?;
 
@@ -322,6 +326,9 @@ pub async fn join(
     .bind(now)
     .execute(&mut *tx)
     .await?;
+
+    // Start the user's read position
+    read::start(&mut tx, room_id, user_id).await?;
 
     // Spend the invite the join was allowed on
     invites::delete(&mut tx, room_id, user_id).await?;

@@ -22,6 +22,16 @@ export type IssuedInviteResponse = { user_id: string, invited_by: string, create
 
 export type MemberResponse = { user_id: string, permissions: Array<Permission>, granted_at: number, notify: Notify | null, };
 
+/**
+ * PUT body for storing the caller's read position in a room
+ */
+export type ReadRequest = { last_read_seq: number, };
+
+/**
+ * The caller's read position in one room and how many messages are past it
+ */
+export type ReadResponse = { room_id: string, last_read_seq: number, unread: number, };
+
 export type ReceivedInviteResponse = { room_id: string, room_name: string | null, invited_by: string, created_at: number, expires_at: number | null, };
 
 export type RoomAccessPatch = { permissions: Array<Permission> | null, notify: Notify | null, };

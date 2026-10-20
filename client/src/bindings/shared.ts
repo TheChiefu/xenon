@@ -6,14 +6,14 @@
 export enum Status { "online" = "online", "busy" = "busy", "away" = "away", "offline" = "offline" }
 
 /**
- * How a room is discovered and entered
- */
-export enum Visibility { "public" = "public", "hidden" = "hidden" }
-
-/**
  * A game service an account is linked to
  */
 export enum Platform { "xbox" = "xbox", "steam" = "steam" }
+
+/**
+ * How a room is discovered and entered
+ */
+export enum Visibility { "public" = "public", "hidden" = "hidden" }
 
 /**
  * A user's server-wide role

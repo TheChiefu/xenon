@@ -6,6 +6,8 @@
     import * as layout from "@/lib/rooms/layout.svelte";
     import type { RoomId } from "@/lib/rooms/data.svelte";
     import * as room from "@/lib/rooms/data.svelte";
+    import * as read from "@/lib/rooms/read.svelte";
+    import * as selection from "@/lib/rooms/selection.svelte";
     import * as session from "@/lib/connection/session.svelte";
     import * as drag from "@/lib/rooms/drag.svelte";
     import * as menu from "@/lib/display/menu.svelte";
@@ -105,6 +107,12 @@
         pointer-events: none;
     }
 
+    .list .badge {
+        min-width: 1.25rem;
+        height: 1.25rem;
+        font-size: 0.75rem;
+    }
+
     .folder-name {
         flex: 1;
         margin-left: 0.5rem;
@@ -166,6 +174,7 @@
 {#snippet roomButton(roomId: RoomId, nested: boolean)}
     {@const data = room.get(roomId)}
     {@const drop = drag.dropAt(roomId)}
+    {@const unread = read.getUnread(roomId)}
     <button
         class:nested
         class:selected={session.getSelectedRoom() === roomId}
@@ -174,12 +183,15 @@
         class:drop-below={drop === Section.Below}
         {@attach drag.dropTarget(roomId)}
         onpointerdown={(event) => drag.start(event, roomId)}
-        onclick={() => { if (layout.isLocked()) session.selectRoom(roomId); }}
+        onclick={() => { if (layout.isLocked()) selection.select(roomId); }}
         oncontextmenu={(event) => menu.open(event, roomCtx(roomId))}
     >
         {data?.name}
         {#if data?.visibility === Visibility.hidden}
             <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.hidden]}>{@html icon_eye_off}</span>
+        {/if}
+        {#if unread > 0 && session.getSelectedRoom() !== roomId}
+            <span class="badge" aria-hidden="true">{unread}</span>
         {/if}
     </button>
 {/snippet}
@@ -287,7 +299,7 @@
                 class="icon-btn"
                 aria-label="Close room"
                 title="Close room"
-                onclick={() => session.selectRoom(null)}
+                onclick={() => selection.select(null)}
             >
                 <span class="icon" aria-hidden="true">{@html icon_back}</span>
             </button>

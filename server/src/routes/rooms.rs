@@ -74,6 +74,22 @@ impl From<Room> for RoomResponse {
     }
 }
 
+/// PUT body for storing the caller's read position in a room
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct ReadRequest {
+    pub last_read_seq: i64,
+}
+
+/// The caller's read position in one room and how many messages are past it
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct ReadResponse {
+    pub room_id: Uuid,
+    pub last_read_seq: i64,
+    pub unread: i64,
+}
+
 /// A room, as the discoverable directory sees it
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
@@ -570,6 +586,39 @@ pub async fn list_my_rooms(
     }
 
     Ok(Json(response))
+}
+
+/// Gets the caller's read position in each room they have one for
+pub async fn list_my_reads(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<ReadResponse>>> {
+
+    let entries = api::rooms::read::list(&pool, user_id).await?;
+
+    let mut response = Vec::with_capacity(entries.len());
+    for entry in entries {
+        response.push(ReadResponse {
+            room_id: entry.room_id,
+            last_read_seq: entry.last_read_seq,
+            unread: entry.unread
+        });
+    }
+
+    Ok(Json(response))
+}
+
+/// Stores the caller's read position in a room
+pub async fn mark_read(
+    AuthUser(user_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(room_id): Path<Uuid>,
+    Json(body): Json<ReadRequest>,
+) -> Result<StatusCode> {
+
+    api::rooms::read::mark(&pool, room_id, user_id, body.last_read_seq).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Gets one room
