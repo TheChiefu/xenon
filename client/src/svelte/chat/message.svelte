@@ -4,6 +4,8 @@
     import { LocalEvent } from "@/lib/events";
     import * as events from "@/lib/events";
     import Attachment from "./attachment.svelte";
+    import YouTube from "./youtube.svelte";
+    import * as youtube from "@/lib/embed/youtube";
 
     interface Props {
         message: MessageResponse;
@@ -178,8 +180,12 @@
             {:else if part.kind === "block"}
                 <pre><code>{part.content}</code></pre>
             {:else if part.kind === "link"}
+                {@const embed = youtube.embedUrl(part.href)}
+                {#if embed}
+                <YouTube src={embed}/>
+                {:else}
                 <a href={part.href} target="_blank" rel="noopener noreferrer">{part.href}</a>
-                <!-- Has recognized embed links, create player: TODO-->
+                {/if}
             {:else if part.kind === "mention"}
                 <span class="mention">@{part.userId}</span>
             {/if}

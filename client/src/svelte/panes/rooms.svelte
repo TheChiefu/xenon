@@ -191,7 +191,7 @@
             <span class="icon" aria-hidden="true" title={LABELS_VISIBILITY[Visibility.hidden]}>{@html icon_eye_off}</span>
         {/if}
         {#if unread > 0 && session.getSelectedRoom() !== roomId}
-            <span class="badge" aria-hidden="true">{unread}</span>
+            <span class="badge" aria-hidden="true">{unread > 99 ? "99+" : unread}</span>
         {/if}
     </button>
 {/snippet}
