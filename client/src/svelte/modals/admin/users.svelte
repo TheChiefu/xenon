@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { UserSummaryResponse } from "@/bindings/routes/users";
   import { GlobalRole } from "@/bindings/shared";
-  import { LABELS_ROLE, MSG_ANONYMIZE, MSG_DELETE_USER, MSG_ERROR, MSG_PROMOTE_ADMIN } from "@/lib/labels";
+  import { LABELS_ROLE, MSG_DELETE_USER, MSG_ERROR, MSG_PROMOTE_ADMIN } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
   import * as events from "@/lib/events";
   import { UserSearch } from "@/lib/users/search.svelte";
@@ -29,7 +29,6 @@
 
     const target = selected;
     const form = new FormData(event.currentTarget);
-    const anonymize = form.has("anonymize");
     const delete_history = form.has("delete_history");
 
     const accepted = await events.confirm(`${MSG_DELETE_USER} (@${target.username})`);
@@ -38,7 +37,7 @@
     notify = "";
 
     try {
-      await usersAPI.deleteUser(target.id, { anonymize, delete_history });
+      await usersAPI.deleteUser(target.id, { delete_history });
       await user_search.refresh();
       selected = null;
     } catch (failure) {
@@ -188,8 +187,6 @@
           <h4>Delete User</h4>
         </div>
 
-        <label for="delete-anonymize" title={MSG_ANONYMIZE}>Anonymize</label>
-        <input id="delete-anonymize" name="anonymize" type="checkbox" title={MSG_ANONYMIZE}/>
         <label for="delete-history">Delete All Messages</label>
         <input id="delete-history" name="delete_history" type="checkbox"/>
 

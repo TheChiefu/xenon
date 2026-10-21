@@ -24,7 +24,7 @@ pub struct SearchResult {
     pub seq: i64,
     pub id: Uuid,
     pub room_id: Uuid,
-    pub author_id: Uuid,
+    pub author_id: Option<Uuid>,
     pub body: Option<String>,
     pub created_at: i64,
     pub edited_at: Option<i64>,

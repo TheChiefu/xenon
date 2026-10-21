@@ -21,7 +21,7 @@ pub struct Message {
     pub seq: i64,
     pub id: Uuid,
     pub room_id: Uuid,
-    pub author_id: Uuid,
+    pub author_id: Option<Uuid>,
     pub body: Option<String>,
     pub created_at: i64,
     pub edited_at: Option<i64>,
@@ -130,7 +130,7 @@ pub async fn post(
             seq: result.last_insert_rowid(),
             id: message_id,
             room_id,
-            author_id,
+            author_id: Some(author_id),
             body: body.map(str::to_string),
             created_at: now,
             edited_at: None
@@ -339,7 +339,7 @@ pub async fn edit(
     let room_id = message.room_id;
 
     // Does caller have permission to edit the message
-    if message.author_id != caller_id {
+    if message.author_id != Some(caller_id) {
         return Err(AppError::Forbidden);
     }
 
@@ -520,7 +520,7 @@ fn can_post(perms: Option<Vec<Permission>>, has_attachments: bool) -> bool {
 /// * `perms` - The caller's resolved permissions, `None` when they are not a member.
 /// * `caller_id` - Who is deleting the message.
 /// * `author_id` - Who wrote the message.
-fn can_delete(perms: Option<Vec<Permission>>, caller_id: Uuid, author_id: Uuid) -> bool {
+fn can_delete(perms: Option<Vec<Permission>>, caller_id: Uuid, author_id: Option<Uuid>) -> bool {
 
     // Not a member, so the room cannot be read
     let Some(perms) = perms else {
@@ -528,7 +528,7 @@ fn can_delete(perms: Option<Vec<Permission>>, caller_id: Uuid, author_id: Uuid) 
     };
 
     // Authors can always delete their own messages
-    if caller_id == author_id {
+    if author_id == Some(caller_id) {
         return true;
     }
 

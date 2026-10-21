@@ -33,12 +33,12 @@ export function get(id: string): UserSummaryResponse | undefined {
 }
 
 // Fetches every id not already held
-export async function load(ids: string[]): Promise<void> {
+export async function load(ids: (string | null)[]): Promise<void> {
 
-  // Find ids not already cached
+  // Find ids not already cached, skipping null
   const missing: string[] = [];
   for (const id of new Set(ids)) {
-    if (!summaries.has(id)) {
+    if (id !== null && !summaries.has(id)) {
       missing.push(id);
     }
   }
@@ -101,7 +101,12 @@ export function clearActivities(): void {
 
 // PROFILE FILES //
 
-export function getDisplayName(id: string): string {
+export function getDisplayName(id: string | null): string {
+
+  if (id === null) {
+    return "Deleted User";
+  }
+
   const user = summaries.get(id);
   if (user === undefined) {
     return "Undefined User";

@@ -125,7 +125,7 @@
   // Load message authors
   // Ones not in user cache are auto skipped when loading
   async function loadAuthors(id: string): Promise<void> {
-    const unknown: string[] = [];
+    const unknown: (string | null)[] = [];
     for (const message of messages.get(id)) {
         unknown.push(message.author_id);
     }
@@ -145,18 +145,6 @@
     } catch (error) {
       failure = failureText(error);
     }
-  }
-
-  // A message author's display name
-  // Marked when they are no longer in the room
-  function getAuthorName(authorId: string): string {
-    const name = users.getDisplayName(authorId);
-
-    if (roomId !== null && !members.has(roomId, authorId)) {
-      return `${name} (Left)`;
-    }
-
-    return name;
   }
 
   // Sends a message's new body, then stores the edit
@@ -271,7 +259,7 @@
       {#each roomMessages as message (message.id)}
         <Message
           {message}
-          author={getAuthorName(message.author_id)}
+          author={users.getDisplayName(message.author_id)}
           canEdit={message.author_id === selfId}
           canDelete={canDeleteAny || message.author_id === selfId}
           onEdit={(body) => edit(message, body)}

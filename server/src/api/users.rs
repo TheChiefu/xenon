@@ -8,7 +8,6 @@ use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::{GlobalRole};
-use crate::utils;
 use crate::validate;
 
 // Data Structs //
@@ -25,9 +24,6 @@ pub struct User {
     pub global_role: GlobalRole,
     pub created_at: i64,
     pub locked: bool,
-
-    /// Set on a tombstoned account, which a client marks rather than hides
-    pub deleted_at: Option<i64>,
 }
 
 /// The `users` columns a member row or search result shows
@@ -76,7 +72,6 @@ pub async fn by_username_prefix(
         FROM users u
         WHERE (?1 IS NULL OR u.id > ?1)
             AND (?2 IS NULL OR u.username LIKE ?2 ESCAPE '\\')
-            AND u.deleted_at IS NULL
         ORDER BY id
         LIMIT ?3
         "
@@ -110,7 +105,7 @@ pub async fn get(
     let row: Option<User> = sqlx::query_as(
         "
         SELECT id, username, display_name, description, avatar_file_id,
-               banner_file_id, global_role, created_at, deleted_at, locked
+               banner_file_id, global_role, created_at, locked
         FROM users
         WHERE id = ?1
         "
@@ -124,7 +119,7 @@ pub async fn get(
 
 /// Reads the summaries of a set of accounts.
 ///
-/// An id naming no account, or a deleted one, is absent from the result.
+/// An id naming no account is absent from the result.
 ///
 /// # Arguments
 ///
@@ -145,7 +140,7 @@ pub async fn by_ids(
         "
         SELECT id, username, display_name, avatar_file_id, banner_file_id, global_role
         FROM users
-        WHERE deleted_at IS NULL AND id IN (
+        WHERE id IN (
         "
     );
 
@@ -250,7 +245,7 @@ pub async fn update(
             banner_file_id = nullif(COALESCE(?4, banner_file_id), ?5)
         WHERE id = ?6
         RETURNING id, username, display_name, description, avatar_file_id,
-                  banner_file_id, global_role, created_at, deleted_at
+                  banner_file_id, global_role, created_at, locked
         "
     )
     .bind(display_name.as_deref())
@@ -265,19 +260,10 @@ pub async fn update(
     Ok(Some(stored))
 }
 
-/// Tombstones an account, stripping its credentials and profile while leaving
-/// the row so messages and membership history still resolve.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - Account being closed.
-/// * `anonymize` - Whether the names are replaced and the username released.
-/// * `delete_history` - Whether every message the account wrote is deleted.
+/// Deletes an account's row, leaving any kept messages without an author
 pub async fn delete(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
-    anonymize: bool,
     delete_history: bool,
 ) -> Result<Vec<Uuid>> {
 
@@ -288,34 +274,29 @@ pub async fn delete(
     }
 
     let rooms = leave_every_room(&mut tx, user_id).await?;
-    clear_owned_rows(&mut tx, user_id).await?;
-    strip_profile(&mut tx, user_id, anonymize).await?;
+
+    sqlx::query("DELETE FROM users WHERE id = ?1")
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
+
+    // Empty the WAL so no copies of deleted rows remain
+    sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
+    .execute(pool)
+    .await?;
 
     Ok(rooms)
 }
 
-/// Closes someone else's account.
-///
-/// The messages are always kept.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `caller_id` - User closing the account.
-/// * `target_id` - Account being closed.
-/// * `anonymize` - Whether the names are replaced and the username released.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller is not Admin, or if an Admin
-/// targets another Admin.
+/// Closes someone else's account
+/// 
+/// Returns `Forbidden` if the caller is not Admin, or if an Admin targets another Admin
 pub async fn delete_other(
     pool: &sqlx::SqlitePool,
     caller_id: Uuid,
     target_id: Uuid,
-    anonymize: bool,
     delete_history: bool,
 ) -> Result<Vec<Uuid>> {
 
@@ -334,7 +315,7 @@ pub async fn delete_other(
         return Err(AppError::Forbidden);
     }
 
-    delete(pool, target_id, anonymize, delete_history).await
+    delete(pool, target_id, delete_history).await
 }
 
 /// Changes a user's server-wide role.
@@ -431,78 +412,4 @@ async fn leave_every_room(
     }
 
     Ok(rooms)
-}
-
-/// Deletes the rows an account owns so that tombstone accounts
-/// don't have unused DB information sitting stagnent.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `user_id` - Account whose rows are dropped.
-async fn clear_owned_rows(
-    conn: &mut sqlx::SqliteConnection,
-    user_id: Uuid,
-) -> Result<()> {
-
-    let statements = [
-        "DELETE FROM sessions WHERE user_id = ?1",
-        "DELETE FROM read_state WHERE user_id = ?1",
-        "DELETE FROM xbox_accounts WHERE user_id = ?1",
-        "DELETE FROM user_files WHERE user_id = ?1",
-        "DELETE FROM room_invites WHERE user_id = ?1",
-        "DELETE FROM push_subscriptions WHERE user_id = ?1",
-    ];
-
-    for statement in statements {
-        sqlx::query(statement)
-        .bind(user_id)
-        .execute(&mut *conn)
-        .await?;
-    }
-
-    Ok(())
-}
-
-/// Strips the credentials and profile from an account's row, optionally
-/// replacing the names with ones derived from its own id.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `user_id` - Account being stripped.
-/// * `anonymize` - Whether the names are replaced and the username released.
-async fn strip_profile(
-    conn: &mut sqlx::SqliteConnection,
-    user_id: Uuid,
-    anonymize: bool,
-) -> Result<()> {
-
-    // Set profile username to ID to tombstone it and free it for new users
-    let hex = user_id.simple().to_string();
-    let display_name = format!("Deleted User {}", &hex[..6]);
-
-    // NULL the password_hash to make the account unloginable
-    sqlx::query(
-        "
-        UPDATE users SET
-            username = CASE WHEN ?1 THEN ?2 ELSE username END,
-            display_name = CASE WHEN ?1 THEN ?3 ELSE display_name END,
-            password_hash = NULL,
-            description = '',
-            avatar_file_id = NULL,
-            banner_file_id = NULL,
-            deleted_at = ?4
-        WHERE id = ?5
-        "
-    )
-    .bind(anonymize)
-    .bind(&hex)
-    .bind(&display_name)
-    .bind(utils::now_ms())
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
-
-    Ok(())
 }

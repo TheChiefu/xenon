@@ -159,7 +159,6 @@ pub enum RoomListItem {
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts"))]
 pub struct RegistrationCode {
     pub code: String,
-    pub created_by: Uuid,
     pub created_at: i64,
     pub expires_at: Option<i64>,
     pub max_uses: Option<i64>,

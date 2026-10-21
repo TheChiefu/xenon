@@ -37,7 +37,6 @@ pub struct UserProfileResponse {
     pub banner_file_id: Option<Uuid>,
     pub global_role: GlobalRole,
     pub created_at: i64,
-    pub deleted_at: Option<i64>,
     pub linked_accounts: Vec<LinkedAccountResponse>,
 }
 
@@ -118,10 +117,6 @@ pub struct PasswordRequest {
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
 pub struct DeleteAccountRequest {
-    /// Replaces the names and releases the username
-    #[serde(default)]
-    pub anonymize: bool,
-
     /// Deletes every message the account wrote
     #[serde(default)]
     pub delete_history: bool,
@@ -254,7 +249,6 @@ async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileRe
         banner_file_id: row.banner_file_id,
         global_role: row.global_role,
         created_at: row.created_at,
-        deleted_at: row.deleted_at,
         linked_accounts,
     })
 }
@@ -370,7 +364,7 @@ pub async fn sign_out(
 ///
 /// * `user_id` - Account being closed.
 /// * `app_state` - Pool and socket registry.
-/// * `body` - Whether to anonymize the names and whether to drop the history.
+/// * `body` - Whether to drop the history.
 pub async fn delete_me(
     AuthUser(user_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -379,7 +373,6 @@ pub async fn delete_me(
     let rooms = api::users::delete(
         &app_state.pool,
         user_id,
-        body.anonymize,
         body.delete_history,
     )
     .await?;
@@ -399,7 +392,7 @@ pub async fn delete_me(
 /// * `caller_id` - Who is closing the account.
 /// * `app_state` - Pool and socket registry.
 /// * `target_id` - Account being closed.
-/// * `body` - Whether to anonymize the names.
+/// * `body` - Whether to drop the history.
 pub async fn delete_user(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -407,7 +400,7 @@ pub async fn delete_user(
     Json(body): Json<DeleteAccountRequest>,
 ) -> Result<StatusCode> {
     let rooms =
-        api::users::delete_other(&app_state.pool, caller_id, target_id, body.anonymize, body.delete_history).await?;
+        api::users::delete_other(&app_state.pool, caller_id, target_id, body.delete_history).await?;
 
     // Remove the account's cached Xbox authorization header
     xbox::auth::remove_header(target_id);

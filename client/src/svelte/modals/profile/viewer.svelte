@@ -98,7 +98,6 @@
       role={profile.global_role}
       links={profile.linked_accounts}
       created_at={formatDate(profile.created_at)}
-      deleted_at={profile.deleted_at === null ? null : formatDate(profile.deleted_at)}
       avatar={users.getAvatar(profile.id) ?? null}
       banner={users.getBanner(profile.id) ?? null}
     />

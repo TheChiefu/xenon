@@ -27,7 +27,7 @@ pub async fn list_registration_codes(
 
     let codes: Vec<RegistrationCode> = sqlx::query_as(
         "
-        SELECT code, created_by, created_at, expires_at, max_uses, uses
+        SELECT code, created_at, expires_at, max_uses, uses
         FROM registration_codes
         ORDER BY created_at DESC
         ",
@@ -160,7 +160,7 @@ pub async fn change_password(
     .await?
     .flatten();
 
-    // No row, or the NULL hash a tombstoned account carries: nothing to verify against
+    // No row or NULL hash: nothing to verify against
     let stored_hash = stored_hash.ok_or(AppError::InvalidCredentials)?;
 
     // Check if given current password matches the one stored in the DB
@@ -236,7 +236,7 @@ pub async fn login(
         "
         SELECT id, password_hash, locked
         FROM users
-        WHERE username = ?1 AND deleted_at IS NULL
+        WHERE username = ?1
         "
     )
     .bind(username)

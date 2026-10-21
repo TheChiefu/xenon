@@ -126,7 +126,7 @@ async fn count_unread(
             FROM messages
             WHERE room_id = ?1
                 AND seq > ?2
-                AND author_id <> ?3
+                AND author_id IS NOT ?3
             LIMIT ?4
         )
         "

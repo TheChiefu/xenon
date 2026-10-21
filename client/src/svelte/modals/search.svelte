@@ -101,7 +101,7 @@
       }
 
       // Load authors not yet known
-      const authors: string[] = [];
+      const authors: (string | null)[] = [];
       for (const result of response.results) {
         authors.push(result.author_id);
       }

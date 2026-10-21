@@ -151,12 +151,10 @@ pub async fn create_session(
 /// # Arguments
 ///
 /// * `conn` - Connection to SQL DB.
-/// * `created_by` - User issuing the code.
 /// * `max_uses` - How many registrations the code covers, or `None` for unlimited.
 /// * `lifetime` - How long (in ms) the code lasts, or `None` for no expiry.
 pub async fn create_registration_code(
     conn: &mut sqlx::SqliteConnection,
-    created_by: Uuid,
     max_uses: Option<i64>,
     lifetime: Option<i64>,
     length: usize,
@@ -168,12 +166,11 @@ pub async fn create_registration_code(
 
     sqlx::query(
         "
-        INSERT INTO registration_codes (code, created_by, created_at, expires_at, max_uses)
-        VALUES (?1, ?2, ?3, ?4, ?5)
+        INSERT INTO registration_codes (code, created_at, expires_at, max_uses)
+        VALUES (?1, ?2, ?3, ?4)
         ",
     )
     .bind(&code)
-    .bind(created_by)
     .bind(now)
     .bind(expires_at)
     .bind(max_uses)
@@ -247,14 +244,14 @@ pub async fn effective_permissions(
 ///
 /// # Errors
 ///
-/// Returns `AppError::Forbidden` if the user is missing or tombstoned.
+/// Returns `AppError::Forbidden` if the user is missing.
 pub async fn global_role(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
 ) -> Result<GlobalRole> {
 
     let result = sqlx::query_scalar(
-        "SELECT global_role FROM users WHERE id = ?1 AND deleted_at IS NULL"
+        "SELECT global_role FROM users WHERE id = ?1"
     )
     .bind(user_id)
     .fetch_one(&mut *conn)
@@ -263,7 +260,7 @@ pub async fn global_role(
     match result {
         Ok(val) => Ok(val),
         Err(sqlx::Error::RowNotFound) => {
-            tracing::warn!("references missing or tombstoned user {user_id}");
+            tracing::warn!("references missing user {user_id}");
             Err(AppError::Forbidden)
         }
         Err(other) => Err(AppError::Db(other))
@@ -436,7 +433,7 @@ pub async fn set_global_role(
     let updated = sqlx::query(
         "
         UPDATE users SET global_role = ?1
-        WHERE id = ?2 AND deleted_at IS NULL
+        WHERE id = ?2
         "
     )
     .bind(role)

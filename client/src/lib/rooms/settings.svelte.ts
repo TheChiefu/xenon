@@ -122,7 +122,7 @@ export async function loadBans(): Promise<boolean> {
 
   return run(async () => {
     bans = await roomsAPI.listBans(id);
-    await users.load(bans.flatMap((entry) => [entry.user_id, entry.created_by]));
+    await users.load(bans.map((entry) => entry.user_id));
   });
 }
 

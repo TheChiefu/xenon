@@ -15,7 +15,6 @@ use crate::validate;
 #[derive(sqlx::FromRow)]
 pub struct Entry {
     pub user_id: Uuid,
-    pub created_by: Uuid,
     pub reason: Option<String>,
     pub created_at: i64,
     pub expires_at: Option<i64>,
@@ -83,7 +82,7 @@ pub async fn list(
     let now = utils::now_ms();
     let entries = sqlx::query_as::<_, Entry>(
         "
-        SELECT user_id, created_by, reason, created_at, expires_at
+        SELECT user_id, reason, created_at, expires_at
         FROM room_bans
         WHERE room_id = ?1 AND (expires_at IS NULL OR expires_at > ?2)
         "
@@ -151,18 +150,16 @@ pub async fn create(
     let expires_at = expire_delta.map(|delta| now + delta);
     sqlx::query(
         "
-        INSERT INTO room_bans (room_id, user_id, created_by, reason, created_at, expires_at)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        INSERT INTO room_bans (room_id, user_id, reason, created_at, expires_at)
+        VALUES (?1, ?2, ?3, ?4, ?5)
         ON CONFLICT (room_id, user_id) DO UPDATE SET
-            created_by = ?3,
-            reason = ?4,
-            created_at = ?5,
-            expires_at = ?6
+            reason = ?3,
+            created_at = ?4,
+            expires_at = ?5
         "
     )
     .bind(room_id)
     .bind(target_id)
-    .bind(caller_id)
     .bind(reason)
     .bind(now)
     .bind(expires_at)

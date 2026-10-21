@@ -4,23 +4,37 @@
 -- Timestamps are Unix milliseconds, set in Rust by now_ms().
 
 
--- Tables --
+--- Tables ---
 
--- Content addressed: sha256 is both the dedup key and the path on disk.
--- filename is the first uploader's name. mime is sniffed from the bytes.
+
+-- GENERIC --
 CREATE TABLE files (
     seq         INTEGER PRIMARY KEY,
     id          BLOB NOT NULL UNIQUE,
-    sha256      BLOB NOT NULL UNIQUE,
-    filename    TEXT NOT NULL,
-    mime        TEXT NOT NULL,
+    sha256      BLOB NOT NULL UNIQUE,   -- used as dedupe key (ie. multiple uploads of same file)
+    filename    TEXT NOT NULL,          -- given by first upload (deduped)
+    mime        TEXT NOT NULL,          -- sniffed from the bytes
     byte_size   INTEGER NOT NULL,
     created_at  INTEGER NOT NULL
 ) STRICT;
 
--- username is restricted to lowercase, so UNIQUE rejects 'Alice' while 'alice'
--- exists.
--- locked refuses new logins until unlocked, existing sessions are unaffected
+CREATE TABLE registration_codes (
+    code        TEXT PRIMARY KEY,
+    created_at  INTEGER NOT NULL,
+    expires_at  INTEGER,
+    max_uses    INTEGER,
+    uses        INTEGER NOT NULL DEFAULT 0
+) STRICT;
+
+-- Client addresses refused before any route runs
+-- IPv6 addresses are stored as their /64 network
+CREATE TABLE blocked_addresses (
+    address     TEXT PRIMARY KEY,
+    reason      TEXT NOT NULL,
+    created_at  INTEGER NOT NULL
+) STRICT;
+
+-- USER --
 CREATE TABLE users (
     id              BLOB PRIMARY KEY,
     username        TEXT NOT NULL UNIQUE,
@@ -31,16 +45,21 @@ CREATE TABLE users (
     password_hash   TEXT,
     global_role     TEXT NOT NULL,
     created_at      INTEGER NOT NULL,
-    deleted_at      INTEGER,
-    locked          INTEGER NOT NULL DEFAULT 0
+    locked          INTEGER NOT NULL DEFAULT 0 -- Refuses new login on TRUE (bool)
 ) STRICT;
 
--- One row per user, created alongside them
 CREATE TABLE user_preferences (
     user_id     BLOB PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     room_layout TEXT NOT NULL DEFAULT '[]'
 ) STRICT;
 
+-- Personal file storage for reuse (without new uploads)
+CREATE TABLE user_files (
+    user_id   BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    file_id   BLOB NOT NULL REFERENCES files(id),
+    added_at  INTEGER NOT NULL,
+    PRIMARY KEY (user_id, file_id)
+) STRICT;
 
 CREATE TABLE sessions (
     token_hash  BLOB PRIMARY KEY,
@@ -50,8 +69,8 @@ CREATE TABLE sessions (
     revoked_at  INTEGER
 ) STRICT;
 
--- default_permissions has no DEFAULT: creation must state it. The value is
--- copied into room_access.permissions when a member joins.
+
+-- ROOMS --
 CREATE TABLE rooms (
     id                  BLOB PRIMARY KEY,
     name                TEXT NOT NULL,
@@ -60,9 +79,7 @@ CREATE TABLE rooms (
     created_at          INTEGER NOT NULL
 ) STRICT;
 
--- A row grants read access to the room
---
--- granted_at holds join time
+-- Read access to the room
 CREATE TABLE room_access (
     room_id     BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     user_id     BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -73,7 +90,6 @@ CREATE TABLE room_access (
 ) STRICT;
 
 -- Pending invitations to rooms
--- A row means invited, not joined
 CREATE TABLE room_invites (
     room_id     BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     user_id     BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -83,12 +99,9 @@ CREATE TABLE room_invites (
     PRIMARY KEY (room_id, user_id)
 ) STRICT;
 
--- Room scoped bans:
--- created_by is a plain REFERENCES, never CASCADE (a cascade lifts every ban an issuer made)
 CREATE TABLE room_bans (
     room_id     BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     user_id     BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_by  BLOB REFERENCES users(id),
     reason      TEXT,
     created_at  INTEGER NOT NULL,
     expires_at  INTEGER,
@@ -102,45 +115,29 @@ CREATE TABLE read_state (
     PRIMARY KEY (user_id, room_id)
 ) STRICT;
 
+
+-- MESSAGES --
 CREATE TABLE messages (
     seq           INTEGER PRIMARY KEY AUTOINCREMENT,
     id            BLOB NOT NULL UNIQUE,
     room_id       BLOB NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-    author_id     BLOB NOT NULL REFERENCES users(id),
+    author_id     BLOB REFERENCES users(id) ON DELETE SET NULL,
     body          TEXT,
     client_nonce  BLOB NOT NULL,
     created_at    INTEGER NOT NULL,
     edited_at     INTEGER
 ) STRICT;
 
--- ordinal is the display order
 CREATE TABLE message_attachments (
     message_id  BLOB NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
     file_id     BLOB NOT NULL REFERENCES files(id),
-    ordinal     INTEGER NOT NULL,
+    ordinal     INTEGER NOT NULL, -- the display order
     spoiler     INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (message_id, ordinal),
     UNIQUE (message_id, file_id)
 ) STRICT;
 
--- A user's library of files
-CREATE TABLE user_files (
-    user_id   BLOB NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    file_id   BLOB NOT NULL REFERENCES files(id),
-    added_at  INTEGER NOT NULL,
-    PRIMARY KEY (user_id, file_id)
-) STRICT;
-
--- Server registration codes
-CREATE TABLE registration_codes (
-    code        TEXT PRIMARY KEY,
-    created_by  BLOB NOT NULL REFERENCES users(id),
-    created_at  INTEGER NOT NULL,
-    expires_at  INTEGER,
-    max_uses    INTEGER,
-    uses        INTEGER NOT NULL DEFAULT 0
-) STRICT;
-
+-- SERVICES --
 CREATE TABLE push_keys (
     id          INTEGER PRIMARY KEY CHECK (id = 1),
     public_key  BLOB NOT NULL,
@@ -164,10 +161,8 @@ CREATE TABLE xbox_accounts (
 ) STRICT;
 
 
--- Indexes --
-
+-- INDEXES --
 CREATE INDEX room_access_user ON room_access(user_id);
-
 CREATE INDEX messages_room ON messages(room_id, seq);
 CREATE UNIQUE INDEX message_nonce ON messages(author_id, client_nonce);
 
@@ -181,8 +176,7 @@ CREATE INDEX message_attachments_file ON message_attachments(file_id);
 CREATE INDEX user_files_file ON user_files(file_id);
 
 
--- Triggers --
-
+-- TRIGGERS --
 CREATE TRIGGER messages_author_is_member BEFORE INSERT ON messages
 WHEN NOT EXISTS (
     SELECT 1 FROM room_access a
@@ -191,13 +185,8 @@ WHEN NOT EXISTS (
 BEGIN SELECT RAISE(ABORT, 'author is not a member of this room');
 END;
 
-CREATE TRIGGER messages_author_live BEFORE INSERT ON messages
-WHEN (SELECT deleted_at FROM users WHERE id = new.author_id) IS NOT NULL
-BEGIN SELECT RAISE(ABORT, 'author is deleted');
-END;
 
-
--- Search --
+-- SEARCH --
 
 -- Message bodies
 CREATE VIRTUAL TABLE messages_fts USING fts5(

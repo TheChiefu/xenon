@@ -19,8 +19,8 @@ export async function changePassword(current_password: string, new_password: str
     await request("/me/password", "PATCH", { current_password, new_password, revoke_others });
 }
 
-export async function deleteMe(anonymize: boolean, delete_history: boolean): Promise<void> {
-    await request("/me", "DELETE", { anonymize, delete_history });
+export async function deleteMe(delete_history: boolean): Promise<void> {
+    await request("/me", "DELETE", { delete_history });
 }
 
 export async function deleteUser(id: string, body: DeleteAccountRequest): Promise<void> {

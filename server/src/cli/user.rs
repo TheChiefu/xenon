@@ -59,7 +59,7 @@ async fn reset(pool: &SqlitePool, username: &str) -> Result<()> {
     let password = utils::generate_code(12);
     let hash = utils::hash_password(&password)?;
 
-    let updated = sqlx::query("UPDATE users SET password_hash = ?1 WHERE username = ?2 AND deleted_at IS NULL")
+    let updated = sqlx::query("UPDATE users SET password_hash = ?1 WHERE username = ?2")
         .bind(hash)
         .bind(username)
         .execute(pool)
@@ -82,7 +82,7 @@ async fn get(pool: &SqlitePool, username: &str) -> Result<()> {
         "
         SELECT
             id, username, display_name, description, avatar_file_id,
-            banner_file_id, global_role, created_at, locked, deleted_at
+            banner_file_id, global_role, created_at, locked
         FROM users
         WHERE username = ?1
         "

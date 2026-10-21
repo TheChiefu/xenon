@@ -10,7 +10,7 @@
 <style>
   .bans {
     display: grid;
-    grid-template-columns: 1fr 1fr 2fr auto auto;
+    grid-template-columns: 1fr 2fr auto auto;
   }
 
   .notify {
@@ -27,14 +27,12 @@
 
   <div class="bans grid table">
     <span class="grid-heading">User</span>
-    <span class="grid-heading">By</span>
     <span class="grid-heading">Reason</span>
     <span class="grid-heading">Expires</span>
     <span class="grid-heading"></span>
 
     {#each settings.getBans() as entry (entry.user_id)}
       <span>@{users.get(entry.user_id)?.username ?? ""}</span>
-      <span>@{users.get(entry.created_by)?.username ?? ""}</span>
       <span>{entry.reason ?? ""}</span>
       <span>{entry.expires_at === null ? "Never" : new Date(entry.expires_at).toLocaleDateString()}</span>
       <span>

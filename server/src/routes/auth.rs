@@ -170,7 +170,6 @@ pub async fn create_registration_code(
     validate::registration_code_params(max_uses, lifetime, length)?;
     let code = db::create_registration_code(
         &mut conn,
-        caller_id,
         Some(max_uses),
         Some(lifetime),
         length

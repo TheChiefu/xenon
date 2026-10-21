@@ -30,7 +30,7 @@ export type Folder = { name: string, rooms: Array<string>, collapsed: boolean, }
 /**
  * The `registration_codes` columns
  */
-export type RegistrationCode = { code: string, created_by: string, created_at: number, expires_at: number | null, max_uses: number | null, uses: number, };
+export type RegistrationCode = { code: string, created_at: number, expires_at: number | null, max_uses: number | null, uses: number, };
 
 /**
  * One entry in a user's room list layout, room ID and possible folder it's in

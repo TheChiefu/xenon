@@ -74,7 +74,7 @@ pub struct MessageResponse {
     pub seq: i64,
     pub id: Uuid,
     pub room_id: Uuid,
-    pub author_id: Uuid,
+    pub author_id: Option<Uuid>,
     pub body: Option<String>,
     pub created_at: i64,
     pub edited_at: Option<i64>,
@@ -322,6 +322,11 @@ async fn notify_users(
     message: &MessageResponse,
 ) -> Result<()> {
 
+    // Skip notifying when the message has no author
+    let Some(author_id) = message.author_id else {
+        return Ok(());
+    };
+
     // Construct message to send to users
     let body = match &message.body {
         Some(val) => val,
@@ -335,7 +340,7 @@ async fn notify_users(
     // Get list of recipients eligible for receiving the notification
     let mut conn = app_state.pool.acquire().await?;
     let pairs = api::rooms::access::list_notify_pairs(&mut *conn, room_id).await?;
-    let recipients = recipients(&pairs, message.author_id, &mentioned);
+    let recipients = recipients(&pairs, author_id, &mentioned);
 
     // Create notification server event
     let event = ServerEvent::Notification {
@@ -380,14 +385,19 @@ async fn announce(
     mentioned: &[Uuid],
 ) -> Result<Announcement> {
 
+    // Return not found when the message has no author
+    let Some(author_id) = message.author_id else {
+        return Err(AppError::NotFound);
+    };
+
     let body = match &message.body {
         Some(val) => val,
         None => "Attachment(s)"
     };
 
     // The author is a member, so the room resolves for them
-    let room = api::rooms::get(&app_state.pool, room_id, message.author_id).await?;
-    let author = api::users::get(&app_state.pool, message.author_id).await?;
+    let room = api::rooms::get(&app_state.pool, room_id, author_id).await?;
+    let author = api::users::get(&app_state.pool, author_id).await?;
 
     // Get display names of everyone mentioned
     let names = api::users::display_names(&app_state.pool, mentioned).await?;

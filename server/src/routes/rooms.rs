@@ -154,7 +154,6 @@ pub struct IssuedInviteResponse {
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
 pub struct BanResponse {
     pub user_id: Uuid,
-    pub created_by: Uuid,
     pub reason: Option<String>,
     pub created_at: i64,
     pub expires_at: Option<i64>
@@ -370,7 +369,6 @@ pub async fn list_bans(
     for ban in bans {
         response.push(BanResponse {
             user_id: ban.user_id,
-            created_by: ban.created_by,
             reason: ban.reason,
             created_at: ban.created_at,
             expires_at: ban.expires_at

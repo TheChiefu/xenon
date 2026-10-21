@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MSG_SAVED, MSG_ERROR, MSG_ANONYMIZE, MSG_DELETE_ACCOUNT } from "@/lib/labels";
+  import { MSG_SAVED, MSG_ERROR, MSG_DELETE_ACCOUNT } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
   import * as events from "@/lib/events";
   import * as session from "@/lib/connection/session.svelte";
@@ -12,7 +12,6 @@
   let creds_notify = $state("");
 
   // Account Deletion
-  let delete_anonymize = $state(false);
   let delete_history = $state(false);
   let delete_notify = $state("");
 
@@ -38,7 +37,7 @@
     }
 
     try {
-      await usersAPI.deleteMe(delete_anonymize, delete_history);
+      await usersAPI.deleteMe(delete_history);
       session.removeLoggedInAccount();
     } catch (failure) {
       delete_notify = `${MSG_ERROR}: ${failureText(failure)}`;
@@ -69,8 +68,6 @@
     </div>
     <p class="message">{delete_notify}</p>
 
-    <label for="delete-username" title={MSG_ANONYMIZE}>Anonymize</label>
-    <input id="delete-username" type="checkbox" title={MSG_ANONYMIZE} bind:checked={delete_anonymize}/>
     <label for="delete-messages">Delete All Messages</label>
     <input id="delete-messages" type="checkbox" bind:checked={delete_history}/>
     <button class="full-row is-danger" onclick={deleteAccount}>Delete Account</button>

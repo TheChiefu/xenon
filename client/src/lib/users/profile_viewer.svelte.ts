@@ -21,7 +21,11 @@ export function close(): void {
   visible = false;
 }
 
-export function open(id: string): void {
+export function open(id: string | null): void {
+  if (id === null) {
+    return;
+  }
+
   userId = id;
   visible = true;
 }

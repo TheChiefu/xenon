@@ -19,7 +19,6 @@
     role: GlobalRole;
     links: LinkedAccountResponse[];
     created_at: string;
-    deleted_at?: string | null;
     avatar?: FetchedFile | null;
     banner?: FetchedFile | null;
   }
@@ -34,7 +33,6 @@
     role,
     links,
     created_at,
-    deleted_at = null,
     avatar = null,
     banner = null,
   }: Props = $props();
@@ -253,10 +251,6 @@
       </dd>
       <dt>Created</dt>
       <dd>{created_at}</dd>
-      {#if deleted_at}
-        <dt>Deleted</dt>
-        <dd>{deleted_at}</dd>
-      {/if}
     </dl>
   </div>
 </div>

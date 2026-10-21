@@ -8,4 +8,4 @@ export type SearchResponse = { results: Array<SearchResult>, total: number, };
 /**
  * A matched message
  */
-export type SearchResult = { seq: number, id: string, room_id: string, author_id: string, body: string | null, created_at: number, edited_at: number | null, files: Array<string>, };
+export type SearchResult = { seq: number, id: string, room_id: string, author_id: string | null, body: string | null, created_at: number, edited_at: number | null, files: Array<string>, };

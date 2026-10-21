@@ -19,7 +19,7 @@ export type EditMessageResponse = { edited_at: number, };
 /**
  * A message and the files attached to it.
  */
-export type MessageResponse = { seq: number, id: string, room_id: string, author_id: string, body: string | null, created_at: number, edited_at: number | null, attachments: Array<AttachmentResponse>, };
+export type MessageResponse = { seq: number, id: string, room_id: string, author_id: string | null, body: string | null, created_at: number, edited_at: number | null, attachments: Array<AttachmentResponse>, };
 
 /**
  * POST body for a new message.
