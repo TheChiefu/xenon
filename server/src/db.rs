@@ -3,6 +3,8 @@
 //! Everything here takes a connection rather than a pool, so a caller can run
 //! several of these inside one transaction.
 
+use std::net::IpAddr;
+
 use sqlx::types::Json;
 use uuid::Uuid;
 
@@ -461,4 +463,38 @@ pub async fn get_user_count(
     .await?;
 
     Ok(count)
+}
+
+/// Reads every blocked address
+pub async fn blocked_addresses(
+    conn: &mut sqlx::SqliteConnection,
+) -> Result<Vec<IpAddr>> {
+
+    let rows: Vec<String> = sqlx::query_scalar("SELECT address FROM blocked_addresses")
+        .fetch_all(&mut *conn)
+        .await?;
+
+    Ok(rows.iter().filter_map(|address| address.parse().ok()).collect())
+}
+
+/// Saves a blocked address, returning false if it was already saved
+pub async fn save_blocked_address(
+    conn: &mut sqlx::SqliteConnection,
+    address: IpAddr,
+    reason: &str,
+) -> Result<bool> {
+
+    let inserted = sqlx::query(
+        "
+        INSERT OR IGNORE INTO blocked_addresses (address, reason, created_at)
+        VALUES (?1, ?2, ?3)
+        "
+    )
+    .bind(address.to_string())
+    .bind(reason)
+    .bind(utils::now_ms())
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(inserted.rows_affected() > 0)
 }

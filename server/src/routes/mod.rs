@@ -11,11 +11,13 @@ mod users;
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
-use axum::extract::{ConnectInfo, DefaultBodyLimit, FromRef, FromRequestParts};
+use axum::extract::{ConnectInfo, DefaultBodyLimit, FromRef, FromRequestParts, Request, State};
 use axum::http;
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::request::Parts;
 use axum::http::Method;
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use axum::routing::{delete, get, patch, post, put};
 use axum::Router;
 use sqlx::SqlitePool;
@@ -25,6 +27,7 @@ use uuid::Uuid;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::ratelimit::AddressLimits;
 use crate::sockets::connection;
 use crate::state::AppState;
 use crate::utils;
@@ -211,8 +214,20 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(server::health_check))
         .merge(crate::services::push::router())
         .merge(crate::services::xbox::router())
+        .layer(middleware::from_fn_with_state(state.clone(), refuse_blocked))
         .with_state(state)
         .layer(cors_layer())
+}
+
+/// Refuses a request from a blocked IP before any route runs
+async fn refuse_blocked(
+    ClientIp(ip): ClientIp,
+    State(address_limits): State<AddressLimits>,
+    request: Request,
+    next: Next,
+) -> Result<Response> {
+    address_limits.check(ip)?;
+    Ok(next.run(request).await)
 }
 
 // Helper Methods //

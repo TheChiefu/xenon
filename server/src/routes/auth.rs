@@ -11,10 +11,10 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::error::{AppError, Result};
-use crate::ratelimit::{LoginFailures, RegisterLimit};
+use crate::ratelimit::{AddressLimits, LoginFailures};
 use crate::shared::{GlobalRole, RegistrationCode};
 use crate::routes::{AuthUser, ClientIp};
-use crate::{api, db, validate};
+use crate::{api, config, db, validate};
 
 // Data Structs //
 
@@ -84,21 +84,35 @@ pub struct CodeResponse {
 /// * `body` - Details for the new account.
 pub async fn register(
     ClientIp(ip): ClientIp,
-    State(register_limit): State<RegisterLimit>,
+    State(address_limits): State<AddressLimits>,
     State(pool): State<SqlitePool>,
     Json(body): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegisterResponse>)> {
 
-    // Count the attempt against the client's IP
-    register_limit.check(ip)?;
-
-    let (id, token) = api::auth::register(
+    let result = api::auth::register(
         &pool,
         body.registration_code.as_deref(),
         &body.username,
         &body.display_name,
         &body.password,
-    ).await?;
+    ).await;
+
+    // Count a failure caused by the client against its IP
+    let failed = matches!(
+        result, 
+        Err(AppError::Validation(_) | AppError::UsernameTaken | AppError::InvalidRegistrationCode)
+    );
+
+    // If IP limit block is on, check limits to determine if block is necessary
+    if failed && config::get().rate_limit.block_on_register_limit {
+        if address_limits.register_limit_reached(ip) {
+            address_limits.block(ip);
+            let mut conn = pool.acquire().await?;
+            db::save_blocked_address(&mut conn, ip, "registration").await?;
+        }
+    }
+
+    let (id, token) = result?;
 
     Ok((StatusCode::CREATED, Json(RegisterResponse { id, session_token: token })))
 }
@@ -110,12 +124,28 @@ pub async fn register(
 /// * `pool` - Pool of SQL connections.
 /// * `body` - Credentials to authenticate with.
 pub async fn login(
+    ClientIp(ip): ClientIp,
+    State(address_limits): State<AddressLimits>,
     State(login_failures): State<LoginFailures>,
     State(pool): State<SqlitePool>,
     Json(body): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>> {
 
-    let token = api::auth::login(&pool, &login_failures, &body.username, &body.password).await?;
+    let result = api::auth::login(&pool, &login_failures, ip, &body.username, &body.password).await;
+
+    // Count a wrong password, unknown username, or locked account against the IP
+    let failed = matches!(result, Err(AppError::InvalidCredentials));
+
+    // If IP limit block is on, check limits to determine if block is necessary
+    if failed && config::get().rate_limit.block_on_login_limit {
+        if address_limits.login_limit_reached(ip) {
+            address_limits.block(ip);
+            let mut conn = pool.acquire().await?;
+            db::save_blocked_address(&mut conn, ip, "login").await?;
+        }
+    }
+
+    let token = result?;
 
     Ok(Json(LoginResponse { token }))
 }

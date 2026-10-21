@@ -5,7 +5,7 @@
 use axum::extract::FromRef;
 use sqlx::SqlitePool;
 
-use crate::ratelimit::{LoginFailures, RegisterLimit};
+use crate::ratelimit::{AddressLimits, LoginFailures};
 use crate::sockets::game_presence::ReportedGames;
 use crate::sockets::registry::Registry;
 
@@ -21,8 +21,8 @@ pub struct AppState {
     /// What each user's linked account last reported
     pub game_presence: ReportedGames,
 
-    /// Registration attempts each IP has made
-    pub register_limit: RegisterLimit,
+    /// Failures each IP has made, and whether it is blocked
+    pub address_limits: AddressLimits,
 
     /// Failed logins each account has made since its last successful login
     pub login_failures: LoginFailures
@@ -40,7 +40,7 @@ impl AppState {
             pool,
             registry: Registry::default(),
             game_presence: ReportedGames::default(),
-            register_limit: RegisterLimit::default(),
+            address_limits: AddressLimits::default(),
             login_failures: LoginFailures::default(),
         }
     }

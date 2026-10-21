@@ -1,5 +1,7 @@
 //! Registration and login.
 
+use std::net::IpAddr;
+
 use uuid::Uuid;
 
 use crate::config;
@@ -224,6 +226,7 @@ pub async fn revoke_session(
 pub async fn login(
     pool: &sqlx::SqlitePool,
     failures: &LoginFailures,
+    ip: IpAddr,
     username: &str,
     password: &str,
 ) -> Result<String> {
@@ -275,12 +278,17 @@ pub async fn login(
                 .execute(pool)
                 .await?;
 
-            tracing::warn!("account {user_id} locked after repeated failed logins");
+            // Log IP on account lock
+            tracing::warn!(
+                "| [{ip}] account locked after failed logins [Username: {0} | ID: {1}]",
+                username, user_id,
+            );
         }
 
         return Err(AppError::InvalidCredentials);
     }
 
+    // Reset failure account once logged in
     failures.clear(user_id);
 
     // Create session key

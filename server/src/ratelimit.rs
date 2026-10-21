@@ -1,56 +1,90 @@
-//! Registration attempts counted per IP, and failed logins counted per account.
+//! Failures and blocks counted per IP, and failed logins counted per account.
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::{Duration, Instant};
 
 use uuid::Uuid;
 
 use crate::config;
 use crate::error::{AppError, Result};
 
-/// Registration attempts counted for one IP
-struct Attempts {
-    first_attempt: Instant,
-    count: u32
+/// Failures counted for one IP, and whether it is blocked
+#[derive(Default)]
+struct AddressRecord {
+    register_failures: u32,
+    login_failures: u32,
+    blocked: bool
 }
 
-/// Registration attempts per IP, with each IPv6 /64 counted as one IP
+/// Failures and blocks per IP, with each IPv6 /64 counted as one IP
 #[derive(Clone, Default)]
-pub struct RegisterLimit {
-    attempts_by_ip: Arc<Mutex<HashMap<IpAddr, Attempts>>>
+pub struct AddressLimits {
+    by_ip: Arc<Mutex<HashMap<IpAddr, AddressRecord>>>
 }
 
-impl RegisterLimit {
+impl AddressLimits {
 
-    /// Counts a registration attempt, failing once the IP has used all of its attempts
+    /// Marks every IP read from the database as blocked
+    pub fn load(&self, addresses: Vec<IpAddr>) {
+        let mut by_ip = self.lock_map();
+
+        // Mark each saved address as blocked
+        for address in addresses {
+            by_ip.entry(accountable_address(address)).or_default().blocked = true;
+        }
+    }
+
+    /// Fails if the IP is blocked
     pub fn check(&self, ip: IpAddr) -> Result<()> {
-        let config = &config::get().rate_limit;
-        let reset_after = Duration::from_secs(config.register_window_minutes * 60);
-        let now = Instant::now();
-
-        // Lock the map
-        let mut attempts_by_ip = match self.attempts_by_ip.lock() {
-            Ok(attempts_by_ip) => attempts_by_ip,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-
-        // Remove every IP whose first attempt was longer ago than the reset time
-        attempts_by_ip.retain(|_, attempts| now.duration_since(attempts.first_attempt) < reset_after);
-
-        // Count starts at zero on an IP's first attempt
-        let attempts = attempts_by_ip.entry(accountable_address(ip)).or_insert(Attempts {
-            first_attempt: now,
-            count: 0
-        });
-
-        if attempts.count >= config.register_attempts_max {
-            return Err(AppError::TooManyRequests);
+        if self.lock_map().get(&accountable_address(ip)).is_some_and(|record| record.blocked) {
+            return Err(AppError::AddressBlocked);
         }
 
-        attempts.count += 1;
         Ok(())
+    }
+
+    /// Counts a failed registration, returning whether the IP just reached the limit
+    pub fn register_limit_reached(&self, ip: IpAddr) -> bool {
+        let max = config::get().rate_limit.address_register_failures_max;
+        let mut by_ip = self.lock_map();
+        let record = by_ip.entry(accountable_address(ip)).or_default();
+        record.register_failures += 1;
+
+        if record.register_failures != max {
+            return false;
+        }
+
+        tracing::warn!("| [{ip}] hit registration attempts limit");
+        true
+    }
+
+    /// Counts a failed login, returning whether the IP just reached the limit
+    pub fn login_limit_reached(&self, ip: IpAddr) -> bool {
+        let max = config::get().rate_limit.address_login_failures_max;
+        let mut by_ip = self.lock_map();
+        let record = by_ip.entry(accountable_address(ip)).or_default();
+        record.login_failures += 1;
+
+        if record.login_failures != max {
+            return false;
+        }
+
+        tracing::warn!("| [{ip}] hit login attempts limit");
+        true
+    }
+
+    /// Blocks the IP
+    pub fn block(&self, ip: IpAddr) {
+        self.lock_map().entry(accountable_address(ip)).or_default().blocked = true;
+    }
+
+    /// Locks the records
+    fn lock_map(&self) -> MutexGuard<'_, HashMap<IpAddr, AddressRecord>> {
+        match self.by_ip.lock() {
+            Ok(by_ip) => by_ip,
+            Err(poisoned) => poisoned.into_inner(),
+        }
     }
 }
 
@@ -64,7 +98,7 @@ impl LoginFailures {
 
     /// Counts a failed login, returning whether the account has reached its limit
     pub fn record_failure(&self, user_id: Uuid) -> bool {
-        let max = config::get().rate_limit.login_failures_max;
+        let max = config::get().rate_limit.account_login_failures_max;
         let mut count_by_user = self.lock_map();
 
         let count = count_by_user.entry(user_id).or_insert(0);

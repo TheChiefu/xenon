@@ -77,6 +77,10 @@ async fn main() -> Result<()> {
 
     // Server server
     let app_state = AppState::new(pool);
+
+    // Read blocked addresses from the database
+    load_blocked_addresses(&app_state).await?;
+
     services::xbox::start(app_state.clone());
 
     let app: axum::Router = routes::router(app_state);
@@ -120,6 +124,14 @@ async fn connect_database() -> Result<SqlitePool> {
     tracing::info!("connected to database: {db_path}");
 
     Ok(pool)
+}
+
+/// Marks every address saved in the database as blocked
+async fn load_blocked_addresses(app_state: &AppState) -> Result<()> {
+    let mut conn = app_state.pool.acquire().await?;
+    let blocked = db::blocked_addresses(&mut conn).await?;
+    app_state.address_limits.load(blocked);
+    Ok(())
 }
 
 /// Creates the bootstrap account, printing its generated password once.
