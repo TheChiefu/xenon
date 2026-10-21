@@ -24,6 +24,7 @@ pub struct User {
     pub banner_file_id: Option<Uuid>,
     pub global_role: GlobalRole,
     pub created_at: i64,
+    pub locked: bool,
 
     /// Set on a tombstoned account, which a client marks rather than hides
     pub deleted_at: Option<i64>,
@@ -109,7 +110,7 @@ pub async fn get(
     let row: Option<User> = sqlx::query_as(
         "
         SELECT id, username, display_name, description, avatar_file_id,
-               banner_file_id, global_role, created_at, deleted_at
+               banner_file_id, global_role, created_at, deleted_at, locked
         FROM users
         WHERE id = ?1
         "

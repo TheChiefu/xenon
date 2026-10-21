@@ -4,6 +4,7 @@ use std::time::Duration;
 use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
 
+use crate::cli;
 use crate::config;
 
 /// How long open connections are given to finish once shutdown begins.
@@ -47,6 +48,7 @@ pub async fn tls(app: Router, bind_addr: SocketAddr) {
     listener.set_nonblocking(true).expect("failed to set listener non-blocking");
 
     tracing::info!("listening on {bind_addr} over TLS");
+    cli::READY.notify_one();
 
     axum_server::from_tcp_rustls(listener, tls)
         .expect("failed to accept on bound listener")
@@ -75,6 +77,7 @@ pub async fn plaintext(app: Router, bind_addr: SocketAddr) {
         .expect("failed to bind port to listener");
 
     tracing::info!("listening on {bind_addr}");
+    cli::READY.notify_one();
 
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(crate::shutdown_signal())

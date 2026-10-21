@@ -3,6 +3,8 @@
 //! enums marked with "PERMANENT" is stored as its integer. Never reuse or
 //! renumber a retired variant's number once rows exist.
 
+use core::fmt;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -20,6 +22,17 @@ pub enum GlobalRole {
     Admin,
     Member,
     Visitor,
+}
+
+impl fmt::Display for GlobalRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GlobalRole::Admin => write!(f, "Admin"),
+            GlobalRole::Member => write!(f, "Member"),
+            GlobalRole::Visitor => write!(f, "Visitor"),
+            _ => write!(f, "Unknown")
+        }
+    }
 }
 
 /// How a room is discovered and entered

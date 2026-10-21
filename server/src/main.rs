@@ -31,28 +31,6 @@ async fn main() -> Result<()> {
 
     let config_path = std::env::var("XENON_CONFIG").unwrap_or_else(|_| "config.toml".into());
 
-    // When args provided, run CLI commands instead of booting server
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if !args.is_empty() {
-
-        // Exit if the config file is missing, instead of writing defaults
-        if !Path::new(&config_path).exists() {
-            eprintln!("no config file at {config_path}");
-            std::process::exit(1);
-        }
-        config::init(&config_path);
-
-        // Exit if the database is missing, instead of creating an empty one
-        let db_path = &config::get().database.path;
-        if !Path::new(db_path).exists() {
-            eprintln!("no database at {db_path}");
-            std::process::exit(1);
-        }
-
-        let pool = connect_database().await?;
-        return cli::run(&pool, &args).await;
-    }
-
     // Read configuration file (create defaults if not existing)
     config::init(&config_path);
 
@@ -80,6 +58,9 @@ async fn main() -> Result<()> {
 
     // Read blocked addresses from the database
     load_blocked_addresses(&app_state).await?;
+
+    // Read commands typed into the terminal
+    tokio::spawn(cli::console(app_state.clone()));
 
     services::xbox::start(app_state.clone());
 
@@ -278,6 +259,7 @@ async fn shutdown_signal() {
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {},
         _ = terminate() => {},
+        _ = cli::EXIT.notified() => {},
     }
     tracing::info!("Shutting down server");
 }

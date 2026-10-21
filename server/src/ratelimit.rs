@@ -79,6 +79,11 @@ impl AddressLimits {
         self.lock_map().entry(accountable_address(ip)).or_default().blocked = true;
     }
 
+    /// Removes the IP's block and failure counts
+    pub fn unblock(&self, ip: IpAddr) {
+        self.lock_map().remove(&accountable_address(ip));
+    }
+
     /// Locks the records
     fn lock_map(&self) -> MutexGuard<'_, HashMap<IpAddr, AddressRecord>> {
         match self.by_ip.lock() {
