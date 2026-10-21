@@ -1,11 +1,16 @@
 <script lang="ts">
   import type { ToolbarButton } from "@/lib/display/toolbar";
+  import { Kind } from "@/lib/display/toolbar";
 
   interface Props {
     buttons: ToolbarButton[];
   }
 
   let { buttons }: Props = $props();
+  let regularButtons = $derived(buttons.filter((b) => b.kind === Kind.Regular));
+  let overlayButtons = $derived(buttons.filter((b) => b.kind === Kind.Overlay));
+  let modalButtons = $derived(buttons.filter((b) => b.kind === Kind.Modal));
+
 </script>
 
 <style>
@@ -17,6 +22,12 @@
     flex: none;
     border-top: 1px solid var(--border);
     background: var(--component);
+  }
+
+  .divider {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--border);
   }
 
   .pane-btn {
@@ -39,7 +50,9 @@
 </style>
 
 <nav class="bottom-toolbar">
-  {#each buttons as button}
+
+  <!-- Regular and Overlay Panes are always shown on left, on mobile -->
+  {#each regularButtons as button}
     <button
       class="icon-btn pane-btn"
       class:open={button.active}
@@ -53,4 +66,35 @@
       {/if}
     </button>
   {/each}
+
+  {#each overlayButtons as button}
+    <button
+      class="icon-btn pane-btn"
+      class:open={button.active}
+      aria-label={button.label}
+      title={button.label}
+      onclick={button.onclick}
+    >
+      <span class="icon" aria-hidden="true">{@html button.icon}</span>
+      {#if button.badge !== undefined && button.badge > 0}
+        <span class="badge" aria-hidden="true">{button.badge}</span>
+      {/if}
+    </button>
+  {/each}
+
+  <div class="divider"></div>
+
+  <!-- Modal Buttons on right -->
+  {#each modalButtons as button}
+    <button
+      class="icon-btn pane-btn"
+      class:open={button.active}
+      aria-label={button.label}
+      title={button.label}
+      onclick={button.onclick}
+    >
+      <span class="icon" aria-hidden="true">{@html button.icon}</span>
+    </button>
+  {/each}
+
 </nav>

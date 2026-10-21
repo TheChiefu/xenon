@@ -38,13 +38,17 @@
   import * as confirm from "@/lib/display/confirm.svelte";
   import { COMPACT_CLASS, isCompact } from "@/lib/utils";
   import type { ToolbarButton } from "@/lib/display/toolbar";
+  import { Kind } from "@/lib/display/toolbar";
   import * as xbox from "@/lib/services/xbox.svelte";
   import { Platform } from "@/bindings/shared";
   import { ICONS_PLATFORM } from "@/lib/labels";
+  import { LocalEvent } from "@/lib/events";
+  import * as events from "@/lib/events";
 
   import icon_menu from "@/assets/icons/menu.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
   import icon_inbox from "@/assets/icons/inbox.svg?raw";
+  import icon_search from "@/assets/icons/search.svg?raw";
 
   // Room shown by chat and members
   const roomId: string | null = $derived(session.getSelectedRoom());
@@ -61,36 +65,43 @@
   const paneButtons: ToolbarButton[] = $derived.by(() => {
     const buttons: ToolbarButton[] = [
       {
-        pane: Pane.room,
         label: "Rooms",
         icon: icon_menu,
         active: panes.isOpen(Pane.room),
+        kind: Kind.Regular,
         onclick: () => panes.toggle(Pane.room),
       },
       {
-        pane: Pane.members,
         label: "Members",
         icon: icon_users,
         active: panes.isOpen(Pane.members),
+        kind: Kind.Regular,
         onclick: () => panes.toggle(Pane.members),
       },
       {
-        pane: Pane.inbox,
         label: "Inbox",
         icon: icon_inbox,
         active: panes.isOpen(Pane.inbox),
         badge: invites.getInvites().length,
+        kind: Kind.Overlay,
         onclick: () => panes.toggle(Pane.inbox),
+      },
+      {
+        label: "Search",
+        icon: icon_search,
+        active: modals.isOpen(Modal.search),
+        kind: Kind.Modal,
+        onclick: () => events.dispatch(LocalEvent.search_requested),
       },
     ];
 
     // Xbox only once an account is linked
     if (xbox.isLinked()) {
       buttons.push({
-        pane: Pane.xbox,
         label: "Xbox",
         icon: ICONS_PLATFORM[Platform.xbox],
         active: panes.isOpen(Pane.xbox),
+        kind: Kind.Overlay,
         onclick: () => panes.toggle(Pane.xbox),
       });
     }

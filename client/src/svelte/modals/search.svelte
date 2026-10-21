@@ -209,21 +209,10 @@
     align-self: center;
   }
 
-  @media (width >= 50rem) {
-    .filters {
-      flex: none;
-    }
-
-    .back {
-      display: none;
-    }
+  .hidden {
+    display: none;
   }
-
-  @media (width < 50rem) {
-    .hidden {
-      display: none;
-    }
-  }
+  
 </style>
 
 <dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
