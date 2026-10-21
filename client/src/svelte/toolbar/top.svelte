@@ -1,17 +1,18 @@
 <script lang="ts">
   import Identity from "./identity.svelte";
   import ServerInfo from "./server_info.svelte";
-  import { Pane } from "@/lib/display/panes.svelte";
   import type { ToolbarButton } from "@/lib/display/toolbar";
-  import { LocalEvent } from "@/lib/events";
-  import * as events from "@/lib/events";
-  import icon_search from "@/assets/icons/search.svg?raw";
+  import { Kind } from "@/lib/display/toolbar";
 
   interface Props {
     buttons: ToolbarButton[];
   }
 
   let { buttons }: Props = $props();
+  let regularButtons = $derived(buttons.filter((b) => b.kind === Kind.Regular));
+  let overlayButtons = $derived(buttons.filter((b) => b.kind === Kind.Overlay));
+  let modalButtons = $derived(buttons.filter((b) => b.kind === Kind.Modal));
+
 </script>
 
 <style>
@@ -26,6 +27,12 @@
 
   .spacer {
     flex: 1;
+  }
+
+  .divider {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--border);
   }
 
   .toolbar-user {
@@ -72,17 +79,26 @@
 
   <ServerInfo/>
 
-  <div class="spacer"></div>
-
-  <!-- Panes -->
-  {#each buttons as button}
+  <!-- Regular Panes -->
+  {#each regularButtons as button}
     {@render toggle(button)}
   {/each}
 
-  <!-- Search -->
-  <button class="icon-btn" aria-label="Search messages" title="Search messages" onclick={() => events.dispatch(LocalEvent.search_requested)}>
-    <span class="icon" aria-hidden="true">{@html icon_search}</span>
-  </button>
+  <div class="spacer"></div>
+
+  <!-- Overlay Panes -->
+  {#each overlayButtons as button}
+    {@render toggle(button)}
+  {/each}
+
+  {#if buttons.length > 0}
+    <div class="divider"></div>
+  {/if}
+
+  <!-- Modal Panes -->
+  {#each modalButtons as button}
+    {@render toggle(button)}
+  {/each}
 
   <div class="toolbar-user">
     <Identity/>
