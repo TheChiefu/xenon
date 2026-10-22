@@ -63,7 +63,8 @@ export async function request(
     path: string,
     method?: Method,
     body?: unknown,
-    keepalive?: boolean
+    keepalive?: boolean,
+    noStore?: boolean
 ): Promise<Response> {
     const url = session.getUrl();
     const token = session.getToken();
@@ -88,6 +89,7 @@ export async function request(
         headers,
         body: payload,
         keepalive,
+        cache: noStore ? "no-store" : "default",
     });
 
     // Failure throws error message from server
@@ -99,8 +101,9 @@ export async function request(
 }
 
 // Fetch a file as a BLOB, interpret file from mime type
-export async function fetchFileBlob(fileId: string): Promise<FetchedFile> {
-    const response = await request(`/files/${fileId}`);
+export async function fetchFileBlob(fileId: string, spoiler?: boolean): Promise<FetchedFile> {
+
+    const response = await request(`/files/${fileId}`, "GET", undefined, false, spoiler);
 
     const mime = response.headers.get("x-file-mime") ?? "application/octet-stream";
     const bytes = await response.arrayBuffer();

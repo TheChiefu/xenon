@@ -20,7 +20,7 @@ let removed = false;
 
 // Fetches the file once the attachment is on screen
 function load(): void {
-    fetchFileBlob(attachment.id).then((fetched) => {
+    fetchFileBlob(attachment.id, attachment.spoiler).then((fetched) => {
 
         // Revoke a URL fetched after the attachment was removed
         if (removed) {
@@ -34,6 +34,10 @@ function load(): void {
 
 // Fetch file once visible
 function lazyLoad(node: HTMLElement): ActionReturn {
+    if (attachment.spoiler) {
+        return {};
+    }
+
     const observer = new IntersectionObserver((entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
             observer.disconnect();
@@ -48,6 +52,12 @@ function lazyLoad(node: HTMLElement): ActionReturn {
             observer.disconnect();
         },
     };
+}
+
+// Reveals a spoiler and fetches its file
+function reveal(): void {
+    revealed = true;
+    load();
 }
 
 // Revokes the file's URL once the attachment is removed
@@ -68,14 +78,8 @@ onDestroy(() => {
     }
 
     .entry {
-        padding: 1rem;
         max-width: 100%;
         max-height: 40rem;
-    }
-
-    .icon-row {
-        display: flex;
-        gap: var(--inline-gap);
     }
 
 </style>
@@ -83,7 +87,7 @@ onDestroy(() => {
 <div class="attachment" use:lazyLoad>
 
     {#if attachment.spoiler && !revealed}
-        <button onclick={() => revealed = true}>Spoiler ({attachment.mime} - {size})</button>
+        <button onclick={reveal}>Spoiler ({attachment.mime} - {size})</button>
     {:else if file === null}
         <span>{attachment.filename}</span>
     {:else}
@@ -104,9 +108,6 @@ onDestroy(() => {
             <span class="icon" aria-hidden="true">{@html download}</span>
             </a>
         {/if}
-
-        <div class="icon-row">
-        </div>
     {/if}
 
 </div>
