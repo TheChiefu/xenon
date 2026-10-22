@@ -14,9 +14,18 @@
         canDelete?: boolean;
         onEdit?: (body: string) => void;
         onDelete?: (skipConfirm: boolean) => void;
+        element?: HTMLDivElement | null;
     }
 
-    let { message, author, canEdit = false, canDelete = false, onEdit, onDelete }: Props = $props();
+    let {
+        message,
+        author,
+        canEdit = false,
+        canDelete = false,
+        onEdit,
+        onDelete,
+        element = $bindable()
+    }: Props = $props();
 
     let editing = $state(false);
     let draft = $state("");
@@ -139,7 +148,7 @@
     }
 </style>
 
-<div class="message">
+<div class="message" bind:this={element}>
     
     <!-- Header -->
     <div class="message-header">

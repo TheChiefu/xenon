@@ -33,15 +33,23 @@
   let content: HTMLDivElement | undefined = $state(); // Contains the messages
   let failure: string | null = $state(null);
 
+  // Bottom-most message in view, and how many pixels of it are hidden below the list
+  interface ScrollPosition {
+    seq: number;
+    hiddenBelow: number;
+  }
+
   // Scroll position of each room left this session, keyed by room ID
-  const scrollPositions: Map<string, number> = new Map(
+  const scrollPositions: Map<string, ScrollPosition> = new Map(
     JSON.parse(sessionStorage.getItem(KEY_SCROLL_POS) ?? "[]")
   );
+
+  // Element of each shown message, keyed by seq
+  const elements: Record<number, HTMLDivElement | null> = {};
 
   let shownRoom: string | null = null;
   let restorePending = false;
   let atBottom = true;
-  let target: number | null = null; // Position being restored
 
   // Loads the selected room's newest page
   $effect(() => {
@@ -57,7 +65,6 @@
     const nextRoom = roomId;
     shownRoom = nextRoom;
     restorePending = true;
-    target = null;
   });
 
   // After the list changes, restores a switched room's position, or follows new messages when at the bottom
@@ -68,8 +75,7 @@
 
     if (restorePending) {
       restorePending = false;
-      target = scrollPositions.get(roomId ?? "") ?? null;
-      list.scrollTop = target ?? list.scrollHeight;
+      restore();
       return;
     }
 
@@ -78,19 +84,15 @@
     }
   });
 
-  // Re-applies the restored position as the messages grow, until it is reached
+  // Keeps the list at the bottom as the messages grow, while it is at the bottom
   $effect(() => {
     if (content === undefined) {
       return;
     }
 
     const observer = new ResizeObserver(() => {
-      if (list !== undefined && target !== null) {
-        list.scrollTop = target;
-
-        if (Math.abs(list.scrollTop - target) < 1) {
-          target = null;
-        }
+      if (list !== undefined && atBottom) {
+        list.scrollTop = list.scrollHeight;
       }
     });
 
@@ -101,12 +103,76 @@
 
   // Methods
 
-  // Stores the shown room's scroll position
+  // Saves the shown room's scroll position
   function savePositions(): void {
-    if (shownRoom !== null && list !== undefined) {
-      scrollPositions.set(shownRoom, list.scrollTop);
-      sessionStorage.setItem("scroll_positions", JSON.stringify([...scrollPositions]));
+
+    // No room shown, or the list is not on the page yet
+    if (shownRoom === null || list === undefined) {
+      return;
     }
+
+    const listBottom = list.getBoundingClientRect().bottom;
+    let newest: ScrollPosition | null = null;
+
+    // Messages are in seq order, oldest first
+    for (const message of roomMessages) {
+      const element = elements[message.seq];
+
+      // Not on the page yet
+      if (!element) {
+        continue;
+      }
+
+      const rect = element.getBoundingClientRect();
+
+      // Below the list's bottom edge, so the previous message was the bottom-most in view
+      if (rect.top >= listBottom) {
+        break;
+      }
+
+      newest = { seq: message.seq, hiddenBelow: rect.bottom - listBottom };
+    }
+
+    // Nothing in view was found, keep the previous save
+    if (newest === null) {
+      return;
+    }
+
+    scrollPositions.set(shownRoom, newest);
+    sessionStorage.setItem(KEY_SCROLL_POS, JSON.stringify([...scrollPositions]));
+  }
+
+  // Restores the shown room's saved scroll position
+  function restore(): void {
+
+    // List is not on the page yet
+    if (list === undefined) {
+      return;
+    }
+
+    // Start at the bottom, kept when nothing is saved or every later message was deleted
+    const saved = scrollPositions.get(roomId ?? "");
+    list.scrollTop = list.scrollHeight;
+
+    if (saved !== undefined && saved.seq < roomMessages[0].seq) {
+      // Saved message is behind Load More, so show the oldest loaded one
+      list.scrollTop = 0;
+    } else if (saved !== undefined) {
+      const listBottom = list.getBoundingClientRect().bottom;
+
+      // Saved message, or the next one if it was deleted
+      const match = roomMessages.find((message) => message.seq >= saved.seq);
+      const element = match ? elements[match.seq] : null;
+
+      // Put the message back with the same amount hidden below the list
+      if (element) {
+        const hiddenBelow = element.getBoundingClientRect().bottom - listBottom;
+        list.scrollTop += hiddenBelow - saved.hiddenBelow;
+      }
+    }
+
+    // Follow new messages only if the restored position is at the bottom
+    onScroll();
   }
 
   // Load messages and member within a room
@@ -259,6 +325,7 @@
       {#each roomMessages as message (message.id)}
         <Message
           {message}
+          bind:element={elements[message.seq]}
           author={users.getDisplayName(message.author_id)}
           canEdit={message.author_id === selfId}
           canDelete={canDeleteAny || message.author_id === selfId}

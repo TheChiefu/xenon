@@ -3,9 +3,11 @@ import { onDestroy } from "svelte";
 import type { AttachmentResponse } from "@/bindings/routes/messages";
 import type { ActionReturn } from "svelte/action";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
-import Image from "./image.svelte";
-import Video from "./video.svelte";
-import download from "@/assets/icons/download.svg?raw";
+import Image from "./attachments/image.svelte";
+import Video from "./attachments/video.svelte";
+import Audio from "./attachments/audio.svelte";
+import File from "./attachments/file.svelte";
+import Pending from "./attachments/pending.svelte";
 
 interface Props {
     attachment: AttachmentResponse;
@@ -15,6 +17,10 @@ let { attachment }: Props = $props();
 let revealed = $state(false);
 let file: FetchedFile | null = $state(null);
 const size = $derived(attachment.byte_size);
+const isMedia = $derived(
+    attachment.mime.startsWith("image/") ||
+    attachment.mime.startsWith("video/")
+);
 
 let removed = false;
 
@@ -71,42 +77,21 @@ onDestroy(() => {
 
 </script>
 
-<style>
-
-    .unknown {
-        user-select: none;
-    }
-
-    .entry {
-        max-width: 100%;
-        max-height: 40rem;
-    }
-
-</style>
-
 <div class="attachment" use:lazyLoad>
 
     {#if attachment.spoiler && !revealed}
         <button onclick={reveal}>Spoiler ({attachment.mime} - {size})</button>
     {:else if file === null}
-        <span>{attachment.filename}</span>
+        <Pending filename={attachment.filename} media={isMedia}/>
     {:else}
         {#if attachment.mime.startsWith("image/")}
             <Image url={file.url} filename={attachment.filename}/>
         {:else if attachment.mime.startsWith("video/")}
             <Video url={file.url} filename={attachment.filename}/>
         {:else if attachment.mime.startsWith("audio/")}
-            <audio class="entry" src={file.url} controls></audio>
+            <Audio url={file.url} filename={attachment.filename}/>
         {:else}
-            <a
-                href={file.url}
-                download={attachment.filename}
-                aria-label="Download attachment"
-                title="Download Attachment"
-            >
-            <span class="entry unknown">[{attachment.filename}]</span>
-            <span class="icon" aria-hidden="true">{@html download}</span>
-            </a>
+            <File url={file.url} filename={attachment.filename}/>
         {/if}
     {/if}
 

@@ -11,23 +11,24 @@ let { url, filename }: Props = $props();
 
 <style>
 
-    .entry {
-        padding: 1rem;
+    .file {
+        display: flex;
+        align-items: center;
+        gap: var(--inline-gap);
+        height: var(--file-height);
+        width: var(--file-width);
         max-width: 100%;
-        max-height: 40rem;
-        border: 1px solid var(--border);
+        padding: 0 var(--control-padding);
     }
 
-    .icon-row {
-        display: flex;
-        gap: var(--inline-gap);
+    .entry {
+        flex: 1;
+        min-width: 0;
     }
 
 </style>
 
-<video class="entry" src={url} controls></video>
-
-<div class="icon-row">
+<div class="file">
     <a
         href={url}
         download={filename}
@@ -36,4 +37,6 @@ let { url, filename }: Props = $props();
     >
         <span class="icon" aria-hidden="true">{@html download}</span>
     </a>
+
+    <audio class="entry" src={url} controls></audio>
 </div>
