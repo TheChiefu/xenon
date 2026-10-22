@@ -14,7 +14,7 @@ use crate::config;
 use crate::db;
 use crate::shared::Status;
 use crate::sockets::events::ServerEvent;
-use crate::sockets::presence::Device;
+use crate::sockets::chat::presence::Device;
 use crate::state::AppState;
 
 // Data Structs //

@@ -14,7 +14,7 @@
   import BottomToolbar from "./toolbar/bottom.svelte";
   import Container from "./panes/container.svelte";
   import Rooms from "./panes/rooms.svelte";
-  import Members from "./panes/members.svelte";
+  import Details from "./panes/details.svelte";
   import Chat from "./chat/area.svelte";
   import Xbox from "./panes/xbox.svelte";
   import Inbox from "./panes/inbox.svelte";
@@ -56,7 +56,7 @@
   // Keep track of which panes are open or not
   const opened: Record<Pane, boolean> = $state({
     [Pane.room]: false,
-    [Pane.members]: false,
+    [Pane.details]: false,
     [Pane.xbox]: false,
     [Pane.inbox]: false,
   });
@@ -72,11 +72,11 @@
         onclick: () => panes.toggle(Pane.room),
       },
       {
-        label: "Members",
+        label: "Details",
         icon: icon_users,
-        active: panes.isOpen(Pane.members),
+        active: panes.isOpen(Pane.details),
         kind: Kind.Regular,
-        onclick: () => panes.toggle(Pane.members),
+        onclick: () => panes.toggle(Pane.details),
       },
       {
         label: "Inbox",
@@ -167,10 +167,10 @@
         </Container>
       {/if}
 
-      <!-- Room Member List-->
-      {#if opened[Pane.members]}
-        <Container pane={Pane.members}>
-          <Members {roomId} open={panes.isOpen(Pane.members)}/>
+      <!-- Room Details -->
+      {#if opened[Pane.details]}
+        <Container pane={Pane.details}>
+          <Details {roomId} open={panes.isOpen(Pane.details)}/>
         </Container>
       {/if}
 

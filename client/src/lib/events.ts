@@ -1,7 +1,7 @@
 // Listeners are registered under an event name,
 // publishing the name calls each of its listeners, passing them the published data
 
-import type { ServerEvent } from "@/bindings/sockets/events";
+import type { CallServerEvent, ServerEvent } from "@/bindings/sockets/events";
 
 // TYPES //
 
@@ -24,10 +24,22 @@ export enum ServerEventType {
   profile_updated = "profile_updated",
   resync = "resync",
   notification = "notification",
+  call_snapshot = "call_snapshot",
+  participant_joined = "participant_joined",
+  participant_left = "participant_left",
 }
 
 // Check the enum has a matching entry for each server event type in the bindings
 ServerEventType satisfies { [Type in ServerEvent["type"]]: Type };
+
+// Names of events sent over the call socket
+export enum CallEventType {
+  call_joined = "call_joined",
+  signal = "signal",
+}
+
+// Check the enum has a matching entry for each call socket event type in the bindings
+CallEventType satisfies { [Type in CallServerEvent["type"]]: Type };
 
 // Names of events sent within the client
 export enum LocalEvent {

@@ -22,7 +22,7 @@ use crate::services::push::send::Payload;
 use crate::shared::{AttachmentRequest, Notify};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
-use crate::sockets::registry;
+use crate::sockets::chat::registry;
 use crate::state::AppState;
 
 // Data Structs //

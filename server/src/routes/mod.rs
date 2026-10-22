@@ -28,7 +28,7 @@ use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::ratelimit::AddressLimits;
-use crate::sockets::connection;
+use crate::sockets::{call, chat};
 use crate::state::AppState;
 use crate::utils;
 
@@ -167,6 +167,7 @@ pub fn router(state: AppState) -> Router {
             .post(rooms::ban_user)
         )
         .route("/rooms/{id}/bans/{user_id}", delete(rooms::unban_user))
+        .route("/rooms/{id}/call", get(call::socket::ws_handler))
 
         // Messages
         .route("/messages/{id}",
@@ -207,7 +208,7 @@ pub fn router(state: AppState) -> Router {
         .route("/users/{id}/role", patch(users::set_role))
 
         // Other
-        .route("/ws", get(connection::ws_handler))
+        .route("/ws", get(chat::socket::ws_handler))
         .route("/server", get(server::info))
         .route("/server/version", get(server::version))
         .route("/server/type", get(server::kind))

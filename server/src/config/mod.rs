@@ -1,6 +1,7 @@
 //! The config file, read once at startup
 
 mod bind;
+mod calls;
 mod database;
 mod info;
 mod lengths;
@@ -21,6 +22,7 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 
 pub use bind::Bind;
+pub use calls::Calls;
 pub use database::Database;
 pub use info::Info;
 pub use lengths::Lengths;
@@ -58,6 +60,7 @@ pub struct Config {
     pub uploads: Uploads,
     pub responses: Responses,
     pub sockets: Sockets,
+    pub calls: Calls,
     pub services: Services,
     pub rate_limit: RateLimit,
 }
@@ -78,6 +81,7 @@ impl Default for Config {
             uploads: Uploads::default(),
             responses: Responses::default(),
             sockets: Sockets::default(),
+            calls: Calls::default(),
             services: Services::default(),
             rate_limit: RateLimit::default(),
         }
@@ -164,6 +168,7 @@ impl Config {
         self.uploads.validate()?;
         self.responses.validate()?;
         self.sockets.validate()?;
+        self.calls.validate()?;
         self.rate_limit.validate()?;
         self.logging.validate()?;
         self.info.validate();

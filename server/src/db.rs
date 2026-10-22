@@ -348,6 +348,26 @@ pub async fn room_member_ids(
     Ok(members)
 }
 
+/// Lists the ids of every room a user is a member of
+pub async fn member_room_ids(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: Uuid,
+) -> Result<Vec<Uuid>> {
+
+    let rooms: Vec<Uuid> = sqlx::query_scalar(
+        "
+        SELECT room_id
+        FROM room_access
+        WHERE user_id = ?1
+        "
+    )
+    .bind(user_id)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    Ok(rooms)
+}
+
 /// Reads a user's preferences
 pub async fn get_preferences(
     conn: &mut sqlx::SqliteConnection,

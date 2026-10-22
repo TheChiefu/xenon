@@ -3,14 +3,31 @@ import type { MessageResponse } from "../routes/messages";
 import type { Platform, Status } from "../shared";
 
 /**
+ * How a linked game account appears to someone sharing a room with it.
+ */
+export enum GamePresence { "Online" = "Online", "Offline" = "Offline", "Away" = "Away" }
+
+/**
+ * Codes the server closes a call socket with
+ */
+export enum CallCloseCode { "server_error" = 1011, "no_connect" = 4001, "already_in_call" = 4002, "call_full" = 4003 }
+
+/**
  * What a user is connected from, for a client to show beside their status.
  */
 export enum Device { "windows" = "windows", "macos" = "macos", "linux" = "linux", "android" = "android", "ios" = "ios", "desktop" = "desktop", "mobile" = "mobile", "tablet" = "tablet" }
 
 /**
- * How a linked game account appears to someone sharing a room with it.
+ * A room's call and who is in it
  */
-export enum GamePresence { "Online" = "Online", "Offline" = "Offline", "Away" = "Away" }
+export type ActiveCall = { room_id: string, participants: Array<string>, };
+
+/**
+ * What a client sends over its call socket.
+ */
+export type CallClientEvent = { "type": "signal", to: string, payload: string, };
+
+export type CallServerEvent = { "type": "call_joined", participants: Array<string>, ice_servers: Array<IceServer>, } | { "type": "signal", from: string, payload: string, };
 
 /**
  * What a client sends over its socket.
@@ -30,6 +47,11 @@ title: string | null,
  */
 detail: string | null, };
 
+/**
+ * A STUN or TURN server a browser uses to find a route to its peers
+ */
+export type IceServer = { urls: string, };
+
 export type ServerEvent = { "type": "message", room_id: string, message: MessageResponse, } | { "type": "message_deleted", room_id: string, message_id: string, } | { "type": "message_edited", room_id: string, message_id: string, body: string | null, edited_at: number, } | { "type": "invited", room_id: string, invited_by: string, } | { "type": "invite_revoked", room_id: string, } | { "type": "banned", room_id: string, } | { "type": "member_joined", room_id: string, user_id: string, } | { "type": "member_left", room_id: string, user_id: string, } | { "type": "room_deleted", room_id: string, } | { "type": "room_updated", room_id: string, } | { "type": "presence_updated", user_id: string, status: Status, device: Device | null, } | { "type": "presence_snapshot", users: Array<UserPresence>, } | { "type": "game_presence_snapshot", users: Array<UserGamePresence>, } | { "type": "profile_updated", user_id: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, } | { "type": "resync" } | { "type": "notification", room_id: string, room_name: string, author: string, body: string, } | { "type": "game_presence_updated", user_id: string, platform: Platform, status: GamePresence, 
 /**
  * Name of the game
@@ -38,7 +60,7 @@ title: string | null,
 /**
  * What the game says they are doing
  */
-detail: string | null, };
+detail: string | null, } | { "type": "call_snapshot", calls: Array<ActiveCall>, } | { "type": "participant_joined", room_id: string, user_id: string, } | { "type": "participant_left", room_id: string, user_id: string, };
 
 /**
  * A user and the linked account they are on.

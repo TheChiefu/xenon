@@ -9,7 +9,7 @@ use crate::db;
 use crate::error::Result;
 use crate::shared::Status;
 use crate::sockets::events::{GameActivity, GamePresence, ServerEvent, UserGamePresence};
-use crate::sockets::registry;
+use crate::sockets::chat::registry;
 use crate::state::AppState;
 
 /// What each user's linked account last reported, keyed by user id

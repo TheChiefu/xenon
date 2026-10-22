@@ -11,8 +11,8 @@ use crate::db;
 use crate::error::Result;
 use crate::shared::Status;
 use crate::sockets::events::{ServerEvent, UserPresence};
-use crate::sockets::game_presence;
-use crate::sockets::registry;
+use crate::sockets::chat::game_presence;
+use crate::sockets::chat::registry;
 use crate::state::AppState;
 
 /// What a user is connected from, for a client to show beside their status.

@@ -1,7 +1,7 @@
 // Text the client shows for each value
 
 import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
-import { Device, GamePresence } from "@/bindings/sockets/events";
+import { CallCloseCode, Device, GamePresence } from "@/bindings/sockets/events";
 import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";
@@ -37,6 +37,13 @@ export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {
   [AnimatePhotos.Always]: "Always",
   [AnimatePhotos.OnHover]: "On Hover",
   [AnimatePhotos.Never]: "Never",
+};
+
+export const LABELS_CALL_CLOSE: Record<CallCloseCode, string> = {
+  [CallCloseCode.server_error]: "The server could not add you to the call",
+  [CallCloseCode.no_connect]: "You do not have permission to join calls in this room",
+  [CallCloseCode.already_in_call]: "You are already in a call",
+  [CallCloseCode.call_full]: "The call is full",
 };
 
 export const LABELS_DEVICE: Record<Device, string> = {
@@ -120,6 +127,7 @@ export const MSG_DELETE_MESSAGE = "Are you sure you want to delete this message?
 export const MSG_DELETE_USER = "Are you sure you want to delete this user? This cannot be undone.";
 export const MSG_LEAVE_ROOM = "Are you sure you want to leave this room?";
 export const MSG_DELETE_ROOM = "Are you sure you want to delete this room? This cannot be undone.";
+export const MSG_MICROPHONE_DENIED = "Microphone access was denied";
 export const MSG_PROMOTE_ADMIN = "Are you sure you want to make this user an admin? Admins cannot change each other's roles, so this cannot be undone.";
 
 // Returns message for a successful refresh, stamped with the current time

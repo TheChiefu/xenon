@@ -15,7 +15,8 @@ use crate::api::rooms::Room;
 use crate::shared::{Notify, Permission, Visibility};
 use crate::routes::AuthUser;
 use crate::sockets::events::ServerEvent;
-use crate::sockets::{presence, registry};
+use crate::sockets::call;
+use crate::sockets::chat::{presence, registry};
 use crate::state::AppState;
 use crate::{api, config};
 
@@ -511,6 +512,7 @@ pub async fn delete_room(
 ) -> Result<StatusCode> {
 
     let members = api::rooms::delete(&app_state.pool, room_id, caller_id).await?;
+    call::registry::end(&app_state, room_id);
 
     // Notify everyone who was in the room
     let event = ServerEvent::RoomDeleted { room_id };

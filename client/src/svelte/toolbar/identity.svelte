@@ -7,7 +7,6 @@
   import * as status from "@/lib/users/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { GlobalRole, Status } from "@/bindings/shared";
-  import * as av from "@/lib/client/av.svelte";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/display/transitions";
@@ -15,10 +14,6 @@
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_gear from "@/assets/icons/gear.svg?raw";
   import icon_shield from "@/assets/icons/shield.svg?raw";
-  import icon_headphones from "@/assets/icons/headphones.svg?raw";
-  import icon_headphones_muted from "@/assets/icons/headphones-muted.svg?raw";
-  import icon_mic from "@/assets/icons/mic.svg?raw";
-  import icon_mic_muted from "@/assets/icons/mic-muted.svg?raw";
 
   let menuOpen = $state(false);
 
@@ -208,24 +203,6 @@
             <span class="icon" aria-hidden="true">{@html icon_shield}</span>
           </button>
         {/if}
-        <button
-          class="icon-btn"
-          class:is-muted={!av.getSoundEnabled()}
-          aria-label="Toggle sound"
-          title="Toggle Sound"
-          onclick={() => av.setSoundEnabled(!av.getSoundEnabled())}
-        >
-          <span class="icon" aria-hidden="true">{@html av.getSoundEnabled() ? icon_headphones : icon_headphones_muted}</span>
-        </button>
-        <button
-          class="icon-btn"
-          class:is-muted={!av.getMicEnabled()}
-          aria-label="Toggle microphone"
-          title="Toggle Microphone"
-          onclick={() => av.setMicEnabled(!av.getMicEnabled())}
-        >
-          <span class="icon" aria-hidden="true">{@html av.getMicEnabled() ? icon_mic : icon_mic_muted}</span>
-        </button>
       </div>
 
       <select

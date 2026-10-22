@@ -6,8 +6,9 @@ use axum::extract::FromRef;
 use sqlx::SqlitePool;
 
 use crate::ratelimit::{AddressLimits, LoginFailures};
-use crate::sockets::game_presence::ReportedGames;
-use crate::sockets::registry::Registry;
+use crate::sockets::call::registry::ActiveCalls;
+use crate::sockets::chat::game_presence::ReportedGames;
+use crate::sockets::chat::registry::Registry;
 
 /// Cloned per request
 ///
@@ -17,6 +18,9 @@ use crate::sockets::registry::Registry;
 pub struct AppState {
     pub pool: SqlitePool,
     pub registry: Registry,
+
+    /// Who is in each room's call
+    pub calls: ActiveCalls,
 
     /// What each user's linked account last reported
     pub game_presence: ReportedGames,
@@ -39,6 +43,7 @@ impl AppState {
         AppState {
             pool,
             registry: Registry::default(),
+            calls: ActiveCalls::default(),
             game_presence: ReportedGames::default(),
             address_limits: AddressLimits::default(),
             login_failures: LoginFailures::default(),

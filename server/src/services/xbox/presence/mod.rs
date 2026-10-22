@@ -17,7 +17,7 @@ use crate::services::xbox::auth;
 use crate::services::xbox::presence::mappings::{Mapping, Mappings};
 use crate::shared::Platform;
 use crate::sockets::events::{GameActivity, GamePresence};
-use crate::sockets::game_presence;
+use crate::sockets::chat::game_presence;
 use crate::state::AppState;
 
 const PRESENCE_URL: &str = "https://userpresence.xboxlive.com/users";

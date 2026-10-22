@@ -400,12 +400,7 @@ async fn leave_every_room(
     user_id: Uuid,
 ) -> Result<Vec<Uuid>> {
 
-    let rooms: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT room_id FROM room_access WHERE user_id = ?1"
-    )
-    .bind(user_id)
-    .fetch_all(&mut *conn)
-    .await?;
+    let rooms = db::member_room_ids(&mut *conn, user_id).await?;
 
     for room_id in &rooms {
         access::remove(&mut *conn, *room_id, user_id).await?;

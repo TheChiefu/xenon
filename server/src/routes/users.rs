@@ -17,7 +17,7 @@ use crate::routes::AuthUser;
 use crate::services::xbox;
 use crate::shared::{GlobalRole, Platform};
 use crate::sockets::events::ServerEvent;
-use crate::sockets::{registry};
+use crate::sockets::chat::registry;
 use crate::state::AppState;
 use crate::validate;
 use crate::{api, config};

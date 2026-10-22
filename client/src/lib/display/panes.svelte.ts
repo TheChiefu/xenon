@@ -2,9 +2,14 @@ import { isCompact } from "@/lib/utils";
 
 export enum Pane {
   room = "room",
-  members = "members",
+  details = "details",
   xbox = "xbox",
   inbox = "inbox",
+}
+
+export enum DetailsTab {
+  members = "members",
+  call = "call",
 }
 
 interface Definition {
@@ -15,7 +20,7 @@ const PANES: Record<Pane, Definition> = {
   [Pane.room]: {
     open: true,
   },
-  [Pane.members]: {
+  [Pane.details]: {
     open: true,
   },
   [Pane.xbox]: {
@@ -28,7 +33,7 @@ const PANES: Record<Pane, Definition> = {
 
 const open: Record<Pane, boolean> = $state({
   [Pane.room]: initialOpen(Pane.room),
-  [Pane.members]: initialOpen(Pane.members),
+  [Pane.details]: initialOpen(Pane.details),
   [Pane.xbox]: initialOpen(Pane.xbox),
   [Pane.inbox]: initialOpen(Pane.inbox),
 });

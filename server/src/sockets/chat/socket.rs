@@ -11,10 +11,11 @@ use uuid::Uuid;
 
 use crate::shared::Status;
 use crate::routes::AuthUser;
+use crate::sockets::call;
 use crate::sockets::events::{ClientEvent, ServerEvent};
-use crate::sockets::game_presence;
-use crate::sockets::presence::{self, Device};
-use crate::sockets::registry::{self, Joined, SocketDevice};
+use crate::sockets::chat::game_presence;
+use crate::sockets::chat::presence::{self, Device};
+use crate::sockets::chat::registry::{self, Joined, SocketDevice};
 use crate::state::AppState;
 
 // Socketing Methods //
@@ -138,6 +139,7 @@ async fn send_snapshot(
     let _ = socket.send(Message::Text(payload.into())).await;
 
     send_game_snapshot(state, viewer_id, socket).await;
+    send_call_snapshot(state, viewer_id, socket).await;
 }
 
 /// Writes what every linked account visible to a socket is on, before any
@@ -162,6 +164,32 @@ async fn send_game_snapshot(
         Ok(payload) => payload,
         Err(e) => {
             tracing::error!("failed to serialize the game presence snapshot: {e}");
+            return;
+        }
+    };
+
+    let _ = socket.send(Message::Text(payload.into())).await;
+}
+
+/// Writes the active calls in every room visible to a socket, before any
+/// update can reach it
+async fn send_call_snapshot(
+    state: &AppState,
+    viewer_id: Uuid,
+    socket: &mut SplitSink<WebSocket, Message>,
+) {
+    let calls = match call::registry::snapshot(state, viewer_id).await {
+        Ok(calls) => calls,
+        Err(e) => {
+            tracing::error!("could not build a call snapshot for {viewer_id}: {e}");
+            return;
+        }
+    };
+
+    let payload = match serde_json::to_string(&ServerEvent::CallSnapshot { calls }) {
+        Ok(payload) => payload,
+        Err(e) => {
+            tracing::error!("failed to serialize the call snapshot: {e}");
             return;
         }
     };
