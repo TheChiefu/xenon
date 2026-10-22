@@ -128,6 +128,8 @@ export const MSG_DELETE_USER = "Are you sure you want to delete this user? This 
 export const MSG_LEAVE_ROOM = "Are you sure you want to leave this room?";
 export const MSG_DELETE_ROOM = "Are you sure you want to delete this room? This cannot be undone.";
 export const MSG_MICROPHONE_DENIED = "Microphone access was denied";
+export const MSG_LOADING = "Loading…";
+export const MSG_LOAD_FAILED = "Failed to load";
 export const MSG_PROMOTE_ADMIN = "Are you sure you want to make this user an admin? Admins cannot change each other's roles, so this cannot be undone.";
 
 // Returns message for a successful refresh, stamped with the current time

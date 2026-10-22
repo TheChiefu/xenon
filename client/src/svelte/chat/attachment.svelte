@@ -16,6 +16,7 @@ interface Props {
 let { attachment }: Props = $props();
 let revealed = $state(false);
 let file: FetchedFile | null = $state(null);
+let failed = $state(false);
 const size = $derived(attachment.byte_size);
 const isMedia = $derived(
     attachment.mime.startsWith("image/") ||
@@ -35,6 +36,8 @@ function load(): void {
         }
 
         file = fetched;
+    }).catch(() => {
+        failed = true;
     });
 }
 
@@ -82,7 +85,7 @@ onDestroy(() => {
     {#if attachment.spoiler && !revealed}
         <button onclick={reveal}>Spoiler ({attachment.mime} - {size})</button>
     {:else if file === null}
-        <Pending filename={attachment.filename} media={isMedia}/>
+        <Pending filename={attachment.filename} media={isMedia} {failed}/>
     {:else}
         {#if attachment.mime.startsWith("image/")}
             <Image url={file.url} filename={attachment.filename}/>
