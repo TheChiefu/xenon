@@ -6,35 +6,19 @@ use crate::api::rooms::bans;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::Permission;
-use crate::utils;
-use crate::validate;
 
 // Data Structs //
-
-/// One invite a room has issued.
-#[derive(sqlx::FromRow)]
-pub struct Issued {
-    pub user_id: Uuid,
-    pub invited_by: Uuid,
-    pub created_at: i64,
-    pub expires_at: Option<i64>,
-}
 
 /// One invite a user has received, with the room's name joined in.
 #[derive(sqlx::FromRow)]
 pub struct Received {
     pub room_id: Uuid,
     pub room_name: Option<String>,
-    pub invited_by: Uuid,
-    pub created_at: i64,
-    pub expires_at: Option<i64>,
 }
 
 // API Methods //
 
 /// Invites a user to a room.
-///
-/// A repeat invite for the same user overwrites the stored issuer and expiry.
 ///
 /// # Arguments
 ///
@@ -42,14 +26,11 @@ pub struct Received {
 /// * `room_id` - Room being invited to.
 /// * `caller_id` - Who is issuing the invite.
 /// * `target_id` - Who is being invited.
-/// * `expire_delta` - How long (in ms) the invite lasts from now, or `None` to
-///   never expire.
 pub async fn create(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
-    expire_delta: Option<i64>,
 ) -> Result<()> {
 
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
@@ -58,37 +39,24 @@ pub async fn create(
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
     can_invite(perms, caller_id, target_id)?;
 
-    if let Some(delta) = expire_delta {
-        validate::expire_delta(delta)?;
-    }
-
-    let now = utils::now_ms();
-
     if db::effective_permissions(&mut tx, room_id, target_id).await?.is_some() {
         return Err(AppError::Validation("user is already a member".to_string()));
     }
 
-    if bans::exists(&mut tx, room_id, target_id, now).await? {
+    if bans::exists(&mut tx, room_id, target_id).await? {
         return Err(AppError::Validation("user is banned from this room".to_string()));
     }
 
     // Create invite
-    let expires_at = expire_delta.map(|delta| now + delta);
     sqlx::query(
         "
-        INSERT INTO room_invites (room_id, user_id, invited_by, created_at, expires_at)
-        VALUES (?1, ?2, ?3, ?4, ?5)
-        ON CONFLICT (room_id, user_id) DO UPDATE SET
-            invited_by = ?3,
-            created_at = ?4,
-            expires_at = ?5
-        " // Re-invites update table
+        INSERT INTO room_invites (room_id, user_id)
+        VALUES (?1, ?2)
+        ON CONFLICT DO NOTHING
+        "
     )
     .bind(room_id)
     .bind(target_id)
-    .bind(caller_id)
-    .bind(now)
-    .bind(expires_at)
     .execute(&mut *tx)
     .await?;
 
@@ -98,7 +66,7 @@ pub async fn create(
     Ok(())
 }
 
-/// Lists the unexpired invites addressed to a user, across every room.
+/// Lists the invites addressed to a user, across every room.
 ///
 /// # Arguments
 ///
@@ -109,59 +77,47 @@ pub async fn list_for_user(
     user_id: Uuid,
 ) -> Result<Vec<Received>> {
 
-    let now = utils::now_ms();
     let mut conn = pool.acquire().await?;
     let invites: Vec<Received> = sqlx::query_as(
         "
-        SELECT i.room_id, r.name AS room_name, i.invited_by, i.created_at, i.expires_at
+        SELECT i.room_id, r.name AS room_name
         FROM room_invites i
         JOIN rooms r ON r.id = i.room_id
         WHERE i.user_id = ?1
-        AND (i.expires_at IS NULL OR i.expires_at > ?2)
         "
     )
     .bind(user_id)
-    .bind(now)
     .fetch_all(&mut *conn)
     .await?;
 
     Ok(invites)
 }
 
-/// Reports whether a user holds an invite to a room that has not expired.
+/// Reports whether a user holds an invite to a room.
 ///
 /// # Arguments
 ///
 /// * `conn` - Connection to SQL DB.
 /// * `room_id` - Room the invite is to.
 /// * `user_id` - User the invite is addressed to.
-/// * `now` - Time the expiry is measured against.
 pub async fn exists(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
     user_id: Uuid,
-    now: i64,
 ) -> Result<bool> {
 
     let exists: bool = sqlx::query_scalar(
-        "
-        SELECT EXISTS(
-            SELECT 1
-            FROM room_invites
-            WHERE room_id = ?1 AND user_id = ?2 AND (expires_at IS NULL OR expires_at > ?3)
-        )
-        "
+        "SELECT EXISTS(SELECT 1 FROM room_invites WHERE room_id = ?1 AND user_id = ?2)"
     )
     .bind(room_id)
     .bind(user_id)
-    .bind(now)
     .fetch_one(&mut *conn)
     .await?;
 
     Ok(exists)
 }
 
-/// Lists the unexpired invites a room has issued.
+/// Lists the users a room has invited.
 ///
 /// # Arguments
 ///
@@ -176,27 +132,25 @@ pub async fn list(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
-) -> Result<Vec<Issued>> {
+) -> Result<Vec<Uuid>> {
 
     let mut conn = pool.acquire().await?;
 
     // Reading the list requires Permission::Invite
     require_permission(&mut conn, room_id, caller_id).await?;
 
-    let now = utils::now_ms();
-    let entries: Vec<Issued> = sqlx::query_as(
+    let user_ids: Vec<Uuid> = sqlx::query_scalar(
         "
-        SELECT user_id, invited_by, created_at, expires_at
+        SELECT user_id
         FROM room_invites
-        WHERE room_id = ?1 AND (expires_at IS NULL OR expires_at > ?2)
+        WHERE room_id = ?1
         "
     )
     .bind(room_id)
-    .bind(now)
     .fetch_all(&mut *conn)
     .await?;
 
-    Ok(entries)
+    Ok(user_ids)
 }
 
 /// Declines an invite the caller received.

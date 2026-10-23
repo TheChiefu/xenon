@@ -127,6 +127,7 @@ export const MSG_DELETE_MESSAGE = "Are you sure you want to delete this message?
 export const MSG_DELETE_USER = "Are you sure you want to delete this user? This cannot be undone.";
 export const MSG_LEAVE_ROOM = "Are you sure you want to leave this room?";
 export const MSG_DELETE_ROOM = "Are you sure you want to delete this room? This cannot be undone.";
+export const MSG_BAN_USER = "Are you sure you want to ban this user? They will be removed from the room.";
 export const MSG_MICROPHONE_DENIED = "Microphone access was denied";
 export const MSG_LOADING = "Loading…";
 export const MSG_LOAD_FAILED = "Failed to load";

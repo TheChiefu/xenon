@@ -32,21 +32,6 @@ pub struct CreateRoomRequest {
     pub claim_all: bool,
 }
 
-/// POST body for inviting a user to a room
-#[derive(Deserialize)]
-pub struct CreateRoomInvite {
-    pub invitee: Uuid,
-    pub expire_delta: Option<i64>
-}
-
-/// POST body for banning a user from a room
-#[derive(Deserialize)]
-pub struct CreateRoomBan {
-    pub target_id: Uuid,
-    pub reason: Option<String>,
-    pub expire_delta: Option<i64>
-}
-
 /// Response carrying the id of a newly created room
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
@@ -132,32 +117,20 @@ pub struct MemberResponse {
     pub notify: Option<Notify>
 }
 
+/// A user's access to a room
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct AccessResponse {
+    pub permissions: Option<Vec<Permission>>,
+    pub invited: bool,
+    pub banned: bool,
+}
+
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
 pub struct ReceivedInviteResponse {
     pub room_id: Uuid,
-    pub room_name: Option<String>,
-    pub invited_by: Uuid,
-    pub created_at: i64,
-    pub expires_at: Option<i64>
-}
-
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct IssuedInviteResponse {
-    pub user_id: Uuid,
-    pub invited_by: Uuid,
-    pub created_at: i64,
-    pub expires_at: Option<i64>
-}
-
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct BanResponse {
-    pub user_id: Uuid,
-    pub reason: Option<String>,
-    pub created_at: i64,
-    pub expires_at: Option<i64>
+    pub room_name: Option<String>
 }
 
 // Routing Methods //
@@ -188,6 +161,22 @@ pub async fn list_members(
     }
 
     Ok(Json(response))
+}
+
+/// Gets a user's access to a room
+pub async fn get_member(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path((room_id, target_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<AccessResponse>> {
+
+    let access = api::rooms::access::get(&pool, room_id, caller_id, target_id).await?;
+
+    Ok(Json(AccessResponse {
+        permissions: access.permissions,
+        invited: access.invited,
+        banned: access.banned
+    }))
 }
 
 /// Writes a member's row in a room
@@ -233,24 +222,17 @@ pub async fn patch(
 /// * `caller_id` - Who is issuing the invite.
 /// * `app_state` - Pool and socket registry.
 /// * `room_id` - Room being invited to.
-/// * `body` - Who to invite, and how long the invite lasts.
+/// * `target_id` - Who to invite.
 pub async fn invite_user(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
-    Path(room_id): Path<Uuid>,
-    Json(body): Json<CreateRoomInvite>,
+    Path((room_id, target_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode> {
 
-    api::rooms::invites::create(
-        &app_state.pool,
-        room_id,
-        caller_id,
-        body.invitee,
-        body.expire_delta
-    ).await?;
+    api::rooms::invites::create(&app_state.pool, room_id, caller_id, target_id).await?;
 
-    let event = ServerEvent::Invited { room_id, invited_by: caller_id };
-    registry::inform_user(&app_state, body.invitee, event);
+    let event = ServerEvent::Invited { room_id };
+    registry::inform_user(&app_state, target_id, event);
 
     Ok(StatusCode::CREATED)
 }
@@ -272,17 +254,14 @@ pub async fn list_my_invites(
     for invite in invites {
         response.push(ReceivedInviteResponse {
             room_id: invite.room_id,
-            room_name: invite.room_name,
-            invited_by: invite.invited_by,
-            created_at: invite.created_at,
-            expires_at: invite.expires_at
+            room_name: invite.room_name
         });
     }
 
     Ok(Json(response))
 }
 
-/// Gets the invites a room has issued
+/// Gets the users a room has invited
 ///
 /// # Arguments
 ///
@@ -293,21 +272,11 @@ pub async fn list_invites(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<IssuedInviteResponse>>> {
+) -> Result<Json<Vec<Uuid>>> {
 
-    let invites = api::rooms::invites::list(&pool, room_id, caller_id).await?;
+    let user_ids = api::rooms::invites::list(&pool, room_id, caller_id).await?;
 
-    let mut response = Vec::with_capacity(invites.len());
-    for invite in invites {
-        response.push(IssuedInviteResponse {
-            user_id: invite.user_id,
-            invited_by: invite.invited_by,
-            created_at: invite.created_at,
-            expires_at: invite.expires_at
-        });
-    }
-
-    Ok(Json(response))
+    Ok(Json(user_ids))
 }
 
 /// Declines a room invite
@@ -362,21 +331,11 @@ pub async fn list_bans(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<BanResponse>>> {
+) -> Result<Json<Vec<Uuid>>> {
 
-    let bans = api::rooms::bans::list(&pool, room_id, caller_id).await?;
+    let user_ids = api::rooms::bans::list(&pool, room_id, caller_id).await?;
 
-    let mut response = Vec::with_capacity(bans.len());
-    for ban in bans {
-        response.push(BanResponse {
-            user_id: ban.user_id,
-            reason: ban.reason,
-            created_at: ban.created_at,
-            expires_at: ban.expires_at
-        });
-    }
-
-    Ok(Json(response))
+    Ok(Json(user_ids))
 }
 
 /// Bans a user from a room
@@ -386,28 +345,20 @@ pub async fn list_bans(
 /// * `caller_id` - Who is issuing the ban.
 /// * `app_state` - Pool and socket registry.
 /// * `room_id` - Room being banned from.
-/// * `body` - Who to ban, how long the ban lasts, and the reason.
+/// * `target_id` - Who to ban.
 pub async fn ban_user(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
-    Path(room_id): Path<Uuid>,
-    Json(body): Json<CreateRoomBan>,
+    Path((room_id, target_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode> {
 
-    api::rooms::bans::create(
-        &app_state.pool,
-        room_id,
-        caller_id,
-        body.target_id,
-        body.reason,
-        body.expire_delta
-    ).await?;
+    api::rooms::bans::create(&app_state.pool, room_id, caller_id, target_id).await?;
 
     let event = ServerEvent::Banned { room_id };
-    registry::inform_user(&app_state, body.target_id, event);
+    registry::inform_user(&app_state, target_id, event);
 
     // Ban removes the membership, notify members user left
-    let event = ServerEvent::MemberLeft { room_id, user_id: body.target_id };
+    let event = ServerEvent::MemberLeft { room_id, user_id: target_id };
     registry::broadcast(&app_state, room_id, event).await;
 
     Ok(StatusCode::NO_CONTENT)

@@ -47,7 +47,7 @@
 
   import icon_menu from "@/assets/icons/menu.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
-  import icon_inbox from "@/assets/icons/inbox.svg?raw";
+  import icon_inbox from "@/assets/icons/mail.svg?raw";
   import icon_search from "@/assets/icons/search.svg?raw";
 
   // Room shown by chat and members

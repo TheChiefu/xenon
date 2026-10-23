@@ -4,8 +4,7 @@
   import { dialogFly } from "@/lib/display/transitions";
   import * as settings from "@/lib/rooms/settings.svelte";
   import General from "./general.svelte";
-  import Invites from "./invites.svelte";
-  import Bans from "./bans.svelte";
+  import Access from "./access.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
 
   interface Props {
@@ -25,12 +24,13 @@
     const permissions = settings.getPermissions();
     const shown: Tab[] = [{ label: "General", view: General }];
 
-    if (permissions.includes(Permission.invite)) {
-      shown.push({ label: "Invites", view: Invites });
-    }
-
-    if (permissions.includes(Permission.ban)) {
-      shown.push({ label: "Bans", view: Bans });
+    // Show access to users who can invite, ban, or grant
+    if (
+      permissions.includes(Permission.invite)
+      || permissions.includes(Permission.ban)
+      || permissions.includes(Permission.grant)
+    ) {
+      shown.push({ label: "Access", view: Access });
     }
 
     return shown;

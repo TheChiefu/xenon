@@ -1,7 +1,6 @@
 <script lang="ts">
   import { MSG_ERROR } from "@/lib/labels";
   import * as invites from "@/lib/rooms/invites.svelte";
-  import * as users from "@/lib/users/data.svelte";
   import icon_check from "@/assets/icons/check.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
   import icon_x from "@/assets/icons/x.svg?raw";
@@ -60,15 +59,10 @@
     min-width: 0;
   }
 
-  .room, .sender {
+  .room {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .sender {
-    color: var(--text-dim);
-    font-size: 0.78rem;
   }
 
 </style>
@@ -93,7 +87,6 @@
     <div class="invite">
       <span class="text">
         <span class="room">{entry.room_name ?? "Unnamed Room"}</span>
-        <span class="sender">Invited by {users.getDisplayName(entry.invited_by)}</span>
       </span>
 
       <button class="icon-btn" aria-label="Accept invite" title="Accept Invite" onclick={() => invites.accept(entry.room_id)} disabled={invites.isPending()}>

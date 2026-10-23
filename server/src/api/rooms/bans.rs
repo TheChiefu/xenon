@@ -1,4 +1,4 @@
-//! The `room_bans` table: who is barred from a room, and until when.
+//! The `room_bans` table: who is barred from a room.
 
 use uuid::Uuid;
 
@@ -6,61 +6,39 @@ use crate::api::rooms;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::Permission;
-use crate::utils;
-use crate::validate;
-
-// Data Structs //
-
-/// One ban a room holds.
-#[derive(sqlx::FromRow)]
-pub struct Entry {
-    pub user_id: Uuid,
-    pub reason: Option<String>,
-    pub created_at: i64,
-    pub expires_at: Option<i64>,
-}
 
 // API Methods //
 
-/// Reports whether a user holds a ban on a room that has not expired.
+/// Reports whether a user holds a ban on a room.
 ///
 /// # Arguments
 ///
 /// * `conn` - Connection to SQL DB.
 /// * `room_id` - Room the ban applies to.
 /// * `user_id` - User the ban is against.
-/// * `now` - Time the expiry is measured against.
 pub async fn exists(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
     user_id: Uuid,
-    now: i64,
 ) -> Result<bool> {
 
     let exists: bool = sqlx::query_scalar(
-        "
-        SELECT EXISTS(
-            SELECT 1
-            FROM room_bans
-            WHERE room_id = ?1 AND user_id = ?2 AND (expires_at IS NULL OR expires_at > ?3)
-        )
-        "
+        "SELECT EXISTS(SELECT 1 FROM room_bans WHERE room_id = ?1 AND user_id = ?2)"
     )
     .bind(room_id)
     .bind(user_id)
-    .bind(now)
     .fetch_one(&mut *conn)
     .await?;
 
     Ok(exists)
 }
 
-/// Lists the unexpired bans on a room.
+/// Lists the users banned from a room.
 ///
 /// # Arguments
 ///
 /// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the entries are within.
+/// * `room_id` - Room the bans are within.
 /// * `caller_id` - Who is requesting the list.
 ///
 /// # Errors
@@ -71,7 +49,7 @@ pub async fn list(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
-) -> Result<Vec<Entry>> {
+) -> Result<Vec<Uuid>> {
 
     let mut conn = pool.acquire().await?;
 
@@ -79,25 +57,21 @@ pub async fn list(
     require_permission(&mut conn, room_id, caller_id).await?;
 
     // Check for all users in ban list
-    let now = utils::now_ms();
-    let entries = sqlx::query_as::<_, Entry>(
+    let user_ids: Vec<Uuid> = sqlx::query_scalar(
         "
-        SELECT user_id, reason, created_at, expires_at
+        SELECT user_id
         FROM room_bans
-        WHERE room_id = ?1 AND (expires_at IS NULL OR expires_at > ?2)
+        WHERE room_id = ?1
         "
     )
     .bind(room_id)
-    .bind(now)
     .fetch_all(&mut *conn)
     .await?;
 
-    Ok(entries)
+    Ok(user_ids)
 }
 
 /// Bans a user from a room and removes any membership they hold.
-///
-/// A repeat ban on the same user overwrites the stored reason and expiry.
 ///
 /// # Arguments
 ///
@@ -105,9 +79,6 @@ pub async fn list(
 /// * `room_id` - Room the user is being banned from.
 /// * `caller_id` - Who is performing the ban.
 /// * `target_id` - Who is being banned.
-/// * `reason` - Why the ban was issued.
-/// * `expire_delta` - How long (in ms) the ban lasts from now, or `None` to
-///   never expire.
 ///
 /// # Errors
 ///
@@ -118,8 +89,6 @@ pub async fn create(
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
-    reason: Option<String>,
-    expire_delta: Option<i64>,
 ) -> Result<()> {
 
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
@@ -131,14 +100,6 @@ pub async fn create(
         return Err(AppError::Validation("cannot ban yourself".to_string()));
     }
 
-    if let Some(r) = &reason {
-        validate::ban_reason(r)?;
-    }
-
-    if let Some(delta) = expire_delta {
-        validate::expire_delta(delta)?;
-    }
-
     // Ban cannot be used against another holder
     let target = db::effective_permissions(&mut tx, room_id, target_id).await?;
     if target.is_some_and(|p| p.contains(&Permission::Ban)) {
@@ -146,23 +107,15 @@ pub async fn create(
     }
 
     // Ban target user
-    let now = utils::now_ms();
-    let expires_at = expire_delta.map(|delta| now + delta);
     sqlx::query(
         "
-        INSERT INTO room_bans (room_id, user_id, reason, created_at, expires_at)
-        VALUES (?1, ?2, ?3, ?4, ?5)
-        ON CONFLICT (room_id, user_id) DO UPDATE SET
-            reason = ?3,
-            created_at = ?4,
-            expires_at = ?5
+        INSERT INTO room_bans (room_id, user_id)
+        VALUES (?1, ?2)
+        ON CONFLICT DO NOTHING
         "
     )
     .bind(room_id)
     .bind(target_id)
-    .bind(reason)
-    .bind(now)
-    .bind(expires_at)
     .execute(&mut *tx)
     .await?;
 

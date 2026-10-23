@@ -155,18 +155,21 @@ pub fn router(state: AppState) -> Router {
             post(messages::post_message)
             .get(messages::fetch_messages)
         )
-        .route("/rooms/{id}/invites",
-            post(rooms::invite_user)
-            .get(rooms::list_invites)
+        .route("/rooms/{id}/invites", get(rooms::list_invites))
+        .route("/rooms/{id}/invites/{user_id}",
+            put(rooms::invite_user)
+            .delete(rooms::revoke_invite)
         )
-        .route("/rooms/{id}/invites/{user_id}", delete(rooms::revoke_invite))
         .route("/rooms/{id}/members", get(rooms::list_members))
-        .route("/rooms/{id}/members/{user_id}", patch(rooms::patch))
-        .route("/rooms/{id}/bans",
-            get(rooms::list_bans)
-            .post(rooms::ban_user)
+        .route("/rooms/{id}/members/{user_id}",
+            get(rooms::get_member)
+            .patch(rooms::patch)
         )
-        .route("/rooms/{id}/bans/{user_id}", delete(rooms::unban_user))
+        .route("/rooms/{id}/bans", get(rooms::list_bans))
+        .route("/rooms/{id}/bans/{user_id}",
+            put(rooms::ban_user)
+            .delete(rooms::unban_user)
+        )
         .route("/rooms/{id}/call", get(call::socket::ws_handler))
 
         // Messages

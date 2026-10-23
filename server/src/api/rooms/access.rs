@@ -3,6 +3,7 @@
 use sqlx::types::Json;
 use uuid::Uuid;
 
+use crate::api::rooms::{bans, invites};
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::shared::{Notify, Permission};
@@ -26,7 +27,35 @@ pub struct NotifyUserPair {
     pub notify: Notify,
 }
 
+/// A user's access to a room
+pub struct Access {
+    pub permissions: Option<Vec<Permission>>,
+    pub invited: bool,
+    pub banned: bool,
+}
+
 // API Methods //
+
+/// Gets a user's access to a room
+pub async fn get(
+    pool: &sqlx::SqlitePool,
+    room_id: Uuid,
+    caller_id: Uuid,
+    target_id: Uuid,
+) -> Result<Access> {
+
+    let mut conn = pool.acquire().await?;
+
+    if db::effective_permissions(&mut conn, room_id, caller_id).await?.is_none() {
+        return Err(AppError::Forbidden);
+    }
+
+    let permissions = db::effective_permissions(&mut conn, room_id, target_id).await?;
+    let invited = invites::exists(&mut conn, room_id, target_id).await?;
+    let banned = bans::exists(&mut conn, room_id, target_id).await?;
+
+    Ok(Access { permissions, invited, banned })
+}
 
 /// Lists the members of a room.
 ///

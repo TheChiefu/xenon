@@ -1,4 +1,4 @@
-import type { BanResponse, CreateRoomRequest, CreateRoomResponse, DiscoverableRoomResponse, IssuedInviteResponse, MemberResponse, ReceivedInviteResponse, RoomAccessPatch, RoomPatch, RoomResponse } from "@/bindings/routes/rooms";
+import type { CreateRoomRequest, CreateRoomResponse, DiscoverableRoomResponse, MemberResponse, ReceivedInviteResponse, RoomAccessPatch, RoomPatch, RoomResponse, AccessResponse } from "@/bindings/routes/rooms";
 import type { ReadRequest, ReadResponse } from "@/bindings/routes/rooms";
 import { request } from "@/lib/utils";
 
@@ -59,17 +59,22 @@ export async function remove(room_id: string): Promise<void> {
     await request(`/rooms/${room_id}`, "DELETE");
 }
 
+export async function getMember(room_id: string, user_id: string): Promise<AccessResponse> {
+    const response = await request(`/rooms/${room_id}/members/${user_id}`);
+    return await response.json() as AccessResponse;
+}
+
 export async function updateMember(room_id: string, user_id: string, body: RoomAccessPatch): Promise<void> {
     await request(`/rooms/${room_id}/members/${user_id}`, "PATCH", body);
 }
 
-export async function listInvites(room_id: string): Promise<IssuedInviteResponse[]> {
+export async function listInvites(room_id: string): Promise<string[]> {
     const response = await request(`/rooms/${room_id}/invites`);
-    return await response.json() as IssuedInviteResponse[];
+    return await response.json() as string[];
 }
 
-export async function invite(room_id: string, invitee: string, expire_delta: number | null): Promise<void> {
-    await request(`/rooms/${room_id}/invites`, "POST", { invitee, expire_delta });
+export async function invite(room_id: string, user_id: string): Promise<void> {
+    await request(`/rooms/${room_id}/invites/${user_id}`, "PUT");
 }
 
 export async function revokeInvite(room_id: string, user_id: string): Promise<void> {
@@ -85,9 +90,13 @@ export async function declineInvite(room_id: string): Promise<void> {
     await request(`/me/invites/${room_id}`, "DELETE");
 }
 
-export async function listBans(room_id: string): Promise<BanResponse[]> {
+export async function listBans(room_id: string): Promise<string[]> {
     const response = await request(`/rooms/${room_id}/bans`);
-    return await response.json() as BanResponse[];
+    return await response.json() as string[];
+}
+
+export async function ban(room_id: string, user_id: string): Promise<void> {
+    await request(`/rooms/${room_id}/bans/${user_id}`, "PUT");
 }
 
 export async function unban(room_id: string, user_id: string): Promise<void> {

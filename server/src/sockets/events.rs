@@ -134,8 +134,7 @@ pub enum ServerEvent {
         edited_at: i64 
     },
     Invited {
-        room_id: Uuid,
-        invited_by: Uuid
+        room_id: Uuid
     },
     InviteRevoked {
         room_id: Uuid

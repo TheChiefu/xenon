@@ -303,11 +303,11 @@ pub async fn join(
         None => return Err(AppError::Forbidden)
     };
 
-    if requires_invite && !invites::exists(&mut tx, room_id, user_id, now).await? {
+    if requires_invite && !invites::exists(&mut tx, room_id, user_id).await? {
         return Err(AppError::Forbidden);
     }
 
-    if bans::exists(&mut tx, room_id, user_id, now).await? {
+    if bans::exists(&mut tx, room_id, user_id).await? {
         return Err(AppError::Forbidden);
     }
 

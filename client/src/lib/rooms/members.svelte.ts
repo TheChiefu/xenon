@@ -32,12 +32,20 @@ export function getPermissions(roomId: string, userId: string): Permission[] {
   return permissions.get(roomId)?.get(userId) ?? [];
 }
 
+export function hasPermissions(roomId: string, userId: string): boolean {
+  return permissions.get(roomId)?.has(userId) ?? false;
+}
+
 export function getNotify(roomId: string): Notify | undefined {
   return notifies.get(roomId);
 }
 
 export function setNotify(roomId: string, notify: Notify): void {
   notifies.set(roomId, notify);
+}
+
+export function setPermissions(roomId: string, userId: string, granted: Permission[]): void {
+  roomPermissions(roomId).set(userId, granted);
 }
 
 export async function load(roomId: string): Promise<void> {
@@ -92,14 +100,24 @@ async function loadRoom(roomId: string): Promise<void> {
   // Replaces the room's stored member IDs
   rooms.set(roomId, new SvelteSet(ids));
 
-  // Replaces the room's stored member permissions
-  permissions.set(roomId, new SvelteMap(entries.map((entry) => [entry.user_id, entry.permissions])));
-
   for (const entry of entries) {
+    setPermissions(roomId, entry.user_id, entry.permissions);
+
     if (entry.notify !== null) {
       notifies.set(roomId, entry.notify);
     }
   }
+}
+
+// Gets a room's permission map, creating it when missing
+function roomPermissions(roomId: string): SvelteMap<string, Permission[]> {
+  let room = permissions.get(roomId);
+  if (room === undefined) {
+    room = new SvelteMap();
+    permissions.set(roomId, room);
+  }
+
+  return room;
 }
 
 // LISTENERS //

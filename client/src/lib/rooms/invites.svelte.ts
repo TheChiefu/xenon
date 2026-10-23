@@ -2,7 +2,6 @@ import type { ReceivedInviteResponse } from "@/bindings/routes/rooms";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
-import * as users from "@/lib/users/data.svelte";
 import { failureText } from "@/lib/utils";
 
 let received: ReceivedInviteResponse[] = $state([]);
@@ -24,7 +23,6 @@ export function getError(): string | null {
 export async function load(): Promise<boolean> {
   return run(async () => {
     received = await roomsAPI.listMyInvites();
-    await users.load(received.map((entry) => entry.invited_by));
   });
 }
 
