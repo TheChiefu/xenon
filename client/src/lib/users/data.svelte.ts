@@ -8,7 +8,14 @@ import { GamePresence, type Device, type GameActivity } from "@/bindings/sockets
 import * as usersAPI from "@/lib/api/users";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
+import { BLOCK_CODE, INLINE_CODE } from "@/lib/markdown";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
+
+// @username outside of code
+const REGEX_USERNAME: RegExp = new RegExp(
+  `${BLOCK_CODE.source}|${INLINE_CODE.source}|@(?<username>[a-z0-9_-]+)`,
+  "g",
+);
 
 // A user's status and what they are connected from
 export interface Presence {
@@ -24,6 +31,7 @@ const avatars: SvelteMap<string, FetchedFile> = new SvelteMap();
 const banners: SvelteMap<string, FetchedFile> = new SvelteMap();
 
 let per_lookup: number = 1;
+let per_page: number = 1;
 
 // SUMMARIES //
 
@@ -58,6 +66,67 @@ export async function load(ids: (string | null)[]): Promise<void> {
       loadProfileFiles(user.id);
     }
   }
+}
+
+// Finds a user by username
+export async function findByUsername(username: string): Promise<UserSummaryResponse | undefined> {
+  for (const user of summaries.values()) {
+    if (user.username === username) {
+      return user;
+    }
+  }
+
+  // Search the server when not held
+  let after: string | undefined = undefined;
+  while (true) {
+    const page = await usersAPI.lookup({ username, after });
+
+    const found = page.find((user) => user.username === username);
+    if (found !== undefined) {
+      summaries.set(found.id, found);
+      loadProfileFiles(found.id);
+      return found;
+    }
+
+    if (page.length < per_page) {
+      return undefined;
+    }
+
+    after = page.at(-1)?.id;
+  }
+}
+
+// Replaces each @username with a mention of that user's id
+export async function resolveMentions(text: string): Promise<string> {
+  let output = "";
+  let last = 0;
+
+  for (const match of text.matchAll(REGEX_USERNAME)) {
+    const username = match.groups?.username;
+    if (username === undefined) {
+      continue;
+    }
+
+    const user = await findByUsername(username);
+
+    // Text before this mention
+    output += text.slice(last, match.index);
+
+    // Id if the user exists, otherwise as typed
+    if (user !== undefined) {
+      output += `@${user.id}`;
+    } else {
+      output += match[0];
+    }
+
+    // Next copy starts after this mention
+    last = match.index + match[0].length;
+  }
+
+  // Text after the last mention
+  output += text.slice(last);
+
+  return output;
 }
 
 // Replaces what is held, for a profile change the server reports
@@ -250,4 +319,5 @@ events.subscribe(ServerEventType.profile_updated, (event) => {
 events.subscribe(LocalEvent.signed_out, clear); // Clear all users on sign out
 events.subscribe(LocalEvent.server_info_loaded, (info: ServerInfo) => {
   per_lookup = info.limit_users_lookup;
+  per_page = info.limit_users_page;
 });

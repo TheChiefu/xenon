@@ -14,6 +14,7 @@
         canDelete?: boolean;
         onEdit?: (body: string) => void;
         onDelete?: (skipConfirm: boolean) => void;
+        getUsername: (id: string) => string | undefined;
         element?: HTMLDivElement | null;
     }
 
@@ -24,6 +25,7 @@
         canDelete = false,
         onEdit,
         onDelete,
+        getUsername,
         element = $bindable()
     }: Props = $props();
 
@@ -110,6 +112,12 @@
         margin-top: var(--row-gap);
     }
 
+    .mention {
+        color: rgb(198, 0, 195);
+        cursor: default;
+        user-select: none;
+    }
+
     .message-footer {
         display: flex;
         justify-content: space-between;
@@ -188,7 +196,7 @@
                 <a href={part.href} target="_blank" rel="noopener noreferrer">{part.href}</a>
                 {/if}
             {:else if part.kind === "mention"}
-                <span class="mention">@{part.userId}</span>
+                <span class="mention">@{getUsername(part.userId)}</span>
             {/if}
         {/each}
         {/if}

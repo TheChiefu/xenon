@@ -119,6 +119,10 @@
     font-size: 0.85rem;
     color: var(--text-dim);
   }
+
+  .uses {
+    font-size: 0.75rem;
+  }
 </style>
 
 <div class="invites">
@@ -161,7 +165,7 @@
       <button class="code inherit" title="Copy Code" onclick={() => navigator.clipboard.writeText(entry.code)}>
         {entry.code}
       </button>
-      <span>{entry.uses} / {entry.max_uses}</span>
+      <span class="uses">{entry.uses} / {entry.max_uses}</span>
       <span class="expires">{entry.expires_at && new Date(entry.expires_at).toLocaleString()}</span>
       <span>
         <button class="glyph-btn" aria-label="Revoke code" title="Revoke Code" onclick={() => revokeCode(entry.code)}>

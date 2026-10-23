@@ -61,7 +61,7 @@
 
 <dialog class="menu" {@attach modal(onClose)} {@attach collapsible} onclose={onClose} transition:dialogFly={{ y: "1rem" }}>
   <div class="header">
-    <h2>{settings.getRoom()?.name ?? "Room"} Settings</h2>
+    <h2>Room Settings - {settings.getRoom()?.name ?? "Room"}</h2>
     <button class="icon-btn" aria-label="Close" onclick={onClose}>
       <span class="icon" aria-hidden="true">{@html icon_x}</span>
     </button>

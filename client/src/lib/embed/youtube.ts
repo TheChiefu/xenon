@@ -1,7 +1,6 @@
 const EMBED_ORIGIN: string = "https://www.youtube-nocookie.com/embed/";
 
 const VIDEO_ID: RegExp = /^[A-Za-z0-9_-]{11}$/;
-
 const TIMESTAMP: RegExp = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/;
 
 const HOSTS: string[] = [

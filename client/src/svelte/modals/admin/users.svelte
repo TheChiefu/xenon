@@ -263,7 +263,7 @@
       <span>{selected?.display_name ?? ""}</span>
 
       <span class="grid-heading">Username</span>
-      <span>{selected ? `@${selected.username}` : ""}</span>
+      <span>{selected ? `${selected.username}` : ""}</span>
 
       <label for="user-role" class="grid-heading">Role</label>
       <span>

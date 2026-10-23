@@ -38,8 +38,8 @@ const BOLD_ITALIC: RegExp = /\*\*\*([^*]+)\*\*\*|(?<!\w)___([^_]+?)___(?!\w)/y;
 const BOLD: RegExp = /\*\*([^*]+)\*\*|(?<!\w)__([^_]+?)__(?!\w)/y;
 const ITALIC: RegExp = /\*([^*\s][^*]*?)\*|(?<!\w)_([^_\s][^_]*?)_(?!\w)/y;
 const STRIKETHROUGH: RegExp = /~~([^~]+)~~/y;
-const BLOCK_CODE: RegExp = /```([\s\S]*?)```/y;
-const INLINE_CODE: RegExp = /`([^`\n]+)`/y;
+export const BLOCK_CODE: RegExp = /```([\s\S]*?)```/y;
+export const INLINE_CODE: RegExp = /`([^`\n]+)`/y;
 
 // Extract the matched pattern and return a MessagePart object
 // For cases that have 2 capture groups, 1st is preferred, 2nd is fallback

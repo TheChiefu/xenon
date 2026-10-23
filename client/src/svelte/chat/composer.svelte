@@ -13,9 +13,10 @@
 
   interface Props {
     roomId: string;
+    resolveMentions: (text: string) => Promise<string>;
   }
 
-  let { roomId }: Props = $props();
+  let { roomId, resolveMentions }: Props = $props();
 
   let text: string = $state("");
   let failure: string | null = $state(null);
@@ -137,10 +138,15 @@
       // Send no body for a message with only attachments
       let body: string | null = null;
       if (text.trim() !== "") {
-        body = text;
+        body = await resolveMentions(text);
       }
 
-      const message = await messagesAPI.post(roomId, { body: body, client_nonce: nonce, attachments: requests });
+      const message = await messagesAPI.post(
+        roomId, {
+          body: body,
+          client_nonce: nonce,
+          attachments: requests
+        });
       messages.add(message);
 
       // Clear the composer once sent

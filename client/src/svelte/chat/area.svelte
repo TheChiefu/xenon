@@ -331,6 +331,7 @@
           canDelete={canDeleteAny || message.author_id === selfId}
           onEdit={(body) => edit(message, body)}
           onDelete={(skipConfirm) => remove(message, skipConfirm)}
+          getUsername={(id) => users.get(id)?.username}
         />
       {/each}
     </div>
@@ -338,7 +339,7 @@
 
   {#if roomId !== null}
     <div class="composer">
-      <Composer {roomId}/>
+      <Composer {roomId} resolveMentions={users.resolveMentions}/>
     </div>
   {/if}
 </div>
