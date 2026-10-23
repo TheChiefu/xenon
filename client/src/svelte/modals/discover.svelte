@@ -1,6 +1,7 @@
 <script lang="ts">
   import { DESCRIPTIONS_VISIBILITY, LABELS_VISIBILITY, MSG_ERROR } from "@/lib/labels";
   import { dialogFly } from "@/lib/display/transitions";
+  import { modal } from "@/lib/display/modal";
   import * as discovery from "@/lib/rooms/discovery.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
 
@@ -9,26 +10,8 @@
   }
 
   let { onClose }: Props = $props();
-  let dialog = $state<HTMLDialogElement | null>(null);
-
-  $effect(() => {
-    dialog?.showModal();
-  });
 
   discovery.loadFirstPage();
-
-  function cancel(event: Event) {
-    if (event.target === dialog) {
-      event.preventDefault();
-      onClose();
-    }
-  }
-
-  function pressAway(event: PointerEvent) {
-    if (event.target === dialog) {
-      onClose();
-    }
-  }
 </script>
 
 <style>
@@ -43,11 +26,6 @@
     min-height: 0;
     overflow-y: auto;
     background-color: var(--background);
-  }
-
-  .notify {
-    color: var(--text-dim);
-    font-style: italic;
   }
 
   .rooms {
@@ -65,7 +43,7 @@
   }
 </style>
 
-<dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
+<dialog class="menu" {@attach modal(onClose)} onclose={onClose} transition:dialogFly={{ y: "1rem" }}>
   <div class="header">
     <h2>Discover Rooms</h2>
     <button class="icon-btn" aria-label="Close" onclick={onClose}>

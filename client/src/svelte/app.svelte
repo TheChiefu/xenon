@@ -45,7 +45,7 @@
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
 
-  import icon_menu from "@/assets/icons/menu.svg?raw";
+  import icon_rooms from "@/assets/icons/door-open.svg?raw";
   import icon_users from "@/assets/icons/users.svg?raw";
   import icon_inbox from "@/assets/icons/mail.svg?raw";
   import icon_search from "@/assets/icons/search.svg?raw";
@@ -66,7 +66,7 @@
     const buttons: ToolbarButton[] = [
       {
         label: "Rooms",
-        icon: icon_menu,
+        icon: icon_rooms,
         active: panes.isOpen(Pane.room),
         kind: Kind.Regular,
         onclick: () => panes.toggle(Pane.room),
@@ -236,11 +236,12 @@
 <!-- Right click menu, filled by whichever element was right clicked -->
 <ContextMenu/>
 
-<!-- Yes/No popup setter for generic popup messages -->
+<!-- Choice popup setter for generic popup messages -->
 {#if confirm.isVisible()}
   <Popup
     message={confirm.getMessage()}
-    onConfirm={() => confirm.resolve(true)}
-    onCancel={() => confirm.resolve(false)}
+    choices={confirm.getChoices()}
+    onChoose={(choice) => confirm.resolve(choice)}
+    onCancel={() => confirm.resolve(null)}
   />
 {/if}

@@ -175,8 +175,6 @@
   .row {
     --avatar-size: 3rem;
     position: relative;
-    display: flex;
-    align-items: center;
     align-self: center;
     width: 100%;
     max-width: 16rem;
@@ -206,7 +204,7 @@
   .name {
     flex: 1;
     min-width: 0;
-    padding: 0 var(--inline-gap);
+    padding-right: var(--inline-gap);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

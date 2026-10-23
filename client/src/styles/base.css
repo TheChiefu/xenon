@@ -140,6 +140,21 @@ video {
   margin-bottom: var(--section-gap);
 }
 
+.notify {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--inline-gap);
+}
+
+.is-inactive {
+  opacity: 0.5;
+}
+
 .section .message {
   margin: 0;
   min-height: 1lh;
@@ -288,7 +303,7 @@ dialog.menu[open] {
   flex-direction: column;
 }
 
-dialog.menu::backdrop {
+dialog::backdrop {
   background: var(--modal-background);
 }
 

@@ -1,3 +1,26 @@
+/* Flow */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--inline-gap);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.grow {
+  flex: 1;
+}
+
+.to-end {
+  margin-top: auto;
+}
+
+
 /* App */
 
 .app {
@@ -88,6 +111,17 @@
 
 .composer-box {
   flex: 1;
+}
+
+
+/* Menus */
+
+.tab-panel {
+  flex: 1;
+  min-height: 0;
+  padding: var(--section-padding);
+  overflow-y: auto;
+  background-color: var(--background);
 }
 
 

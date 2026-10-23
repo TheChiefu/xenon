@@ -3,6 +3,7 @@
   import type { SearchRequest } from "@/bindings/shared";
   import * as searchAPI from "@/lib/api/search";
   import { dialogFly } from "@/lib/display/transitions";
+  import { modal } from "@/lib/display/modal";
   import { MSG_ERROR } from "@/lib/labels";
   import * as rooms from "@/lib/rooms/data.svelte";
   import * as users from "@/lib/users/data.svelte";
@@ -15,7 +16,6 @@
   }
 
   let { onClose }: Props = $props();
-  let dialog = $state<HTMLDialogElement | null>(null);
 
   // Filter inputs, blank means not used
   let msg: string = $state("");
@@ -36,23 +36,6 @@
 
   const roomChoices = $derived(rooms.list().toSorted((a, b) => a.name.localeCompare(b.name)));
   const pageCount = $derived(Math.ceil(total / (searchAPI.pageSize() ?? 1)));
-
-  $effect(() => {
-    dialog?.showModal();
-  });
-
-  function cancel(event: Event) {
-    if (event.target === dialog) {
-      event.preventDefault();
-      onClose();
-    }
-  }
-
-  function pressAway(event: PointerEvent) {
-    if (event.target === dialog) {
-      onClose();
-    }
-  }
 
   // Local midnight of a picked day, moved by a number of days
   function dayStart(day: string, offset: number): number {
@@ -173,11 +156,6 @@
     gap: 0.5rem;
   }
 
-  .notify {
-    color: var(--text-dim);
-    font-style: italic;
-  }
-
   .empty {
     position: absolute;
     inset: 0;
@@ -220,7 +198,7 @@
   
 </style>
 
-<dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
+<dialog class="menu" {@attach modal(onClose)} onclose={onClose} transition:dialogFly={{ y: "1rem" }}>
   <div class="header">
     <h2>Search Messages</h2>
     <button class="icon-btn" aria-label="Close" onclick={onClose}>

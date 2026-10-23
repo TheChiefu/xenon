@@ -75,10 +75,6 @@
     background: var(--component);
     color: var(--text);
   }
-
-  dialog::backdrop {
-    background: var(--modal-background)
-  }
 </style>
 
 <dialog bind:this={dialog} onclose={onClose} oncancel={cancel} onclick={clickAway} transition:dialogFly={{ y: "1rem" }}>

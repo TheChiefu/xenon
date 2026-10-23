@@ -11,7 +11,7 @@ let { url, filename }: Props = $props();
 
 <style>
 
-    .row {
+    .media {
         display: flex;
         gap: var(--inline-gap);
         max-width: 100%;
@@ -33,7 +33,7 @@ let { url, filename }: Props = $props();
 
 </style>
 
-<div class="row">
+<div class="media">
     <div class="icon-column">
         <a
             href={url}

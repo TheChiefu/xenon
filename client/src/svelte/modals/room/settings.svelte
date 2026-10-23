@@ -2,6 +2,8 @@
   import type { Component } from "svelte";
   import { Permission } from "@/bindings/shared";
   import { dialogFly } from "@/lib/display/transitions";
+  import { collapsible } from "@/lib/display/collapse";
+  import { modal } from "@/lib/display/modal";
   import * as settings from "@/lib/rooms/settings.svelte";
   import General from "./general.svelte";
   import Access from "./access.svelte";
@@ -17,7 +19,6 @@
   }
 
   let { onClose }: Props = $props();
-  let dialog = $state<HTMLDialogElement | null>(null);
   let current_tab = $state(0);
 
   const tabs: Tab[] = $derived.by(() => {
@@ -38,10 +39,6 @@
 
   const View = $derived((tabs[current_tab] ?? tabs[0]).view);
 
-  $effect(() => {
-    dialog?.showModal();
-  });
-
   // Clear room ID on close
   $effect(() => {
     return settings.close;
@@ -53,19 +50,6 @@
       onClose();
     }
   });
-
-  function cancel(event: Event) {
-    if (event.target === dialog) {
-      event.preventDefault();
-      onClose();
-    }
-  }
-
-  function pressAway(event: PointerEvent) {
-    if (event.target === dialog) {
-      onClose();
-    }
-  }
 </script>
 
 <style>
@@ -73,17 +57,9 @@
     width: 50rem;
     height: 36rem;
   }
-
-  .tab-view {
-    padding: var(--section-padding);
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    background-color: var(--background);
-  }
 </style>
 
-<dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
+<dialog class="menu" {@attach modal(onClose)} {@attach collapsible} onclose={onClose} transition:dialogFly={{ y: "1rem" }}>
   <div class="header">
     <h2>{settings.getRoom()?.name ?? "Room"} Settings</h2>
     <button class="icon-btn" aria-label="Close" onclick={onClose}>
@@ -103,7 +79,7 @@
     {/each}
   </div>
 
-  <div class="tab-view">
+  <div class="tab-panel">
     <View/>
   </div>
 </dialog>

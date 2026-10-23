@@ -121,37 +121,25 @@
     gap: var(--row-gap) var(--column-gap);
   }
 
-  @media (max-width: 40rem) {
-    .access {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto minmax(8rem, 1fr) auto auto;
-      grid-template-areas:
-        "search"
-        "list"
-        "actions"
-        "permissions";
-    }
-  }
-
-  .inactive {
-    opacity: 0.5;
+  :global(.is-collapsed) .access {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(8rem, 1fr) auto auto;
+    grid-template-areas:
+      "search"
+      "list"
+      "actions"
+      "permissions";
   }
 
   .search {
     grid-area: search;
-    display: flex;
-    gap: var(--inline-gap);
   }
 
   .list {
     grid-area: list;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
   .more {
-    margin-top: auto;
     justify-content: center;
   }
 
@@ -159,16 +147,8 @@
     grid-area: actions;
   }
 
-  .buttons {
-    display: flex;
-    gap: var(--inline-gap);
-  }
-
   .permissions {
     grid-area: permissions;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
   .checks {
@@ -176,29 +156,10 @@
     grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
     gap: var(--row-gap) var(--column-gap);
   }
-
-  .check {
-    display: flex;
-    align-items: center;
-    gap: var(--inline-gap);
-  }
-
-  .footer {
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    gap: var(--inline-gap);
-  }
-
-  .error {
-    flex: 1;
-    color: var(--text-dim);
-    font-style: italic;
-  }
 </style>
 
 <div class="access">
-  <form class="search" onsubmit={search}>
+  <form class="search row" onsubmit={search}>
     <input class="is-compact" type="search" placeholder="Username" bind:value={username}/>
     <button
       class="glyph-btn"
@@ -211,7 +172,7 @@
     </button>
   </form>
 
-  <div class="list grid table is-compact">
+  <div class="list grid table is-compact column">
     {#each user_search.users as user (user.id)}
       <button
         class:is-active={selected_id === user.id}
@@ -223,16 +184,16 @@
     {/each}
 
     {#if !user_search.final_page}
-      <button class="more" onclick={() => user_search.loadMore()} disabled={user_search.pending}>
+      <button class="more to-end" onclick={() => user_search.loadMore()} disabled={user_search.pending}>
         Load More
       </button>
     {/if}
   </div>
 
-  <div class="actions grid-title" class:inactive={selected_id === null} inert={selected_id === null}>
+  <div class="actions grid-title" class:is-inactive={selected_id === null} inert={selected_id === null}>
     <h4>Permissions</h4>
 
-    <div class="buttons">
+    <div class="row">
       {#if access?.invited}
         <button
           class="glyph-btn"
@@ -280,8 +241,8 @@
   </div>
 
   <form
-    class="permissions grid is-compact"
-    class:inactive={selected_id === null}
+    class="permissions grid is-compact column"
+    class:is-inactive={selected_id === null}
     inert={selected_id === null}
     onsubmit={save}
   >
@@ -299,8 +260,8 @@
       {/each}
     </div>
 
-    <div class="footer">
-      <span class="error">
+    <div class="row to-end">
+      <span class="notify grow">
         {#if settings.getError()}
           {MSG_ERROR}: {settings.getError()}
         {:else if user_search.error}

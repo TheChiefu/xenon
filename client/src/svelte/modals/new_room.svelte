@@ -41,10 +41,6 @@
     color: var(--text);
   }
 
-  dialog::backdrop {
-    background: var(--modal-background)
-  }
-
   .header {
     display: flex;
     justify-content: space-between;
@@ -62,12 +58,6 @@
     gap: var(--row-gap);
   }
 
-  .check {
-    display: flex;
-    align-items: center;
-    gap: var(--inline-gap);
-  }
-
   fieldset {
     display: grid;
     gap: var(--row-gap);
@@ -75,8 +65,6 @@
   }
 
   .row {
-    display: flex;
-    gap: var(--inline-gap);
     justify-content: flex-end;
   }
 </style>

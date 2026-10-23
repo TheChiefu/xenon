@@ -2,10 +2,11 @@
 
     interface Props {
         message: string,
-        onConfirm: () => void;
+        choices: string[];
+        onChoose: (choice: number) => void;
         onCancel: () => void;
     }
-    let { message, onConfirm, onCancel }: Props = $props();
+    let { message, choices, onChoose, onCancel }: Props = $props();
     let dialog = $state<HTMLDialogElement | null>(null);
 
     $effect(() => {
@@ -15,7 +16,12 @@
 </script>
 
 <style>
-    .row {
+    dialog {
+        max-width: 18rem;
+        text-align: center;
+    }
+
+    .choices {
         display: flex;
         width: 100%;
         gap: var(--inline-gap);
@@ -23,8 +29,15 @@
         justify-content: center;
     }
 
+    .choices.is-column {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     p {
         margin: 0;
+        padding: 0.1rem;
+        white-space: pre-line;
     }
 
 </style>
@@ -32,13 +45,10 @@
 <dialog bind:this={dialog} oncancel={onCancel}>
     <p>{message}</p>
     <hr/>
-    <div class="row">
-        {#if onConfirm != null}
-        <button onclick={onConfirm}>Yes</button>
-        {/if}
-        {#if onCancel != null}
-        <button onclick={onCancel}>No</button>
-        {/if}
+    <div class="choices" class:is-column={choices.length > 2}>
+        {#each choices as choice, index (index)}
+        <button onclick={() => onChoose(index)}>{choice}</button>
+        {/each}
     </div>
 
 </dialog>

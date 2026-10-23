@@ -1,12 +1,23 @@
 <script lang="ts">
   import type { UserProfileResponse, UserSummaryResponse } from "@/bindings/routes/users";
   import { GlobalRole } from "@/bindings/shared";
-  import { LABELS_PLATFORM, LABELS_ROLE, MSG_DELETE_USER, MSG_ERROR, MSG_PROMOTE_ADMIN, MSG_SERVER_BAN } from "@/lib/labels";
+  import {
+    CHOICE_CANCEL,
+    CHOICE_DELETE,
+    CHOICE_DELETE_WITH_MESSAGES,
+    LABELS_PLATFORM,
+    LABELS_ROLE,
+    MSG_DELETE_USER,
+    MSG_ERROR,
+    MSG_PROMOTE_ADMIN,
+    MSG_SERVER_BAN,
+  } from "@/lib/labels";
   import * as usersAPI from "@/lib/api/users";
   import * as events from "@/lib/events";
   import { UserSearch } from "@/lib/users/search.svelte";
   import { failureText } from "@/lib/utils";
   import icon_search from "@/assets/icons/search.svg?raw";
+  import icon_trash from "@/assets/icons/trash.svg?raw";
   import icon_user_ban from "@/assets/icons/user-ban.svg?raw";
   import icon_user from "@/assets/icons/user.svg?raw";
 
@@ -14,7 +25,6 @@
   let username = $state("");
   let selected = $state<UserSummaryResponse | null>(null);
   let profile = $state<UserProfileResponse | null>(null);
-  let delete_history = $state(false);
   let notify = $state("");
 
   const selected_is_admin = $derived(selected?.global_role === GlobalRole.admin);
@@ -39,7 +49,6 @@
   async function select(user: UserSummaryResponse) {
     selected = user;
     profile = null;
-    delete_history = false;
     notify = "";
 
     try {
@@ -85,9 +94,15 @@
 
     const target = selected;
 
-    const accepted = await events.confirm(`${MSG_DELETE_USER} (@${target.username})`);
-    if (!accepted) return;
+    // Show choice popup
+    const choice = await events.choose(`${MSG_DELETE_USER}\n\nUser: [${target.username}]`, [
+      CHOICE_DELETE,
+      CHOICE_DELETE_WITH_MESSAGES,
+      CHOICE_CANCEL,
+    ]);
+    if (choice === 2 || choice === null) return;
 
+    const delete_history = (choice === 1);
     notify = "";
 
     try {
@@ -141,26 +156,18 @@
     gap: var(--row-gap) var(--column-gap);
   }
 
-  @media (max-width: 40rem) {
-    .users {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto minmax(8rem, 1fr) auto auto;
-      grid-template-areas:
-        "search"
-        "list"
-        "actions"
-        "details";
-    }
-  }
-
-  .inactive {
-    opacity: 0.5;
+  :global(.is-collapsed) .users {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(8rem, 1fr) auto auto;
+    grid-template-areas:
+      "search"
+      "list"
+      "actions"
+      "details";
   }
 
   .search {
     grid-area: search;
-    display: flex;
-    gap: var(--inline-gap);
   }
 
   .actions {
@@ -169,49 +176,23 @@
 
   .list {
     grid-area: list;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
   .more {
-    margin-top: auto;
     justify-content: center;
   }
 
   .details {
     grid-area: details;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
   .description {
     white-space: pre-wrap;
   }
-
-  .footer {
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    gap: var(--inline-gap);
-  }
-
-  .error {
-    flex: 1;
-    color: var(--text-dim);
-    font-style: italic;
-  }
-
-  .check {
-    display: flex;
-    align-items: center;
-    gap: var(--inline-gap);
-  }
 </style>
 
 <div class="users">
-  <form class="search" onsubmit={search}>
+  <form class="search row" onsubmit={search}>
     <input class="is-compact" type="search" placeholder="Username" bind:value={username}/>
     <button
       class="glyph-btn"
@@ -224,33 +205,45 @@
     </button>
   </form>
 
-  <div class="actions grid-title" class:inactive={selected === null} inert={selected === null}>
+  <div class="actions grid-title" class:is-inactive={selected === null} inert={selected === null}>
     <h4>{selected?.display_name ?? "User"}</h4>
 
-    {#if profile?.banned}
+    <div class="row">
+      {#if profile?.banned}
+        <button
+          class="glyph-btn"
+          aria-label="Unban"
+          title="Unban"
+          onclick={toggleBan}
+          disabled={selected_is_admin}
+        >
+          {@html icon_user}
+        </button>
+      {:else}
+        <button
+          class="glyph-btn"
+          aria-label="Ban"
+          title="Ban"
+          onclick={toggleBan}
+          disabled={profile === null || selected_is_admin}
+        >
+          {@html icon_user_ban}
+        </button>
+      {/if}
+
       <button
-        class="glyph-btn"
-        aria-label="Unban"
-        title="Unban"
-        onclick={toggleBan}
-        disabled={selected_is_admin}
+        class="glyph-btn is-danger"
+        aria-label="Delete"
+        title="Delete"
+        onclick={deleteUser}
+        disabled={selected === null}
       >
-        {@html icon_user}
+        {@html icon_trash}
       </button>
-    {:else}
-      <button
-        class="glyph-btn"
-        aria-label="Ban"
-        title="Ban"
-        onclick={toggleBan}
-        disabled={profile === null || selected_is_admin}
-      >
-        {@html icon_user_ban}
-      </button>
-    {/if}
+    </div>
   </div>
 
-  <div class="list grid table is-compact">
+  <div class="list grid table is-compact column">
     {#each user_search.users as user (user.id)}
       <button class:is-active={selected?.id === user.id} onclick={() => select(user)}>
         {user.username}
@@ -258,13 +251,13 @@
     {/each}
 
     {#if !user_search.final_page}
-      <button class="more" onclick={() => user_search.loadMore()} disabled={user_search.pending}>
+      <button class="more to-end" onclick={() => user_search.loadMore()} disabled={user_search.pending}>
         Load More
       </button>
     {/if}
   </div>
 
-  <div class="details grid is-compact" class:inactive={selected === null} inert={selected === null}>
+  <div class="details grid is-compact column" class:is-inactive={selected === null} inert={selected === null}>
     <div class="fields is-compact">
       <span class="grid-heading">Display Name</span>
       <span>{selected?.display_name ?? ""}</span>
@@ -308,23 +301,14 @@
       <span class="description">{profile?.description || "None"}</span>
     </div>
 
-    <div class="footer">
-      <span class="error">
+    <div class="row to-end">
+      <span class="notify grow">
         {#if notify}
           {notify}
         {:else if user_search.error}
           {MSG_ERROR}: {user_search.error}
         {/if}
       </span>
-
-      <label class="check">
-        <input type="checkbox" bind:checked={delete_history}/>
-        Delete messages
-      </label>
-
-      <button class="is-danger is-compact" onclick={deleteUser} disabled={selected === null}>
-        Delete
-      </button>
     </div>
   </div>
 </div>

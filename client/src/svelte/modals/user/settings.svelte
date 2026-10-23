@@ -1,5 +1,6 @@
 <script lang="ts">
   import { dialogFly } from "@/lib/display/transitions";
+  import { modal } from "@/lib/display/modal";
   import Profile from "./profile.svelte";
   import Client from "./client.svelte";
   import Account from "./account.svelte";
@@ -11,7 +12,6 @@
   }
 
   let { onClose }: Props = $props();
-  let dialog = $state<HTMLDialogElement | null>(null);
   let current_tab = $state(0);
 
   const tabs = [
@@ -22,25 +22,6 @@
   ];
 
   const Tabs = $derived(tabs[current_tab].view);
-
-  $effect(() => {
-    dialog?.showModal();
-  });
-
-  // Closes on Escape with the fade out
-  function cancel(event: Event) {
-    if (event.target === dialog) {
-      event.preventDefault();
-      onClose();
-    }
-  }
-
-  function pressAway(event: PointerEvent) {
-    if (event.target === dialog) {
-      onClose();
-    }
-  }
-
 </script>
 
 <style>
@@ -48,18 +29,9 @@
     width: 32rem;
     height: 36rem;
   }
-
-  .tab-view {
-      background-color: var(--background);
-      padding: var(--section-padding);
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-  }
-
 </style>
 
-<dialog class="menu" bind:this={dialog} onclose={onClose} oncancel={cancel} onpointerdown={pressAway} transition:dialogFly={{ y: "1rem" }}>
+<dialog class="menu" {@attach modal(onClose)} onclose={onClose} transition:dialogFly={{ y: "1rem" }}>
 
   <div class="header">
     <h2>Settings</h2>
@@ -81,7 +53,7 @@
     {/each}
   </div>
 
-  <div class="tab-view">
+  <div class="tab-panel">
     <Tabs/>
   </div>
 

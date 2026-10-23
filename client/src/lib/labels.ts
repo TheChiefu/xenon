@@ -115,6 +115,12 @@ export const LABELS_SEND_KEY: Record<SendKey, string> = {
   [SendKey.ShiftEnter]: "Shift+Enter",
 };
 
+export const CHOICE_YES = "Yes";
+export const CHOICE_NO = "No";
+export const CHOICE_DELETE = "Delete";
+export const CHOICE_DELETE_WITH_MESSAGES = "Delete with Messages";
+export const CHOICE_CANCEL = "Cancel";
+
 export const MSG_SAVED = "Changes Saved";
 export const MSG_REFRESHED = "Refreshed";
 export const MSG_ERROR = "Error";

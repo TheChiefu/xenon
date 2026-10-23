@@ -58,23 +58,48 @@
 </script>
 
 <style>
-  form {
-    margin-bottom: var(--section-gap);
+  .invites {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(9rem, 14rem) 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "create-title list-title"
+      "create list";
+    gap: var(--row-gap) var(--column-gap);
   }
 
-  .list-actions {
-    display: flex;
-    gap: var(--inline-gap);
-    align-items: center;
+  :global(.is-collapsed) .invites {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto minmax(8rem, 1fr);
+    grid-template-areas:
+      "create-title"
+      "create"
+      "list-title"
+      "list";
   }
 
-  .notify {
-    color: var(--text-dim);
-    font-style: italic;
+  .create-title {
+    grid-area: create-title;
+  }
+
+  .create {
+    grid-area: create;
+    gap: var(--row-gap);
+  }
+
+  .create .fields {
+    grid-template-columns: 1fr;
+  }
+
+  .list-title {
+    grid-area: list-title;
   }
 
   .codes {
-    flex: 1;
+    grid-area: list;
+    min-height: 0;
     display: grid;
     grid-template-columns: 2fr 1fr 2fr auto;
   }
@@ -90,35 +115,43 @@
     background: none;
   }
 
+  .expires {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
 </style>
 
-<div class="fill-column">
-  <div class="grid-title">
-    <h3>Create Invite</h3>
+<div class="invites">
+  <div class="create-title grid-title">
+    <h4>Create Invite</h4>
   </div>
 
-  <form class="fields" onsubmit={createCode}>
-    <label for="code-max-uses">Max Uses</label>
-    <input id="code-max-uses" name="max_uses" type="number" min="1" value="1" required/>
-    <label for="code-days">Lifetime (Days)</label>
-    <input id="code-days" name="days" type="number" min="1" value="7" required/>
-    <label for="code-length">Length</label>
-    <input id="code-length" name="length" type="number" min="4" max="64" value="12" required/>
+  <form class="create grid is-compact column" onsubmit={createCode}>
+    <div class="fields is-compact">
+      <label for="code-max-uses" class="grid-heading">Max Uses</label>
+      <input id="code-max-uses" class="is-compact" name="max_uses" type="number" min="1" value="1" required/>
+      <label for="code-days" class="grid-heading">Lifetime (Days)</label>
+      <input id="code-days" class="is-compact" name="days" type="number" min="1" value="7" required/>
+      <label for="code-length" class="grid-heading">Length</label>
+      <input id="code-length" class="is-compact" name="length" type="number" min="4" max="64" value="12" required/>
+    </div>
+
     <span class="notify">{create_notify}</span>
-    <button type="submit">Create</button>
+    <button class="is-compact" type="submit">Create</button>
   </form>
 
-  <div class="grid-title">
-    <h3>Invites</h3>
-    <div class="list-actions">
+  <div class="list-title grid-title">
+    <h4>Invites</h4>
+
+    <div class="row">
       <span class="notify">{notify}</span>
-      <button class="icon-btn" aria-label="Refresh codes" title="Refresh Codes" onclick={refresh}>
-        <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
+      <button class="glyph-btn" aria-label="Refresh codes" title="Refresh Codes" onclick={refresh}>
+        {@html icon_refresh}
       </button>
     </div>
   </div>
 
-  <div class="codes grid table">
+  <div class="codes grid table is-compact">
     <span class="grid-heading">Code</span>
     <span class="grid-heading">Uses</span>
     <span class="grid-heading">Expires</span>
@@ -129,13 +162,12 @@
         {entry.code}
       </button>
       <span>{entry.uses} / {entry.max_uses}</span>
-      <span>{entry.expires_at && new Date(entry.expires_at).toLocaleString()}</span>
+      <span class="expires">{entry.expires_at && new Date(entry.expires_at).toLocaleString()}</span>
       <span>
-        <button class="icon-btn" aria-label="Revoke code" title="Revoke Code" onclick={() => revokeCode(entry.code)}>
-          <span class="icon" aria-hidden="true">{@html icon_x}</span>
+        <button class="glyph-btn" aria-label="Revoke code" title="Revoke Code" onclick={() => revokeCode(entry.code)}>
+          {@html icon_x}
         </button>
       </span>
     {/each}
   </div>
-
 </div>

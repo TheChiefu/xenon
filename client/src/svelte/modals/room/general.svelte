@@ -51,19 +51,8 @@
     border: 1px solid var(--border);
   }
 
-  .check {
-    display: flex;
-    align-items: center;
-    gap: var(--inline-gap);
-  }
-
   .divider {
     border-top: 1px solid var(--border);
-  }
-
-  .notify {
-    color: var(--text-dim);
-    font-style: italic;
   }
 </style>
 

@@ -2,6 +2,7 @@
 // publishing the name calls each of its listeners, passing them the published data
 
 import type { CallServerEvent, ServerEvent } from "@/bindings/sockets/events";
+import { CHOICE_NO, CHOICE_YES } from "@/lib/labels";
 
 // TYPES //
 
@@ -58,10 +59,11 @@ export enum LocalEvent {
   search_requested = "search_requested",
 }
 
-// A Yes/No question, answered by calling answer with the user's choice
+// A question with one button per choice, answered with the clicked button's position, or null when dismissed
 export interface ConfirmRequest {
   message: string;
-  answer: (result: boolean) => void;
+  choices: string[];
+  answer: (choice: number | null) => void;
 }
 
 // Event names accepted when publishing or listening
@@ -77,12 +79,18 @@ export function dispatch(type: EventType, data?: unknown): void {
   events.dispatchEvent(event);
 }
 
-// Asks the user a Yes/No question, resolving to their answer
-export function confirm(message: string): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    const request: ConfirmRequest = { message, answer: resolve };
+// Asks the user a question, resolving to the clicked button's position in choices, or null when dismissed
+export function choose(message: string, choices: string[]): Promise<number | null> {
+  return new Promise<number | null>((resolve) => {
+    const request: ConfirmRequest = { message, choices, answer: resolve };
     dispatch(LocalEvent.confirm_requested, request);
   });
+}
+
+// Asks the user a Yes/No question, resolving to their answer
+export async function confirm(message: string): Promise<boolean> {
+  const choice = await choose(message, [CHOICE_YES, CHOICE_NO]);
+  return choice === 0;
 }
 
 export function subscribe(type: EventType, listener: (data: any) => void): void {
