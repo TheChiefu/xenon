@@ -209,6 +209,10 @@ pub fn router(state: AppState) -> Router {
             .delete(users::delete_user)
         )
         .route("/users/{id}/role", patch(users::set_role))
+        .route("/users/{id}/ban",
+            put(users::ban_user)
+            .delete(users::unban_user)
+        )
 
         // Other
         .route("/ws", get(chat::socket::ws_handler))

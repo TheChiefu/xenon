@@ -10,10 +10,13 @@ use std::time::Duration;
 
 use axum::routing::get;
 use axum::Router;
+use uuid::Uuid;
 
 use crate::config;
+use crate::error::Result;
 use crate::services::xbox::presence::mappings;
 use crate::services::xbox::presence::mappings::Mappings;
+use crate::sockets::chat::game_presence;
 use crate::state::AppState;
 
 // Public Methods //
@@ -47,6 +50,17 @@ pub fn start(state: AppState) {
     };
 
     tokio::spawn(poll_presence(state, mappings, xbox));
+}
+
+/// Removes a user's linked account
+pub async fn unlink(state: &AppState, user_id: Uuid) -> Result<()> {
+    accounts::remove(&state.pool, user_id).await?;
+
+    // Remove the cached header and the game presence shown to others
+    auth::remove_header(user_id);
+    game_presence::clear(state, user_id).await;
+
+    Ok(())
 }
 
 // Helper Methods //

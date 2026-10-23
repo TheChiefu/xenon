@@ -121,3 +121,7 @@ events.subscribe(ServerEventType.room_deleted, (event) => {
     selectRoom(null);
   }
 });
+
+events.subscribe(ServerEventType.session_revoked, () => {
+  removeLoggedInAccount();
+});

@@ -233,6 +233,24 @@ button.is-danger:hover {
   background: var(--btn-muted);
 }
 
+.glyph-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0.25rem;
+}
+
+.glyph-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.glyph-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .icon-btn.is-muted:hover {
   background: var(--btn-muted);
 }
@@ -259,8 +277,6 @@ dialog {
 }
 
 dialog.menu {
-  width: 55rem;
-  height: 36rem;
   padding: var(--dialog-padding);
   border: 1px solid var(--border);
   background: var(--component);
@@ -380,4 +396,42 @@ dialog.menu h2 {
   background: var(--component-raised);
   font-weight: bold;
   user-select: none;
+}
+
+.table > .is-active {
+  background: var(--component-raised);
+  outline: 1px solid var(--btn-action);
+  outline-offset: -1px;
+}
+
+
+/* Compact */
+
+input.is-compact {
+  padding: 0.25rem 0.5rem;
+}
+
+select.is-compact {
+  padding: 0.25rem;
+}
+
+button.is-compact {
+  padding: 0.25rem 1rem;
+}
+
+.fields.is-compact > label {
+  padding: 0;
+}
+
+.grid.is-compact {
+  padding: 0.5rem;
+}
+
+.table.is-compact {
+  padding: 0;
+}
+
+.table.is-compact > * {
+  padding: 0.25rem 0.5rem;
+  border-bottom: none;
 }

@@ -27,6 +27,7 @@ export enum ServerEventType {
   call_snapshot = "call_snapshot",
   participant_joined = "participant_joined",
   participant_left = "participant_left",
+  session_revoked = "session_revoked",
 }
 
 // Check the enum has a matching entry for each server event type in the bindings

@@ -246,6 +246,15 @@ pub fn set_status(
     Some(previous)
 }
 
+/// Removes a user from the registry
+pub fn remove(
+    state: &AppState,
+    user_id: Uuid,
+) {
+    let mut reg = state.registry.write_lock();
+    reg.remove(&user_id);
+}
+
 // Sending Methods //
 
 /// Sends an event to every member of a room.
@@ -277,6 +286,18 @@ pub async fn broadcast(
     };
 
     inform_users(state, &members, event);
+}
+
+/// Tells each of several rooms that a member is no longer in it
+pub async fn broadcast_member_left(
+    state: &AppState,
+    user_id: Uuid,
+    rooms: Vec<Uuid>,
+) {
+    for room_id in rooms {
+        let event = ServerEvent::MemberLeft { room_id, user_id };
+        broadcast(state, room_id, event).await;
+    }
 }
 
 /// Sends an event to every member of every room one user is in.

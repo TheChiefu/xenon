@@ -32,6 +32,11 @@
 </script>
 
 <style>
+  dialog {
+    width: 55rem;
+    height: 36rem;
+  }
+
   .view {
     padding: var(--section-padding);
     flex: 1;

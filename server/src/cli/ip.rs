@@ -84,6 +84,8 @@ async fn unblock_address(state: &AppState, address: &str) -> Result<()> {
     Ok(())
 }
 
+// Helper Methods //
+
 /// Reads a typed address, written the same way it was saved
 fn parse_address(address: &str) -> Result<IpAddr> {
     address.parse().map_err(|_| AppError::Validation(format!("\"{address}\" is not an IP address")))

@@ -6,8 +6,9 @@
 //! than HTTP calls over the internet.
 
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
-use crate::api::users::User;
+use crate::api;
 use crate::error::{AppError, Result};
 use crate::state::AppState;
 use crate::utils;
@@ -16,6 +17,9 @@ pub const COMMANDS: &[&str] = &[
     "user unlock <username>",
     "user reset <username>",
     "user get <username>",
+    "user ban <username>",
+    "user unban <username>",
+    "user delete <username> [--messages]",
 ];
 
 /// Runs the `user` command named by the arguments
@@ -24,29 +28,54 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
         ["unlock", username] => unlock(&state.pool, username).await,
         ["reset", username] => reset(&state.pool, username).await,
         ["get", username] => get(&state.pool, username).await,
+        ["ban", username] => ban(state, username).await,
+        ["unban", username] => unban(&state.pool, username).await,
+        ["delete", username] => delete(state, username, false).await,
+        ["delete", username, "--messages"] => delete(state, username, true).await,
         _ => Err(super::usage(COMMANDS)),
     }
+}
+
+/// Bans an account
+async fn ban(state: &AppState, username: &str) -> Result<()> {
+    let user_id = get_user_id(&state.pool, username).await?;
+    api::users::ban(state, user_id).await?;
+
+    println!("banned user account: \"{username}\"");
+    Ok(())
+}
+
+/// Unbans an account
+async fn unban(pool: &SqlitePool, username: &str) -> Result<()> {
+    let user_id = get_user_id(pool, username).await?;
+    api::users::unban(pool, user_id).await?;
+
+    println!("unbanned user account: \"{username}\"");
+    Ok(())
+}
+
+/// Deletes an account
+async fn delete(state: &AppState, username: &str, delete_history: bool) -> Result<()> {
+    let user_id = get_user_id(&state.pool, username).await?;
+    api::users::delete(state, user_id, delete_history).await?;
+
+    println!("deleted user account: \"{username}\"");
+    Ok(())
 }
 
 /// Lets a locked account log in again
 async fn unlock(pool: &SqlitePool, username: &str) -> Result<()> {
 
-    // Determine if account exists
-    let locked: Option<bool> = sqlx::query_scalar("SELECT locked FROM users WHERE username = ?1")
-        .bind(username)
-        .fetch_optional(pool)
-        .await?;
+    let user_id = get_user_id(pool, username).await?;
+    let user = api::users::get(pool, user_id).await?;
 
-    // Provide relevant messaging if account cannot be modified
-    match locked {
-        None => return Err(AppError::Validation(format!("no account named \"{username}\""))),
-        Some(false) => return Err(AppError::Validation(format!("account \"{username}\" is not locked"))),
-        Some(true) => {}
+    if !user.locked {
+        return Err(AppError::Validation(format!("account \"{username}\" is not locked")));
     }
 
     // Unlock user account
-    sqlx::query("UPDATE users SET locked = 0 WHERE username = ?1")
-        .bind(username)
+    sqlx::query("UPDATE users SET locked = 0 WHERE id = ?1")
+        .bind(user_id)
         .execute(pool)
         .await?;
 
@@ -56,62 +85,59 @@ async fn unlock(pool: &SqlitePool, username: &str) -> Result<()> {
 
 /// Replaces an account's password with a generated one, printing it once
 async fn reset(pool: &SqlitePool, username: &str) -> Result<()> {
+    let user_id = get_user_id(pool, username).await?;
+
     let password = utils::generate_code(12);
     let hash = utils::hash_password(&password)?;
 
-    let updated = sqlx::query("UPDATE users SET password_hash = ?1 WHERE username = ?2")
+    sqlx::query("UPDATE users SET password_hash = ?1 WHERE id = ?2")
         .bind(hash)
-        .bind(username)
+        .bind(user_id)
         .execute(pool)
-        .await?
-        .rows_affected();
-
-    if updated == 0 {
-        return Err(AppError::Validation(format!("no account named \"{username}\"")));
-    }
+        .await?;
 
     // Printed, never logged
     println!("new password for \"{username}\": {password}");
     Ok(())
 }
 
+/// Prints an account's details
 async fn get(pool: &SqlitePool, username: &str) -> Result<()> {
+    let user_id = get_user_id(pool, username).await?;
+    let user = api::users::get(pool, user_id).await?;
 
-    let mut conn = pool.acquire().await?;
-    let user: Option<User> = sqlx::query_as(
-        "
-        SELECT
-            id, username, display_name, description, avatar_file_id,
-            banner_file_id, global_role, created_at, locked
+    println!(
+        "+------------------------------------+\n\
+        Selected User:\n\
+        - ID:\t\t{0}\n\
+        - Username:\t{1}\n\
+        - Display Name:\t'{2}'\n\
+        - Description:\t'{3}'\n\
+        - Global Role:\t{4}\n\
+        - Created At:\t{5}\n\
+        - Locked:\t{6}\n\
+        - Banned:\t{7}\n\
+        +------------------------------------+\
+        ",
+        user.id, user.username, user.display_name, user.description,
+        user.global_role, user.created_at, user.locked, user.banned
+    );
+
+    Ok(())
+}
+
+// Helper Methods //
+
+/// Check if the given username exists
+async fn get_user_id(pool: &SqlitePool, username: &str) -> Result<Uuid> {
+    let id: Option<Uuid> = sqlx::query_scalar("
+        SELECT id
         FROM users
         WHERE username = ?1
-        "
-    )
+    ")
     .bind(username)
-    .fetch_optional(&mut *conn)
+    .fetch_optional(pool)
     .await?;
 
-    match user {
-        Some(user) => {
-            println!(
-                "+------------------------------------+\n\
-                Selected User:\n\
-                - ID:\t\t{0}\n\
-                - Username:\t{1}\n\
-                - Display Name:\t'{2}'\n\
-                - Description:\t'{3}'\n\
-                - Global Role:\t{4}\n\
-                - Created At:\t{5}\n\
-                - Locked:\t{6}\n\
-                +------------------------------------+\
-                ",
-                user.id, user.username, user.display_name, user.description,
-                user.global_role, user.created_at, user.locked
-            );
-            Ok(())
-        }
-        None => {
-            return Err(AppError::Validation(format!("user not found")));
-        }
-    }
+    id.ok_or(AppError::Validation(format!("no account named \"{username}\"")))
 }

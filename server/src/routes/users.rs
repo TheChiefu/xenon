@@ -37,6 +37,7 @@ pub struct UserProfileResponse {
     pub banner_file_id: Option<Uuid>,
     pub global_role: GlobalRole,
     pub created_at: i64,
+    pub banned: bool,
     pub linked_accounts: Vec<LinkedAccountResponse>,
 }
 
@@ -249,6 +250,7 @@ async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileRe
         banner_file_id: row.banner_file_id,
         global_role: row.global_role,
         created_at: row.created_at,
+        banned: row.banned,
         linked_accounts,
     })
 }
@@ -370,17 +372,7 @@ pub async fn delete_me(
     State(app_state): State<AppState>,
     Json(body): Json<DeleteAccountRequest>,
 ) -> Result<StatusCode> {
-    let rooms = api::users::delete(
-        &app_state.pool,
-        user_id,
-        body.delete_history,
-    )
-    .await?;
-
-    // Remove the account's cached Xbox authorization header
-    xbox::auth::remove_header(user_id);
-
-    broadcast_member_left(&app_state, user_id, rooms).await;
+    api::users::delete(&app_state, user_id, body.delete_history).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -399,29 +391,9 @@ pub async fn delete_user(
     Path(target_id): Path<Uuid>,
     Json(body): Json<DeleteAccountRequest>,
 ) -> Result<StatusCode> {
-    let rooms =
-        api::users::delete_other(&app_state.pool, caller_id, target_id, body.delete_history).await?;
-
-    // Remove the account's cached Xbox authorization header
-    xbox::auth::remove_header(target_id);
-
-    broadcast_member_left(&app_state, target_id, rooms).await;
+    api::users::delete_other(&app_state, caller_id, target_id, body.delete_history).await?;
 
     Ok(StatusCode::NO_CONTENT)
-}
-
-/// Tells each of several rooms that a member is no longer in it.
-///
-/// # Arguments
-///
-/// * `app_state` - Pool and socket registry.
-/// * `user_id` - Member that was removed.
-/// * `rooms` - Rooms the membership was removed from.
-async fn broadcast_member_left(app_state: &AppState, user_id: Uuid, rooms: Vec<Uuid>) {
-    for room_id in rooms {
-        let event = ServerEvent::MemberLeft { room_id, user_id };
-        registry::broadcast(app_state, room_id, event).await;
-    }
 }
 
 /// Promotes or demotes a user.
@@ -439,6 +411,28 @@ pub async fn set_role(
     Json(body): Json<SetRoleRequest>,
 ) -> Result<StatusCode> {
     api::users::set_role(&pool, caller_id, target_id, body.role).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Bans a user
+pub async fn ban_user(
+    AuthUser(caller_id, ..): AuthUser,
+    State(app_state): State<AppState>,
+    Path(target_id): Path<Uuid>,
+) -> Result<StatusCode> {
+    api::users::ban_other(&app_state, caller_id, target_id).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Unbans a user
+pub async fn unban_user(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(target_id): Path<Uuid>,
+) -> Result<StatusCode> {
+    api::users::unban_other(&pool, caller_id, target_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

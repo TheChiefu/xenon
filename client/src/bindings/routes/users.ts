@@ -52,7 +52,7 @@ export type SetRoleRequest = { role: GlobalRole, };
 /**
  * A user's profile
  */
-export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, linked_accounts: Array<LinkedAccountResponse>, };
+export type UserProfileResponse = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, banned: boolean, linked_accounts: Array<LinkedAccountResponse>, };
 
 /**
  * What a member row or search result shows of a user

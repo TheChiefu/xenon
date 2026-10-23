@@ -44,6 +44,11 @@
 </script>
 
 <style>
+  dialog {
+    width: 32rem;
+    height: 36rem;
+  }
+
   .tab-view {
       background-color: var(--background);
       padding: var(--section-padding);

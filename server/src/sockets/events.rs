@@ -197,5 +197,6 @@ pub enum ServerEvent {
     ParticipantLeft {
         room_id: Uuid,
         user_id: Uuid
-    }
+    },
+    SessionRevoked
 }

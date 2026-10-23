@@ -30,3 +30,11 @@ export async function deleteUser(id: string, body: DeleteAccountRequest): Promis
 export async function setRole(id: string, body: SetRoleRequest): Promise<void> {
     await request(`/users/${id}/role`, "PATCH", body);
 }
+
+export async function ban(id: string): Promise<void> {
+    await request(`/users/${id}/ban`, "PUT");
+}
+
+export async function unban(id: string): Promise<void> {
+    await request(`/users/${id}/ban`, "DELETE");
+}

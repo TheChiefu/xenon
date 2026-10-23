@@ -110,7 +110,7 @@ async fn connect_database() -> Result<SqlitePool> {
 /// Marks every address saved in the database as blocked
 async fn load_blocked_addresses(app_state: &AppState) -> Result<()> {
     let mut conn = app_state.pool.acquire().await?;
-    let blocked = db::blocked_addresses(&mut conn).await?;
+    let blocked = db::get_blocked_addresses(&mut conn).await?;
     app_state.address_limits.load(blocked);
     Ok(())
 }
@@ -142,7 +142,7 @@ async fn ensure_account(pool: &SqlitePool) -> Result<()> {
 
     // Attempt to create account
     let mut conn = pool.acquire().await?;
-    let result = db::insert_user(
+    let result = db::create_user(
         &mut conn,
         id,
         username,

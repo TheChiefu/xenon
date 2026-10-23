@@ -30,7 +30,6 @@ impl fmt::Display for GlobalRole {
             GlobalRole::Admin => write!(f, "Admin"),
             GlobalRole::Member => write!(f, "Member"),
             GlobalRole::Visitor => write!(f, "Visitor"),
-            _ => write!(f, "Unknown")
         }
     }
 }

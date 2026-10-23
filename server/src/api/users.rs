@@ -7,7 +7,12 @@ use uuid::Uuid;
 use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::services::{push, xbox};
 use crate::shared::{GlobalRole};
+use crate::sockets;
+use crate::sockets::chat::registry;
+use crate::state::AppState;
+use crate::utils;
 use crate::validate;
 
 // Data Structs //
@@ -24,6 +29,7 @@ pub struct User {
     pub global_role: GlobalRole,
     pub created_at: i64,
     pub locked: bool,
+    pub banned: bool,
 }
 
 /// The `users` columns a member row or search result shows
@@ -40,14 +46,8 @@ pub struct UserSummary {
 
 // API Methods //
 
-/// Lists one page of user summaries, optionally filtered by a username prefix.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `prefix` - Username prefix to match on, or `None` for every user.
-/// * `after` - User id to page from, or `None` for the first page.
-/// * `limit` - How many users to return.
+/// Lists one page of user summaries
+/// Optionally filtered by a username prefix
 pub async fn by_username_prefix(
     pool: &sqlx::SqlitePool,
     prefix: Option<String>,
@@ -85,16 +85,7 @@ pub async fn by_username_prefix(
     Ok(users)
 }
 
-/// Reads a user's public profile by id.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User to look up.
-///
-/// # Errors
-///
-/// Returns `AppError::NotFound` if no such user exists.
+/// Reads a user's public profile by id
 pub async fn get(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
@@ -105,7 +96,7 @@ pub async fn get(
     let row: Option<User> = sqlx::query_as(
         "
         SELECT id, username, display_name, description, avatar_file_id,
-               banner_file_id, global_role, created_at, locked
+               banner_file_id, global_role, created_at, locked, banned
         FROM users
         WHERE id = ?1
         "
@@ -117,14 +108,7 @@ pub async fn get(
     row.ok_or(AppError::NotFound)
 }
 
-/// Reads the summaries of a set of accounts.
-///
-/// An id naming no account is absent from the result.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `ids` - Accounts to read.
+/// Reads the summaries of a set of accounts
 pub async fn by_ids(
     pool: &sqlx::SqlitePool,
     ids: &[Uuid],
@@ -136,6 +120,7 @@ pub async fn by_ids(
 
     let mut conn = pool.acquire().await?;
 
+    // Build SQL statement
     let mut builder = sqlx::QueryBuilder::new(
         "
         SELECT id, username, display_name, avatar_file_id, banner_file_id, global_role
@@ -143,27 +128,20 @@ pub async fn by_ids(
         WHERE id IN (
         "
     );
-
-    // Each push adds one placeholder and holds its value
     let mut list = builder.separated(", ");
     for id in ids {
         list.push_bind(*id);
     }
     list.push_unseparated(")");
 
-    let rows: Vec<UserSummary> = builder.build_query_as().fetch_all(&mut *conn).await?;
+    // Get list of summaries by given IDs
+    let rows: Vec<UserSummary> = builder.build_query_as()
+        .fetch_all(&mut *conn).await?;
 
     Ok(rows)
 }
 
-/// Reads the display names for a set of accounts.
-///
-/// An id naming no account is absent from the map.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `ids` - Accounts to read.
+/// Reads the display names for a set of account IDs
 pub async fn display_names(
     pool: &sqlx::SqlitePool,
     ids: &[Uuid],
@@ -174,34 +152,22 @@ pub async fn display_names(
     }
 
     let mut conn = pool.acquire().await?;
-
+    
+    // Build SQL statement
     let mut builder = sqlx::QueryBuilder::new("SELECT id, display_name FROM users WHERE id IN (");
-
-    // Each push adds one placeholder and holds its value
     let mut list = builder.separated(", ");
     for id in ids {
         list.push_bind(*id);
     }
     list.push_unseparated(")");
 
+    // Get list of display names matching IDs
     let rows: Vec<(Uuid, String)> = builder.build_query_as().fetch_all(&mut *conn).await?;
-
     Ok(rows.into_iter().collect())
 }
 
-/// Writes a user's own profile, returning it as stored, or `None` if the patch
-/// asked for no change.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User whose profile is being written.
-/// * `patch` - Fields to change; an absent field is left unchanged.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the display name or the description is
-/// outside its length limits.
+/// Writes a user's own profile, returning it as stored
+/// or `None` if a patch didn't make any changes
 pub async fn update(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
@@ -225,7 +191,6 @@ pub async fn update(
     if let Some(name) = &display_name {
         validate::display_name(name)?;
     }
-
     if let Some(text) = &description {
         validate::profile_description(text)?;
     }
@@ -245,7 +210,7 @@ pub async fn update(
             banner_file_id = nullif(COALESCE(?4, banner_file_id), ?5)
         WHERE id = ?6
         RETURNING id, username, display_name, description, avatar_file_id,
-                  banner_file_id, global_role, created_at, locked
+                  banner_file_id, global_role, created_at, locked, banned
         "
     )
     .bind(display_name.as_deref())
@@ -260,25 +225,29 @@ pub async fn update(
     Ok(Some(stored))
 }
 
-/// Deletes an account's row, leaving any kept messages without an author
+/// Deletes an account
 pub async fn delete(
-    pool: &sqlx::SqlitePool,
+    state: &AppState,
     user_id: Uuid,
     delete_history: bool,
-) -> Result<Vec<Uuid>> {
+) -> Result<()> {
 
+    let pool = &state.pool;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
+    // Optionally delete the accounts message history
     if delete_history {
-        delete_messages(&mut tx, user_id).await?;
+        delete_all_messages(&mut tx, user_id).await?;
     }
 
+    // Leave every room
     let rooms = leave_every_room(&mut tx, user_id).await?;
 
+    // Delete row from DB
     sqlx::query("DELETE FROM users WHERE id = ?1")
-    .bind(user_id)
-    .execute(&mut *tx)
-    .await?;
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
 
     tx.commit().await?;
 
@@ -287,50 +256,30 @@ pub async fn delete(
     .execute(pool)
     .await?;
 
-    Ok(rooms)
+    // Remove the account's cached Xbox authorization header
+    xbox::auth::remove_header(user_id);
+
+    // Disconnect from sockets and broadcast that account has left
+    sockets::disconnect(state, user_id).await;
+    registry::broadcast_member_left(state, user_id, rooms).await;
+
+    Ok(())
 }
 
-/// Closes someone else's account
-/// 
-/// Returns `Forbidden` if the caller is not Admin, or if an Admin targets another Admin
+/// Delete someone else's account
 pub async fn delete_other(
-    pool: &sqlx::SqlitePool,
+    state: &AppState,
     caller_id: Uuid,
     target_id: Uuid,
     delete_history: bool,
-) -> Result<Vec<Uuid>> {
+) -> Result<()> {
 
-    let mut conn = pool.acquire().await?;
-
-    // Is the caller ranked high enough to close another account
-    let caller_role = db::global_role(&mut conn, caller_id).await?;
-    let permissible_roles = [GlobalRole::Admin];
-    if !permissible_roles.contains(&caller_role) {
-        return Err(AppError::Forbidden);
-    }
-
-    // Admins can't close each other's accounts
-    let target_role = db::global_role(&mut conn, target_id).await?;
-    if caller_role == GlobalRole::Admin && target_role == GlobalRole::Admin {
-        return Err(AppError::Forbidden);
-    }
-
-    delete(pool, target_id, delete_history).await
+    let mut conn = state.pool.acquire().await?;
+    require_admin_over(&mut conn, caller_id, target_id).await?;
+    delete(state, target_id, delete_history).await
 }
 
-/// Changes a user's server-wide role.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `caller_id` - User performing the role change.
-/// * `target_id` - User receiving the role change.
-/// * `role` - Role the target receives.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller is not Admin, or if an Admin
-/// targets another Admin; and `AppError::NotFound` if the target does not exist.
+/// Change a user's server-wide role
 pub async fn set_role(
     pool: &sqlx::SqlitePool,
     caller_id: Uuid,
@@ -338,73 +287,135 @@ pub async fn set_role(
     role: GlobalRole,
 ) -> Result<()> {
 
-    // Start transaction
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-
-    let caller_role = db::global_role(&mut tx, caller_id).await?;
-
-    // Is the caller ranked high enough to change other's roles
-    let permissible_roles = [GlobalRole::Admin];
-    if !permissible_roles.contains(&caller_role) {
-        return Err(AppError::Forbidden);
-    }
-
-    // Admins can't change each other's roles
-    let target_role = db::global_role(&mut tx, target_id).await?;
-    if caller_role == GlobalRole::Admin && target_role == GlobalRole::Admin {
-        return Err(AppError::Forbidden);
-    }
-
-    // No row updated, so the target does not exist
-    if !db::set_global_role(&mut tx, target_id, role).await? {
-        return Err(AppError::NotFound);
-    }
-
+    require_admin_over(&mut tx, caller_id, target_id).await?;
+    db::set_global_role(&mut tx, target_id, role).await?;
     tx.commit().await?;
 
     Ok(())
 }
 
-// Helper Methods //
-
-/// Deletes every message an account wrote.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `user_id` - Author whose messages are deleted.
-async fn delete_messages(
-    conn: &mut sqlx::SqliteConnection,
-    user_id: Uuid,
+/// Bans a user
+pub async fn ban(
+    state: &AppState,
+    target_id: Uuid,
 ) -> Result<()> {
 
-    // Attachments cascade
-    sqlx::query("DELETE FROM messages WHERE author_id = ?1")
-    .bind(user_id)
-    .execute(&mut *conn)
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+
+    // Update user's ban row
+    sqlx::query("UPDATE users SET banned = 1 WHERE id = ?1")
+        .bind(target_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Revoke every session
+    sqlx::query("
+        UPDATE sessions
+        SET revoked_at = ?1
+        WHERE user_id = ?2 AND revoked_at IS NULL"
+    )
+    .bind(utils::now_ms())
+    .bind(target_id)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
+
+    // Clear services
+    push::store::remove_all(&state.pool, target_id).await?;
+    xbox::unlink(state, target_id).await?;
+
+    // Disconnect user from sockets
+    sockets::disconnect(state, target_id).await;
 
     Ok(())
 }
 
-/// Removes an account from every room it belongs to, one room at a time so each
-/// runs the same cull and promotion checks a single removal does, returning the
-/// rooms it was in so the caller can tell each one.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `user_id` - Account being removed.
+/// Unban a user
+pub async fn unban(
+    pool: &sqlx::SqlitePool,
+    target_id: Uuid,
+) -> Result<()> {
+
+    sqlx::query("UPDATE users SET banned = 0 WHERE id = ?1")
+        .bind(target_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+/// Bans someone else
+pub async fn ban_other(
+    state: &AppState,
+    caller_id: Uuid,
+    target_id: Uuid,
+) -> Result<()> {
+    let mut conn = state.pool.acquire().await?;
+    require_admin_over(&mut conn, caller_id, target_id).await?;
+    ban(state, target_id).await
+}
+
+/// Unban someone else
+pub async fn unban_other(
+    pool: &sqlx::SqlitePool,
+    caller_id: Uuid,
+    target_id: Uuid,
+) -> Result<()> {
+    let mut conn = pool.acquire().await?;
+    require_admin_over(&mut conn, caller_id, target_id).await?;
+    unban(pool, target_id).await
+}
+
+// Helper Methods //
+
+/// Determine if a caller can act on another user's account
+async fn require_admin_over(
+    conn: &mut sqlx::SqliteConnection,
+    caller_id: Uuid,
+    target_id: Uuid,
+) -> Result<()> {
+
+    // Only Admins can act on another user's account
+    let caller_role = db::global_role(&mut *conn, caller_id).await?;
+    if caller_role != GlobalRole::Admin {
+        return Err(AppError::Forbidden);
+    }
+
+    // Admins can't be acted upon
+    let target_role = db::global_role(&mut *conn, target_id).await?;
+    if target_role == GlobalRole::Admin {
+        return Err(AppError::Forbidden);
+    }
+
+    Ok(())
+}
+
+/// Delete every message an account wrote
+async fn delete_all_messages(
+    conn: &mut sqlx::SqliteConnection,
+    user_id: Uuid,
+) -> Result<()> {
+
+    // Attachments CASCADE
+    sqlx::query("DELETE FROM messages WHERE author_id = ?1")
+    .bind(user_id)
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+/// Removes an account from every room it belongs to, one room at a time
 async fn leave_every_room(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
 ) -> Result<Vec<Uuid>> {
-
     let rooms = db::member_room_ids(&mut *conn, user_id).await?;
-
     for room_id in &rooms {
         access::remove(&mut *conn, *room_id, user_id).await?;
     }
 
+    // Return list of rooms remove from (to later notify members user left)
     Ok(rooms)
 }

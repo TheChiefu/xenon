@@ -19,6 +19,7 @@ use ts_rs::TS;
 use crate::config;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
+use crate::services::xbox;
 use crate::services::xbox::accounts;
 use crate::services::xbox::auth;
 use crate::services::xbox::auth::microsoft;
@@ -26,6 +27,7 @@ use crate::services::xbox::auth::xsts;
 use crate::services::xbox::auth::Failure;
 use crate::services::xbox::friends;
 use crate::services::xbox::presence::PresenceState;
+use crate::state::AppState;
 use crate::utils::{now_ms, MINUTE};
 
 /// Page shown after linking, in tab client opened
@@ -244,10 +246,9 @@ pub async fn update(
 /// Removes caller's linked account and cached header
 pub async fn unlink(
     AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
+    State(app_state): State<AppState>,
 ) -> Result<StatusCode> {
-    accounts::remove(&pool, user_id).await?;
-    auth::remove_header(user_id);
+    xbox::unlink(&app_state, user_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

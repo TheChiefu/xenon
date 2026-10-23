@@ -335,7 +335,7 @@ async fn notify_users(
 
     // Check who is mentioned and construct the announcement
     let mentioned = mentioned_ids(body);
-    let announcement = announce(app_state, room_id, message, &mentioned).await?;
+    let announcement = announce(app_state, room_id, author_id, body, &mentioned).await?;
 
     // Get list of recipients eligible for receiving the notification
     let mut conn = app_state.pool.acquire().await?;
@@ -369,31 +369,15 @@ async fn notify_users(
 
 }
 
-/// Builds what a notification for this message shows, with mentions read as
-/// display names rather than uuids.
-///
-/// # Arguments
-///
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room the message was posted to.
-/// * `message` - Message being announced.
-/// * `mentioned` - Accounts the body names.
+/// Builds what a notification based on message,
+/// with mentions read as display names
 async fn announce(
     app_state: &AppState,
     room_id: Uuid,
-    message: &MessageResponse,
+    author_id: Uuid,
+    body: &str,
     mentioned: &[Uuid],
 ) -> Result<Announcement> {
-
-    // Return not found when the message has no author
-    let Some(author_id) = message.author_id else {
-        return Err(AppError::NotFound);
-    };
-
-    let body = match &message.body {
-        Some(val) => val,
-        None => "Attachment(s)"
-    };
 
     // The author is a member, so the room resolves for them
     let room = api::rooms::get(&app_state.pool, room_id, author_id).await?;

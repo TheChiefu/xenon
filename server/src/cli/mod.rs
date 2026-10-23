@@ -81,6 +81,8 @@ async fn run(state: &AppState, args: &[&str]) -> Result<()> {
     }
 }
 
+// Helper Methods //
+
 /// Lists the given commands as a usage error
 fn usage(commands: &[&str]) -> AppError {
     AppError::Validation(format!(

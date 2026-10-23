@@ -38,6 +38,11 @@
 </script>
 
 <style>
+  dialog {
+    width: 40rem;
+    height: 36rem;
+  }
+
   .tab-view {
     padding: var(--section-padding);
     flex: 1;

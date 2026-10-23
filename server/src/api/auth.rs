@@ -100,7 +100,7 @@ pub async fn register(
 
     // Create user
     let id = Uuid::now_v7();
-    db::insert_user(
+    db::create_user(
         &mut tx,
         id,
         username,
@@ -157,10 +157,9 @@ pub async fn change_password(
     )
     .bind(user_id)
     .fetch_optional(pool)
-    .await?
-    .flatten();
+    .await?;
 
-    // No row or NULL hash: nothing to verify against
+    // No row: nothing to verify against
     let stored_hash = stored_hash.ok_or(AppError::InvalidCredentials)?;
 
     // Check if given current password matches the one stored in the DB
@@ -231,69 +230,66 @@ pub async fn login(
     password: &str,
 ) -> Result<String> {
 
+    #[derive(sqlx::FromRow)]
+    struct LoginRow {id: Uuid, password_hash: String, locked: bool, banned: bool}
+
     // Username lookup
-    let lookup = sqlx::query_as::<_, (Uuid, Option<String>, bool)>(
+    let row: Option<LoginRow> = sqlx::query_as(
         "
-        SELECT id, password_hash, locked
+        SELECT id, password_hash, locked, banned
         FROM users
         WHERE username = ?1
         "
     )
     .bind(username)
-    .fetch_one(pool)
-    .await;
+    .fetch_optional(pool)
+    .await?;
 
-    // Attempt to retrieve username, password hash, and lock
-    let (user_id, stored_hash, locked) = match lookup {
-
-        // Found creds
-        Ok((id, Some(hash), locked)) => (id, hash, locked),
-
-        // Not found, burn cycles to mask kind of API call
-        Ok((_, None, _)) | Err(sqlx::Error::RowNotFound) => {
-            utils::burn_verify(password);
-            return Err(AppError::InvalidCredentials);
-        }
-
-        // DB error, exit...
-        Err(e) => return Err(AppError::Db(e))
+    // Not found, burn cycles to mask kind of API call
+    let Some(user) = row else {
+        utils::burn_verify(password);
+        return Err(AppError::InvalidCredentials);
     };
 
     // Verify Password:
     // `?` is the corrupt-stored-hash case (server fault)
     // `false` is an incorrect password
-    let verified = utils::verify_password(password, &stored_hash)?;
+    let verified = utils::verify_password(password, &user.password_hash)?;
 
     // Locked account returns the same error as a wrong password
-    if locked {
+    if user.locked {
         return Err(AppError::InvalidCredentials);
     }
 
     if !verified {
 
         // Lock the account once its failed logins reach the configured limit
-        if failures.record_failure(user_id) {
+        if failures.record_failure(user.id) {
             sqlx::query("UPDATE users SET locked = 1 WHERE id = ?1")
-                .bind(user_id)
+                .bind(user.id)
                 .execute(pool)
                 .await?;
 
             // Log IP on account lock
             tracing::warn!(
                 "| [{ip}] account locked after failed logins [Username: {0} | ID: {1}]",
-                username, user_id,
+                username, user.id,
             );
         }
 
         return Err(AppError::InvalidCredentials);
     }
 
+    if user.banned {
+        return Err(AppError::Banned);
+    }
+
     // Reset failure account once logged in
-    failures.clear(user_id);
+    failures.clear(user.id);
 
     // Create session key
     let mut conn = pool.acquire().await?;
-    let token = db::create_session(&mut conn, user_id).await?;
+    let token = db::create_session(&mut conn, user.id).await?;
 
     Ok(token)
 }

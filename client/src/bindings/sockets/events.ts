@@ -60,7 +60,7 @@ title: string | null,
 /**
  * What the game says they are doing
  */
-detail: string | null, } | { "type": "call_snapshot", calls: Array<ActiveCall>, } | { "type": "participant_joined", room_id: string, user_id: string, } | { "type": "participant_left", room_id: string, user_id: string, };
+detail: string | null, } | { "type": "call_snapshot", calls: Array<ActiveCall>, } | { "type": "participant_joined", room_id: string, user_id: string, } | { "type": "participant_left", room_id: string, user_id: string, } | { "type": "session_revoked" };
 
 /**
  * A user and the linked account they are on.

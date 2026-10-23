@@ -118,7 +118,7 @@
     grid-template-areas:
       "search actions"
       "list permissions";
-    gap: 0.25rem 0.75rem;
+    gap: var(--row-gap) var(--column-gap);
   }
 
   @media (max-width: 40rem) {
@@ -133,181 +133,109 @@
     }
   }
 
-  .users, .detail {
-    display: contents;
-  }
-
-  .detail.inactive > * {
+  .inactive {
     opacity: 0.5;
   }
-
-  .glyph-button {
-    flex: none;
-    display: grid;
-    place-items: center;
-    padding: 0.25rem;
-  }
-
-  .glyph-button :global(svg) {
-    width: 1.25rem;
-    height: 1.25rem;
-  }
-
-  .glyph-button:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-
-  /* Search */
 
   .search {
     grid-area: search;
     display: flex;
-    gap: 0.25rem;
+    gap: var(--inline-gap);
   }
-
-  .search input {
-    flex: 1;
-    min-width: 0;
-    padding: 0.25rem 0.5rem;
-  }
-
-  /* User list */
 
   .list {
     grid-area: list;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    background: var(--component);
-    border: 1px solid var(--border);
-  }
-
-  .row {
-    flex: none;
-    padding: 0.25rem 0.5rem;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    background: transparent;
-    border: none;
-  }
-
-  .row.selected {
-    background: var(--component-raised);
-    outline: 1px solid var(--btn-action);
-    outline-offset: -1px;
   }
 
   .more {
-    flex: none;
-    padding: 0.25rem;
+    margin-top: auto;
+    justify-content: center;
   }
-
-  /* Actions */
 
   .actions {
     grid-area: actions;
+  }
+
+  .buttons {
     display: flex;
-    gap: 0.25rem;
+    gap: var(--inline-gap);
   }
-
-  .title {
-    align-self: center;
-    margin-right: auto;
-    font-weight: 600;
-  }
-
-  /* Permissions */
 
   .permissions {
     grid-area: permissions;
-    min-width: 0;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: 0.5rem;
-    overflow-y: auto;
-    background: var(--component);
-    border: 1px solid var(--border);
   }
 
   .checks {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-    gap: 0.25rem 0.75rem;
+    gap: var(--row-gap) var(--column-gap);
   }
 
   .check {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--inline-gap);
   }
 
   .footer {
     margin-top: auto;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--inline-gap);
   }
 
   .error {
     flex: 1;
-    min-width: 0;
     color: var(--text-dim);
     font-style: italic;
-  }
-
-  .save {
-    flex: none;
-    padding: 0.25rem 1rem;
   }
 </style>
 
 <div class="access">
-  <div class="users">
-    <form class="search" onsubmit={search}>
-      <input type="search" placeholder="Username" bind:value={username}/>
+  <form class="search" onsubmit={search}>
+    <input class="is-compact" type="search" placeholder="Username" bind:value={username}/>
+    <button
+      class="glyph-btn"
+      type="submit"
+      aria-label="Search"
+      title="Search"
+      disabled={user_search.pending}
+    >
+      {@html icon_search}
+    </button>
+  </form>
+
+  <div class="list grid table is-compact">
+    {#each user_search.users as user (user.id)}
       <button
-        class="glyph-button"
-        type="submit"
-        aria-label="Search"
-        title="Search"
-        disabled={user_search.pending}
+        class:is-active={selected_id === user.id}
+        onclick={() => selectUser(user.id)}
+        disabled={settings.isPending()}
       >
-        {@html icon_search}
+        {user.username}
       </button>
-    </form>
+    {/each}
 
-    <div class="list">
-      {#each user_search.users as user (user.id)}
-        <button
-          class="row"
-          class:selected={selected_id === user.id}
-          onclick={() => selectUser(user.id)}
-          disabled={settings.isPending()}
-        >
-          {user.username}
-        </button>
-      {/each}
-
-      {#if !user_search.final_page}
-        <button class="more" onclick={() => user_search.loadMore()} disabled={user_search.pending}>
-          Load More
-        </button>
-      {/if}
-    </div>
+    {#if !user_search.final_page}
+      <button class="more" onclick={() => user_search.loadMore()} disabled={user_search.pending}>
+        Load More
+      </button>
+    {/if}
   </div>
 
-  <div class="detail" class:inactive={selected_id === null} inert={selected_id === null}>
-    <div class="actions">
-      <span class="title">Permissions</span>
+  <div class="actions grid-title" class:inactive={selected_id === null} inert={selected_id === null}>
+    <h4>Permissions</h4>
 
+    <div class="buttons">
       {#if access?.invited}
         <button
-          class="glyph-button"
+          class="glyph-btn"
           aria-label="Revoke invite"
           title="Revoke invite"
           onclick={toggleInvite}
@@ -317,7 +245,7 @@
         </button>
       {:else}
         <button
-          class="glyph-button"
+          class="glyph-btn"
           aria-label="Invite"
           title="Invite"
           onclick={toggleInvite}
@@ -329,7 +257,7 @@
 
       {#if access?.banned}
         <button
-          class="glyph-button"
+          class="glyph-btn"
           aria-label="Unban"
           title="Unban"
           onclick={toggleBan}
@@ -339,7 +267,7 @@
         </button>
       {:else}
         <button
-          class="glyph-button"
+          class="glyph-btn"
           aria-label="Ban"
           title="Ban"
           onclick={toggleBan}
@@ -349,35 +277,40 @@
         </button>
       {/if}
     </div>
-
-    <form class="permissions" onsubmit={save}>
-      <div class="checks">
-        {#each Object.values(Permission) as value}
-          <label class="check">
-            <input
-              type="checkbox"
-              {value}
-              bind:group={checked_permissions}
-              disabled={!permissions_enabled}
-            />
-            {LABELS_PERMISSION[value]}
-          </label>
-        {/each}
-      </div>
-
-      <div class="footer">
-        <span class="error">
-          {#if settings.getError()}
-            {MSG_ERROR}: {settings.getError()}
-          {:else if user_search.error}
-            {MSG_ERROR}: {user_search.error}
-          {/if}
-        </span>
-
-        <button class="save" type="submit" disabled={!permissions_enabled || settings.isPending()}>
-          Save
-        </button>
-      </div>
-    </form>
   </div>
+
+  <form
+    class="permissions grid is-compact"
+    class:inactive={selected_id === null}
+    inert={selected_id === null}
+    onsubmit={save}
+  >
+    <div class="checks">
+      {#each Object.values(Permission) as value}
+        <label class="check">
+          <input
+            type="checkbox"
+            {value}
+            bind:group={checked_permissions}
+            disabled={!permissions_enabled}
+          />
+          {LABELS_PERMISSION[value]}
+        </label>
+      {/each}
+    </div>
+
+    <div class="footer">
+      <span class="error">
+        {#if settings.getError()}
+          {MSG_ERROR}: {settings.getError()}
+        {:else if user_search.error}
+          {MSG_ERROR}: {user_search.error}
+        {/if}
+      </span>
+
+      <button class="is-compact" type="submit" disabled={!permissions_enabled || settings.isPending()}>
+        Save
+      </button>
+    </div>
+  </form>
 </div>

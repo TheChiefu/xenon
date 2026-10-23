@@ -361,6 +361,14 @@ pub async fn ban_user(
     let event = ServerEvent::MemberLeft { room_id, user_id: target_id };
     registry::broadcast(&app_state, room_id, event).await;
 
+    // Ban removes the user from the room's call
+    if call::registry::participant_call(&app_state, target_id) == Some(room_id) {
+        call::registry::leave(&app_state, target_id);
+
+        let event = ServerEvent::ParticipantLeft { room_id, user_id: target_id };
+        registry::broadcast(&app_state, room_id, event).await;
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 

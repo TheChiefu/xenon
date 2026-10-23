@@ -27,6 +27,7 @@ pub struct ErrorResponse {
 #[derive(Debug)]
 pub enum AppError {
     InvalidCredentials,
+    Banned,
     InvalidRegistrationCode,
     UsernameTaken,
     Forbidden,
@@ -45,6 +46,7 @@ impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AppError::InvalidCredentials => write!(f, "invalid username or password"),
+            AppError::Banned => write!(f, "account is banned"),
             AppError::InvalidRegistrationCode => write!(f, "invalid or unusable registration code"),
             AppError::UsernameTaken => write!(f, "username is already taken"),
             AppError::Db(e) => write!(f, "database error: {e}"),
@@ -123,6 +125,7 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
             AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::Banned => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::InvalidRegistrationCode => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::UsernameTaken => (StatusCode::CONFLICT, self.to_string()),
             AppError::Validation(_) => (StatusCode::BAD_REQUEST, self.to_string()),

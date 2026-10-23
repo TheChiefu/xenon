@@ -161,7 +161,7 @@ pub async fn update(
     }
 
     // Change target's permissions
-    let affected = sqlx::query(
+    sqlx::query(
         "
         UPDATE room_access
         SET permissions = ?1
@@ -173,11 +173,6 @@ pub async fn update(
     .bind(target_id)
     .execute(&mut *tx)
     .await?;
-
-    // No row affected means the target is not in the room
-    if affected.rows_affected() == 0 {
-        return Err(AppError::NotFound);
-    }
 
     tx.commit().await?;
 

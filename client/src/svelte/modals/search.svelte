@@ -120,6 +120,11 @@
 </script>
 
 <style>
+  dialog {
+    width: 55rem;
+    height: 36rem;
+  }
+
   .columns {
     display: flex;
     gap: var(--section-gap);

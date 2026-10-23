@@ -119,6 +119,23 @@ pub async fn remove(pool: &SqlitePool, user_id: Uuid, endpoint: &str) -> Result<
     Ok(())
 }
 
+/// Removes every subscription a user holds
+pub async fn remove_all(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
+    let mut conn = pool.acquire().await?;
+
+    sqlx::query(
+        "
+        DELETE FROM push_subscriptions
+        WHERE user_id = ?1
+        "
+    )
+    .bind(user_id)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
+}
+
 /// Removes a rejected subscription
 pub async fn remove_unreachable(pool: &SqlitePool, endpoint: &str) -> Result<()> {
     let mut conn = pool.acquire().await?;
