@@ -149,8 +149,8 @@
   }
 
   .glyph-button :global(svg) {
-    width: 1.1rem;
-    height: 1.1rem;
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   .glyph-button:disabled {
@@ -188,7 +188,6 @@
     flex: none;
     padding: 0.25rem 0.5rem;
     text-align: left;
-    font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -205,7 +204,6 @@
   .more {
     flex: none;
     padding: 0.25rem;
-    font-size: 0.85rem;
   }
 
   /* Actions */
@@ -230,10 +228,8 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
     padding: 0.5rem;
     overflow-y: auto;
-    font-size: 0.85rem;
     background: var(--component);
     border: 1px solid var(--border);
   }
