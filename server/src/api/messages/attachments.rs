@@ -92,7 +92,7 @@ pub async fn for_message(
 
     let result = sqlx::query_as::<_, Attachment>(
         "
-        SELECT f.id, f.sha256, f.filename, f.mime, f.byte_size, f.created_at, ma.spoiler
+        SELECT f.id, f.sha256, f.filename, f.mime, f.byte_size, ma.spoiler
         FROM message_attachments ma
         JOIN files f ON f.id = ma.file_id
         WHERE ma.message_id = ?1
@@ -123,7 +123,7 @@ pub async fn for_message_range(
 
     let rows = sqlx::query_as::<_, AttachmentRow>(
         "
-        SELECT ma.message_id, f.id, f.sha256, f.filename, f.mime, f.byte_size, f.created_at, ma.spoiler
+        SELECT ma.message_id, f.id, f.sha256, f.filename, f.mime, f.byte_size, ma.spoiler
         FROM message_attachments ma
         JOIN messages m ON m.id = ma.message_id
         JOIN files f ON f.id = ma.file_id

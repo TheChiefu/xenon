@@ -22,7 +22,6 @@ pub struct File {
     pub filename: String,
     pub mime: String,
     pub byte_size: i64,
-    pub created_at: i64,
 }
 
 /// Outcome of an upload. Bytes the server already holds return the stored row
@@ -123,7 +122,7 @@ pub async fn fetch(
     let mut conn = pool.acquire().await?;
     let f = sqlx::query_as::<_, File>(
         "
-        SELECT id, sha256, filename, mime, byte_size, created_at
+        SELECT id, sha256, filename, mime, byte_size
         FROM files
         WHERE id = ?1
         "
@@ -311,7 +310,7 @@ async fn insert(
 
         let file = sqlx::query_as::<_, File>(
             "
-            SELECT id, sha256, filename, mime, byte_size, created_at
+            SELECT id, sha256, filename, mime, byte_size
             FROM files
             WHERE sha256 = ?1
             "
@@ -330,8 +329,7 @@ async fn insert(
             sha256,
             filename: filename.to_string(),
             mime: mime.to_string(),
-            byte_size,
-            created_at: now
+            byte_size
         }
     ))
 }
