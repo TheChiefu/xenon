@@ -27,8 +27,6 @@ async fn clean(pool: &SqlitePool, threads: Option<&str>) -> Result<()> {
     let threads = thread_count(threads)?;
     let unused_files = api::files::delete_unused_rows(pool).await?;
     api::files::delete_unused_files(&unused_files, threads).await?;
-
-    println!("removed {} unused files", unused_files.len());
     Ok(())
 }
 

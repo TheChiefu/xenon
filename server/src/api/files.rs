@@ -178,16 +178,24 @@ pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<()> {
     let files_path = &config::get().storage.files;
 
     let mut deletes = Vec::new();
+    let mut bytes_deleted = 0;
     for file in files {
         let hex = hex::encode(&file.sha256);
         let path = create_shard_path(files_path, &hex).join(&hex);
         deletes.push(tokio::fs::remove_file(path));
+        bytes_deleted += file.byte_size;
     }
 
     stream::iter(deletes)
         .buffer_unordered(threads)
         .try_collect::<Vec<()>>()
         .await?;
+
+    println!(
+        "Deleted {0} unused files ({1} bytes)",
+        files.len(),
+        bytes_deleted,
+    );
 
     Ok(())
 }
