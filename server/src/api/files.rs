@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use futures_util::{stream, StreamExt, TryStreamExt};
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
@@ -152,6 +153,43 @@ pub async fn fetch(
             Err(AppError::Io(e))
         }
     }
+}
+
+/// Deletes rows nothing references, returning the deleted rows
+pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
+    let files = sqlx::query_as::<_, File>(
+        "
+        DELETE FROM files
+        WHERE id NOT IN (SELECT file_id FROM message_attachments)
+          AND id NOT IN (SELECT file_id FROM user_files)
+          AND id NOT IN (SELECT avatar_file_id FROM users WHERE avatar_file_id IS NOT NULL)
+          AND id NOT IN (SELECT banner_file_id FROM users WHERE banner_file_id IS NOT NULL)
+        RETURNING id, sha256, filename, mime, byte_size
+        "
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(files)
+}
+
+/// Deletes each file's bytes from disk
+pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<()> {
+    let files_path = &config::get().storage.files;
+
+    let mut deletes = Vec::new();
+    for file in files {
+        let hex = hex::encode(&file.sha256);
+        let path = create_shard_path(files_path, &hex).join(&hex);
+        deletes.push(tokio::fs::remove_file(path));
+    }
+
+    stream::iter(deletes)
+        .buffer_unordered(threads)
+        .try_collect::<Vec<()>>()
+        .await?;
+
+    Ok(())
 }
 
 // Helper Methods //

@@ -6,6 +6,7 @@
 //! - Reattach to screen:   `screen -r xenon`
 //! 
 
+mod files;
 mod ip;
 mod user;
 
@@ -26,6 +27,7 @@ pub static READY: LazyLock<Notify> = LazyLock::new(Notify::new);
 
 pub const COMMANDS: &[&str] = &[
     "user <command>",
+    "files <command>",
     "ip <command>",
     "stop",
     "exit",
@@ -76,6 +78,7 @@ async fn run(state: &AppState, args: &[&str]) -> Result<()> {
     match args {
         [] => Ok(()),
         ["user", args_s @ ..] => user::run(state, args_s).await,
+        ["files", args_s @ ..] => files::run(state, args_s).await,
         ["ip", args_s @ ..] => ip::run(state, args_s).await,
         _ => Err(usage(&[COMMANDS].concat())),
     }
