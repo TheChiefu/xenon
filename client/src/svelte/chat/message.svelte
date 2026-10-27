@@ -90,6 +90,7 @@
 
     .message-body {
         white-space: pre-wrap;
+        overflow-wrap: anywhere;
     }
 
     .message-body textarea {
