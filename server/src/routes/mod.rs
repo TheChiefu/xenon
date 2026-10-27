@@ -222,6 +222,7 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(server::health_check))
         .merge(crate::services::push::router())
         .merge(crate::services::xbox::router())
+        .merge(crate::services::steam::router())
         .layer(middleware::from_fn_with_state(state.clone(), refuse_blocked))
         .with_state(state)
         .layer(cors_layer())

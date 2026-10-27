@@ -1,4 +1,4 @@
-//! The `[xbox]` section of the config file.
+//! The `[xbox]` section of the config file
 
 use serde::{Deserialize, Serialize};
 

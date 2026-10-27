@@ -1,4 +1,5 @@
 pub mod push;
+pub mod steam;
 pub mod xbox;
 
 use std::sync::LazyLock;
@@ -21,6 +22,8 @@ pub fn init() {
 
     LazyLock::force(&CLIENT);
 }
+
+// Helper Methods //
 
 /// Builds outbound HTTP client with request timeout, exits server if it cannot be built
 fn build_client() -> Client {

@@ -12,6 +12,7 @@ mod responses;
 mod services;
 mod session;
 mod sockets;
+mod steam;
 mod storage;
 mod uploads;
 mod xbox;
@@ -36,6 +37,7 @@ pub use sockets::Sockets;
 pub use storage::Storage;
 pub use uploads::Uploads;
 pub use xbox::Xbox;
+pub use steam::Steam;
 
 /// Static Global (configured once on load from file)
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -56,6 +58,7 @@ pub struct Config {
     pub session: Session,
     pub push: Option<Push>,
     pub xbox: Option<Xbox>,
+    pub steam: Option<Steam>,
     pub lengths: Lengths,
     pub uploads: Uploads,
     pub responses: Responses,
@@ -77,6 +80,7 @@ impl Default for Config {
             session: Session::default(),
             push: None,
             xbox: None,
+            steam: None,
             lengths: Lengths::default(),
             uploads: Uploads::default(),
             responses: Responses::default(),

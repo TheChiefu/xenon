@@ -44,6 +44,8 @@ pub fn start(state: AppState) {
         return;
     };
 
+    tracing::info!("enabled");
+
     let mappings = match xbox.game_mappings.is_empty() {
         true => Mappings::new(),
         false => mappings::load(&xbox.game_mappings)
@@ -72,6 +74,7 @@ async fn poll_presence(
     xbox: &config::Xbox,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(xbox.poll_interval_seconds));
+    tracing::info!("polling at ({} seconds)", xbox.poll_interval_seconds);
 
     loop {
         interval.tick().await;
