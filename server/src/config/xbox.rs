@@ -11,9 +11,6 @@ pub struct Xbox {
     /// Entra client secret value
     pub client_secret: String,
 
-    /// Address registered on that app, which Microsoft redirects a browser to
-    pub redirect_uri: String,
-
     /// Path to a JSON file renaming games and their rich presence
     pub game_mappings: String,
 
@@ -34,10 +31,6 @@ impl Xbox {
             return Err("xbox.client_secret must be set".to_string());
         }
 
-        if !self.redirect_uri.starts_with("http://") && !self.redirect_uri.starts_with("https://") {
-            return Err("xbox.redirect_uri must start with http:// or https://".to_string());
-        }
-
         if self.poll_interval_seconds < 1 {
             return Err("xbox.poll_interval_seconds must be at least 1".to_string());
         }
@@ -51,7 +44,6 @@ impl Default for Xbox {
         Xbox {
             client_id: String::new(),
             client_secret: String::new(),
-            redirect_uri: String::new(),
             game_mappings: String::new(),
             poll_interval_seconds: 60
         }

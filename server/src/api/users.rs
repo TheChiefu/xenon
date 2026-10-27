@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::services::{push, xbox};
+use crate::services::{push, steam, xbox};
 use crate::shared::{GlobalRole};
 use crate::sockets;
 use crate::sockets::chat::registry;
@@ -258,6 +258,7 @@ pub async fn delete(
 
     // Remove the account's cached Xbox authorization header
     xbox::auth::remove_header(user_id);
+    steam::routes::remove(pool, user_id).await?;
 
     // Disconnect from sockets and broadcast that account has left
     sockets::disconnect(state, user_id).await;
@@ -325,6 +326,7 @@ pub async fn ban(
     // Clear services
     push::store::remove_all(&state.pool, target_id).await?;
     xbox::unlink(state, target_id).await?;
+    steam::routes::remove(&state.pool, target_id).await?;
 
     // Disconnect user from sockets
     sockets::disconnect(state, target_id).await;

@@ -13,7 +13,7 @@ use crate::shared::Status;
 use crate::routes::AuthUser;
 use crate::sockets::call;
 use crate::sockets::events::{ClientEvent, ServerEvent};
-use crate::sockets::chat::game_presence;
+use crate::sockets::chat::platforms;
 use crate::sockets::chat::presence::{self, Device};
 use crate::sockets::chat::registry::{self, Joined, SocketDevice};
 use crate::state::AppState;
@@ -152,7 +152,7 @@ async fn send_game_snapshot(
     viewer_id: Uuid,
     socket: &mut SplitSink<WebSocket, Message>,
 ) {
-    let users = match game_presence::snapshot(state, viewer_id).await {
+    let users = match platforms::snapshot(state, viewer_id).await {
         Ok(users) => users,
         Err(e) => {
             tracing::error!("could not build a game presence snapshot for {viewer_id}: {e}");

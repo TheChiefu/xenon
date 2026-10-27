@@ -163,6 +163,16 @@ video {
   color: var(--text-dim);
 }
 
+.divider-vertical {
+  width: 1px;
+  background: var(--border);
+}
+
+.divider-horizontal {
+  height: 1px;
+  background: var(--border);
+}
+
 
 /* Buttons */
 

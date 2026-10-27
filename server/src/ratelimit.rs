@@ -2,12 +2,13 @@
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
 
 use crate::config;
 use crate::error::{AppError, Result};
+use crate::utils::mutex_lock;
 
 /// Failures counted for one IP, and whether it is blocked
 #[derive(Default)]
@@ -27,7 +28,7 @@ impl AddressLimits {
 
     /// Marks every IP read from the database as blocked
     pub fn load(&self, addresses: Vec<IpAddr>) {
-        let mut by_ip = self.lock_map();
+        let mut by_ip = mutex_lock(&self.by_ip);
 
         // Mark each saved address as blocked
         for address in addresses {
@@ -37,7 +38,7 @@ impl AddressLimits {
 
     /// Fails if the IP is blocked
     pub fn check(&self, ip: IpAddr) -> Result<()> {
-        if self.lock_map().get(&accountable_address(ip)).is_some_and(|record| record.blocked) {
+        if mutex_lock(&self.by_ip).get(&accountable_address(ip)).is_some_and(|record| record.blocked) {
             return Err(AppError::AddressBlocked);
         }
 
@@ -47,7 +48,7 @@ impl AddressLimits {
     /// Counts a failed registration, returning whether the IP just reached the limit
     pub fn register_limit_reached(&self, ip: IpAddr) -> bool {
         let max = config::get().rate_limit.address_register_failures_max;
-        let mut by_ip = self.lock_map();
+        let mut by_ip = mutex_lock(&self.by_ip);
         let record = by_ip.entry(accountable_address(ip)).or_default();
         record.register_failures += 1;
 
@@ -62,7 +63,7 @@ impl AddressLimits {
     /// Counts a failed login, returning whether the IP just reached the limit
     pub fn login_limit_reached(&self, ip: IpAddr) -> bool {
         let max = config::get().rate_limit.address_login_failures_max;
-        let mut by_ip = self.lock_map();
+        let mut by_ip = mutex_lock(&self.by_ip);
         let record = by_ip.entry(accountable_address(ip)).or_default();
         record.login_failures += 1;
 
@@ -76,20 +77,12 @@ impl AddressLimits {
 
     /// Blocks the IP
     pub fn block(&self, ip: IpAddr) {
-        self.lock_map().entry(accountable_address(ip)).or_default().blocked = true;
+        mutex_lock(&self.by_ip).entry(accountable_address(ip)).or_default().blocked = true;
     }
 
     /// Removes the IP's block and failure counts
     pub fn unblock(&self, ip: IpAddr) {
-        self.lock_map().remove(&accountable_address(ip));
-    }
-
-    /// Locks the records
-    fn lock_map(&self) -> MutexGuard<'_, HashMap<IpAddr, AddressRecord>> {
-        match self.by_ip.lock() {
-            Ok(by_ip) => by_ip,
-            Err(poisoned) => poisoned.into_inner(),
-        }
+        mutex_lock(&self.by_ip).remove(&accountable_address(ip));
     }
 }
 
@@ -104,7 +97,7 @@ impl LoginFailures {
     /// Counts a failed login, returning whether the account has reached its limit
     pub fn record_failure(&self, user_id: Uuid) -> bool {
         let max = config::get().rate_limit.account_login_failures_max;
-        let mut count_by_user = self.lock_map();
+        let mut count_by_user = mutex_lock(&self.count_by_user);
 
         let count = count_by_user.entry(user_id).or_insert(0);
         *count += 1;
@@ -120,15 +113,7 @@ impl LoginFailures {
 
     /// Removes an account's failed login count
     pub fn clear(&self, user_id: Uuid) {
-        self.lock_map().remove(&user_id);
-    }
-
-    /// Locks the failed login counts
-    fn lock_map(&self) -> MutexGuard<'_, HashMap<Uuid, u32>> {
-        match self.count_by_user.lock() {
-            Ok(count_by_user) => count_by_user,
-            Err(poisoned) => poisoned.into_inner(),
-        }
+        mutex_lock(&self.count_by_user).remove(&user_id);
     }
 }
 

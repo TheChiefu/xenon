@@ -9,9 +9,10 @@ use ts_rs::TS;
 
 use crate::db;
 use crate::error::Result;
-use crate::shared::Status;
-use crate::sockets::events::{ServerEvent, UserPresence};
-use crate::sockets::chat::game_presence;
+use crate::shared::{Platform, Status};
+use crate::sockets::events::ServerEvent;
+use crate::sockets::events::presence::UserPresence;
+use crate::sockets::chat::platforms;
 use crate::sockets::chat::registry;
 use crate::state::AppState;
 
@@ -98,7 +99,8 @@ pub async fn on_change(
 ) {
     // Offline users have no game presence
     if after == Some(Status::Offline) && before != Some(Status::Offline) {
-        game_presence::clear(state, user_id).await;
+        platforms::clear_presence(state, user_id, Platform::Xbox).await;
+        platforms::clear_presence(state, user_id, Platform::Steam).await;
     }
 
     // An Offline user connecting or leaving is not a change to a viewer

@@ -23,7 +23,9 @@ pub struct Bind {
     pub cors_max_age: u64,
 
     /// Connections have 'X-Forwarded-For' header read as the client IP
-    pub trusted_proxies: Vec<IpAddr>
+    pub trusted_proxies: Vec<IpAddr>,
+
+    pub public_url: Option<String>
 }
 
 impl Bind {
@@ -45,6 +47,12 @@ impl Bind {
             _ => {}
         }
 
+        if let Some(url) = &self.public_url {
+            if !url.starts_with("http://") && !url.starts_with("https://") {
+                return Err("bind.public_url must start with http:// or https://".to_string());
+            }
+        }
+
         Ok(())
     }
 }
@@ -64,6 +72,7 @@ impl Default for Bind {
                 IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V6(Ipv6Addr::LOCALHOST)
             ],
+            public_url: None,
         }
     }
 }

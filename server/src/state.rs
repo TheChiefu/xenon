@@ -7,7 +7,7 @@ use sqlx::SqlitePool;
 
 use crate::ratelimit::{AddressLimits, LoginFailures};
 use crate::sockets::call::registry::ActiveCalls;
-use crate::sockets::chat::game_presence::ReportedGames;
+use crate::sockets::chat::platforms::ReportedGames;
 use crate::sockets::chat::registry::Registry;
 
 /// Cloned per request

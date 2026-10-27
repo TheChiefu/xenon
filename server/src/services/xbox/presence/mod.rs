@@ -16,8 +16,8 @@ use crate::services::xbox::accounts::Account;
 use crate::services::xbox::auth;
 use crate::services::xbox::presence::mappings::{Mapping, Mappings};
 use crate::shared::Platform;
-use crate::sockets::events::{GameActivity, GamePresence};
-use crate::sockets::chat::game_presence;
+use crate::sockets::events::platforms::{Presence, Status};
+use crate::sockets::chat::platforms;
 use crate::state::AppState;
 
 const PRESENCE_URL: &str = "https://userpresence.xboxlive.com/users";
@@ -111,8 +111,8 @@ pub async fn poll(
             continue;
         };
 
-        let game = reported(record, account.honor_cloaked, mappings);
-        game_presence::on_report(state, account.user_id, game).await;
+        let presence = reported(record, account.honor_cloaked, mappings);
+        platforms::report_presence(state, account.user_id, Platform::Xbox, presence).await;
     }
 }
 
@@ -174,26 +174,25 @@ async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
     }
 }
 
-/// Converts presence record to game activity, applying game mappings
-fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> GameActivity {
-    let status = match record.state {
-        _ if record.cloaked && honor_cloaked => GamePresence::Offline,
-        PresenceState::Online => GamePresence::Online,
-        PresenceState::Away => GamePresence::Away,
-        PresenceState::Offline | PresenceState::Unknown => GamePresence::Offline
-    };
+/// Converts presence record to platform presence, applying game mappings
+fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> Presence {
 
-    let mut game = GameActivity {
-        platform: Platform::Xbox,
-        status,
-        title: None,
-        detail: None
-    };
-
-    // Returns without title if user is not online
-    if status != GamePresence::Online {
-        return game;
+    // Cloaked users appear offline, hide everything else
+    if record.cloaked && honor_cloaked {
+        return Presence { status: Status::Offline, game: None, activity: None };
     }
+
+    let status = match record.state {
+        PresenceState::Online => Status::Online,
+        PresenceState::Away => Status::Away,
+        PresenceState::Offline | PresenceState::Unknown => Status::Offline
+    };
+
+    let mut presence = Presence {
+        status,
+        game: None,
+        activity: None,
+    };
 
     // Finds game being played, skipping unnamed titles
     for device in record.devices {
@@ -203,19 +202,19 @@ fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> GameAct
             }
 
             let mapping = mappings.get(&mappings::lookup_key(&title.name));
-            game.detail = detail(title.activity, mapping);
+            presence.activity = detail(title.activity, mapping);
 
             // Uses mapped title name, or reported name with symbols removed
-            game.title = Some(match mapping {
+            presence.game = Some(match mapping {
                 Some(mapping) => mapping.name.clone(),
                 None => mappings::remove_excessive(&title.name)
             });
 
-            return game;
+            return presence;
         }
     }
 
-    game
+    presence
 }
 
 /// Returns rich presence with mapped prefix, if title reports one

@@ -166,6 +166,18 @@ impl Config {
 
         if let Some(xbox) = &self.xbox {
             xbox.validate()?;
+
+            if self.bind.public_url.is_none() {
+                return Err("bind.public_url must be set when xbox is enabled".to_string());
+            }
+        }
+
+        if let Some(steam) = &self.steam {
+            steam.validate()?;
+
+            if self.bind.public_url.is_none() {
+                return Err("bind.public_url must be set when steam is enabled".to_string());
+            }
         }
 
         self.lengths.validate()?;
@@ -194,9 +206,19 @@ impl Config {
         self.socket_addr().ip().is_loopback()
     }
 
+    pub fn public_url(&self) -> &str {
+        let url = self.bind.public_url.as_deref().expect("bind.public_url validated at startup");
+        url.trim_end_matches('/')
+    }
+
     /// Returns xbox section
     pub fn xbox(&self) -> &Xbox {
         self.xbox.as_ref().expect("xbox routes require xbox config")
+    }
+
+    /// Returns steam section
+    pub fn steam(&self) -> &Steam {
+        self.steam.as_ref().expect("steam routes require steam config")
     }
 
     /// Whether a certificate and key are configured for the listener.

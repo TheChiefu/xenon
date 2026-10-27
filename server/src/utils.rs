@@ -1,6 +1,7 @@
 //! Clock, random-token, and password-hashing helpers.
 
-use std::sync::LazyLock;
+use std::panic::Location;
+use std::sync::{LazyLock, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use argon2::password_hash::rand_core::{OsRng, RngCore};
@@ -174,4 +175,39 @@ pub fn ms_rfc3339(timestamp: &str) -> Option<i64> {
     }
 
     Some((days * 86400 + hour * 3600 + minute * 60 + second) * 1000)
+}
+
+// Locks
+
+#[track_caller]
+pub fn read_lock<T>(lock: &RwLock<T>) -> RwLockReadGuard<'_, T> {
+    match lock.read() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            tracing::warn!("lock was poisoned at {}, recovering", Location::caller());
+            poisoned.into_inner()
+        }
+    }
+}
+
+#[track_caller]
+pub fn write_lock<T>(lock: &RwLock<T>) -> RwLockWriteGuard<'_, T> {
+    match lock.write() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            tracing::warn!("lock was poisoned at {}, recovering", Location::caller());
+            poisoned.into_inner()
+        }
+    }
+}
+
+#[track_caller]
+pub fn mutex_lock<T>(lock: &Mutex<T>) -> MutexGuard<'_, T> {
+    match lock.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            tracing::warn!("lock was poisoned at {}, recovering", Location::caller());
+            poisoned.into_inner()
+        }
+    }
 }

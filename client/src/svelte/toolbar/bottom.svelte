@@ -24,10 +24,8 @@
     background: var(--component);
   }
 
-  .divider {
-    width: 1px;
+  .divider-vertical {
     height: 1.5rem;
-    background: var(--border);
   }
 
   .pane-btn {
@@ -82,7 +80,7 @@
     </button>
   {/each}
 
-  <div class="divider"></div>
+  <div class="divider-vertical"></div>
 
   <!-- Modal Buttons on right -->
   {#each modalButtons as button}

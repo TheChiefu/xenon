@@ -39,6 +39,7 @@ pub enum AppError {
     Validation(String),
     Io(std::io::Error),
     Http(reqwest::Error),
+    Url(url::ParseError),
     Xbox(Failure),
 }
 
@@ -56,6 +57,7 @@ impl fmt::Display for AppError {
             AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
             AppError::Io(e) => write!(f, "i/o error: {e}"),
             AppError::Http(e) => write!(f, "http error: {e}"),
+            AppError::Url(e) => write!(f, "url error: {e}"),
             AppError::NotFound => write!(f, "not found"),
             AppError::AddressBlocked => write!(f, "this address is blocked"),
             AppError::Xbox(failure) => write!(f, "{failure}"),
@@ -70,6 +72,7 @@ impl std::error::Error for AppError {
             AppError::Hash(e) => Some(e),
             AppError::Io(e) => Some(e),
             AppError::Http(e) => Some(e),
+            AppError::Url(e) => Some(e),
             _ => None
         }
     }
@@ -102,6 +105,12 @@ impl From<std::io::Error> for AppError {
 impl From<reqwest::Error> for AppError {
     fn from(e: reqwest::Error) -> Self {
         AppError::Http(e)
+    }
+}
+
+impl From<url::ParseError> for AppError {
+    fn from(e: url::ParseError) -> Self {
+        AppError::Url(e)
     }
 }
 
@@ -154,7 +163,7 @@ impl IntoResponse for AppError {
             },
 
             // Never reaches client
-            AppError::Hash(_) | AppError::Http(_) => self.internal_error(),
+            AppError::Hash(_) | AppError::Http(_) | AppError::Url(_) => self.internal_error(),
         };
 
         (status, Json(ErrorResponse { error: message })).into_response()

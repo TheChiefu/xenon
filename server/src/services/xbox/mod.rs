@@ -16,8 +16,11 @@ use crate::config;
 use crate::error::Result;
 use crate::services::xbox::presence::mappings;
 use crate::services::xbox::presence::mappings::Mappings;
-use crate::sockets::chat::game_presence;
+use crate::shared::Platform;
+use crate::sockets::chat::platforms;
 use crate::state::AppState;
+
+pub const REDIRECT_PATH: &str = "/xbox/redirect";
 
 // Public Methods //
 
@@ -35,7 +38,7 @@ pub fn router() -> Router<AppState> {
             .delete(routes::unlink)
         )
         .route("/me/xbox/friends", get(routes::get_friends))
-        .route("/xbox/redirect", get(routes::redirect))
+        .route(REDIRECT_PATH, get(routes::redirect))
 }
 
 /// Start presence polling, doing nothing when the config has no xbox section
@@ -60,7 +63,7 @@ pub async fn unlink(state: &AppState, user_id: Uuid) -> Result<()> {
 
     // Remove the cached header and the game presence shown to others
     auth::remove_header(user_id);
-    game_presence::clear(state, user_id).await;
+    platforms::clear_presence(state, user_id, Platform::Xbox).await;
 
     Ok(())
 }

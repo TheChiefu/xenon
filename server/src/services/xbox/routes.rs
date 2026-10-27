@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::sync::{PoisonError, RwLock};
+use std::sync::RwLock;
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -7,7 +7,6 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
@@ -28,7 +27,7 @@ use crate::services::xbox::auth::Failure;
 use crate::services::xbox::friends;
 use crate::services::xbox::presence::PresenceState;
 use crate::state::AppState;
-use crate::utils::{now_ms, MINUTE};
+use crate::utils::{generate_code, write_lock};
 
 /// Page shown after linking, in tab client opened
 const LINKED_PAGE: &str = r#"
@@ -71,19 +70,10 @@ const LINKED_PAGE: &str = r#"
 </html>
 "#;
 
-/// Time before a code verifier expires
-const SIGN_IN_TIMEOUT: i64 = 10 * MINUTE;
-
 // Data Types //
 
-/// PKCE code verifier for one sign-in
-struct Verifier {
-    value: String,
-    expires_at: i64
-}
-
-/// Code verifiers by user ID
-static VERIFIERS: RwLock<BTreeMap<Uuid, Verifier>> = RwLock::new(BTreeMap::new());
+/// Code verifiers by user ID (PKCE code verifier for one sign-in)
+static VERIFIERS: RwLock<BTreeMap<Uuid, String>> = RwLock::new(BTreeMap::new());
 
 /// Authorization request URL sent to client
 #[derive(Serialize)]
@@ -144,21 +134,13 @@ pub async fn start(AuthUser(user_id, ..): AuthUser) -> Result<Json<LinkResponse>
     let xbox = config::get().xbox();
 
     // Random PKCE code verifier, kept until Microsoft redirects back
-    let mut bytes = [0u8; 32];
-    OsRng.fill_bytes(&mut bytes);
-    let verifier = hex::encode(bytes);
+    let verifier = generate_code(64);
 
     // SHA-256 hash of code verifier, sent as code challenge
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
 
     // Replaces any earlier code verifier for this user
-    VERIFIERS.write().unwrap_or_else(PoisonError::into_inner).insert(
-        user_id,
-        Verifier {
-            value: verifier,
-            expires_at: now_ms() + SIGN_IN_TIMEOUT
-        }
-    );
+    write_lock(&VERIFIERS).insert(user_id, verifier);
 
     let authorize_url = microsoft::authorize_url(xbox, &user_id.to_string(), &challenge);
 
@@ -259,17 +241,12 @@ async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
     let xbox = config::get().xbox();
 
     // Code verifier is removed so it can't be used twice
-    let verifier = VERIFIERS.write().unwrap_or_else(PoisonError::into_inner).remove(&query.state);
+    let verifier = write_lock(&VERIFIERS).remove(&query.state);
 
     // No code verifier means this server never started sign-in
     let Some(verifier) = verifier else {
-        return Err(AppError::Validation("sign-in was not started here".into()));
+        return Err(AppError::Forbidden);
     };
-
-    // Rejects expired code verifier
-    if verifier.expires_at < now_ms() {
-        return Err(AppError::Validation("sign-in expired".into()));
-    }
 
     // No authorization code when user cancels
     let Some(code) = query.code else {
@@ -277,7 +254,7 @@ async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
     };
 
     // Microsoft checks code verifier against code challenge
-    let tokens = microsoft::redeem_code(&code, &verifier.value, xbox).await?;
+    let tokens = microsoft::redeem_code(&code, &verifier, xbox).await?;
 
     // Rejects a token response without a refresh token
     let Some(refresh_token) = tokens.refresh_token else {

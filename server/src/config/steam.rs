@@ -17,7 +17,7 @@ impl Steam {
         }
 
         if self.poll_interval_seconds < 1 {
-            return Err("xbox.poll_interval_seconds must be at least 1".to_string());
+            return Err("steam.poll_interval_seconds must be at least 1".to_string());
         }
 
         Ok(())

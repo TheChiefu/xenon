@@ -51,9 +51,6 @@
     border: 1px solid var(--border);
   }
 
-  .divider {
-    border-top: 1px solid var(--border);
-  }
 </style>
 
 <div class="section fields">
@@ -109,7 +106,7 @@
     {/if}
 
     {#if can_delete}
-      <span class="divider full-row"></span>
+      <span class="divider-horizontal full-row"></span>
       <button class="full-row is-danger" onclick={deleteRoom} disabled={settings.isPending()}>Delete Room</button>
     {/if}
   </div>

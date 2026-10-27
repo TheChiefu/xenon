@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, RwLock};
 
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -7,8 +7,9 @@ use uuid::Uuid;
 use crate::config;
 use crate::db;
 use crate::error::Result;
-use crate::sockets::events::{ActiveCall, CallServerEvent};
+use crate::sockets::events::call::{ActiveCall, CallServerEvent};
 use crate::state::AppState;
+use crate::utils::{read_lock, write_lock};
 
 // Data Structs //
 
@@ -40,29 +41,6 @@ pub struct ActiveCalls {
     routes: Arc<RwLock<SignalRoutes>>
 }
 
-impl ActiveCalls {
-
-    fn read_lock(&self) -> RwLockReadGuard<'_, SignalRoutes> {
-        match self.routes.read() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                tracing::warn!("calls lock was poisoned, recovering");
-                poisoned.into_inner()
-            }
-        }
-    }
-
-    fn write_lock(&self) -> RwLockWriteGuard<'_, SignalRoutes> {
-        match self.routes.write() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                tracing::warn!("calls lock was poisoned, recovering");
-                poisoned.into_inner()
-            }
-        }
-    }
-}
-
 // Call Methods //
 
 /// Adds a user to a room's call
@@ -71,7 +49,7 @@ pub fn join(
     room_id: Uuid,
     user_id: Uuid,
 ) -> std::result::Result<mpsc::Receiver<String>, JoinRefused> {
-    let mut guard = state.calls.write_lock();
+    let mut guard = write_lock(&state.calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -98,7 +76,7 @@ pub fn leave(
     state: &AppState,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    let mut guard = state.calls.write_lock();
+    let mut guard = write_lock(&state.calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -124,7 +102,7 @@ pub fn end(
     state: &AppState,
     room_id: Uuid,
 ) {
-    let mut guard = state.calls.write_lock();
+    let mut guard = write_lock(&state.calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -143,7 +121,7 @@ pub fn participants(
     state: &AppState,
     room_id: Uuid,
 ) -> Vec<Uuid> {
-    let routes = state.calls.read_lock();
+    let routes = read_lock(&state.calls.routes);
 
     let mut found = Vec::new();
     if let Some(participants) = routes.by_room.get(&room_id) {
@@ -163,7 +141,7 @@ pub async fn snapshot(
     let mut conn = state.pool.acquire().await?;
     let room_ids = db::member_room_ids(&mut conn, user_id).await?;
 
-    let routes = state.calls.read_lock();
+    let routes = read_lock(&state.calls.routes);
 
     let mut calls = Vec::new();
     for room_id in room_ids {
@@ -189,7 +167,7 @@ pub fn participant_call(
     state: &AppState,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    let routes = state.calls.read_lock();
+    let routes = read_lock(&state.calls.routes);
 
     match routes.by_user.get(&user_id) {
         Some(room_id) => Some(*room_id),
@@ -213,7 +191,7 @@ pub fn forward(
         }
     };
 
-    let routes = state.calls.read_lock();
+    let routes = read_lock(&state.calls.routes);
 
     // The sender must be in a call
     let Some(room_id) = routes.by_user.get(&from) else {

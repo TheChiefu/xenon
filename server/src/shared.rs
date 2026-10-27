@@ -57,7 +57,7 @@ pub enum Notify {
 }
 
 /// A game service an account is linked to
-#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "shared.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]

@@ -29,10 +29,8 @@
     flex: 1;
   }
 
-  .divider {
-    width: 1px;
+  .divider-vertical {
     height: 1.5rem;
-    background: var(--border);
   }
 
   .toolbar-user {
@@ -92,7 +90,7 @@
   {/each}
 
   {#if buttons.length > 0}
-    <div class="divider"></div>
+    <div class="divider-vertical"></div>
   {/if}
 
   <!-- Modal Panes -->

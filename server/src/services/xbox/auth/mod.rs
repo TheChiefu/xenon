@@ -8,7 +8,7 @@ pub mod xsts;
 
 use std::collections::BTreeMap;
 use std::fmt;
-use std::sync::{PoisonError, RwLock};
+use std::sync::RwLock;
 
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -16,7 +16,7 @@ use uuid::Uuid;
 use crate::config;
 use crate::services::xbox::accounts;
 use crate::services::xbox::accounts::Account;
-use crate::utils::{now_ms, ms_rfc3339};
+use crate::utils::{now_ms, ms_rfc3339, read_lock, write_lock};
 
 // Data Types //
 
@@ -92,8 +92,7 @@ pub async fn get_header(
 
 /// Removes cached Authorization header for a user
 pub fn remove_header(user_id: Uuid) {
-    let mut authorizations = AUTHORIZATIONS.write().unwrap_or_else(PoisonError::into_inner);
-    authorizations.remove(&user_id);
+    write_lock(&AUTHORIZATIONS).remove(&user_id);
 }
 
 // Helper Methods //
@@ -127,7 +126,7 @@ async fn request_header(
 
     // Builds Authorization header from user hash and XSTS token, then cache it
     let value = format!("XBL3.0 x={};{}", claims.uhs, xsts.token);
-    AUTHORIZATIONS.write().unwrap_or_else(PoisonError::into_inner).insert(
+    write_lock(&AUTHORIZATIONS).insert(
         account.user_id,
         Authorization {
             value: value.clone(),
@@ -140,7 +139,7 @@ async fn request_header(
 
 /// Returns cached Authorization header if not expired
 fn get_cached_header(user_id: Uuid) -> Option<String> {
-    let authorizations = AUTHORIZATIONS.read().unwrap_or_else(PoisonError::into_inner);
+    let authorizations = read_lock(&AUTHORIZATIONS);
     let authorization = authorizations.get(&user_id)?;
 
     match authorization.expires_at > now_ms() {

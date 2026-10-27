@@ -14,7 +14,7 @@ use crate::api::users::UserSummary;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::services::xbox;
+use crate::services::{steam, xbox};
 use crate::shared::{GlobalRole, Platform};
 use crate::sockets::events::ServerEvent;
 use crate::sockets::chat::registry;
@@ -238,7 +238,17 @@ async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileRe
     let mut linked_accounts = Vec::new();
 
     if let Some(xbox) = xbox::accounts::get(pool, user_id).await? {
-        linked_accounts.push(LinkedAccountResponse { platform: Platform::Xbox, handle: xbox.gamertag });
+        linked_accounts.push(LinkedAccountResponse {
+            platform: Platform::Xbox,
+            handle: xbox.gamertag
+        });
+    }
+
+    if let Some(steam) = steam::accounts::get(pool, user_id).await? {
+        linked_accounts.push(LinkedAccountResponse {
+            platform: Platform::Steam,
+            handle: steam.persona_name
+        });
     }
 
     Ok(UserProfileResponse {

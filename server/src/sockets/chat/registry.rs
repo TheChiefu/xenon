@@ -3,7 +3,7 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, RwLock};
 
 use sqlx::pool::PoolConnection;
 use sqlx::{Sqlite, SqlitePool};
@@ -16,6 +16,7 @@ use crate::shared::Status;
 use crate::sockets::events::ServerEvent;
 use crate::sockets::chat::presence::Device;
 use crate::state::AppState;
+use crate::utils::{read_lock, write_lock};
 
 // Data Structs //
 
@@ -59,31 +60,6 @@ pub struct Registry {
     connected: Arc<RwLock<HashMap<Uuid, Connected>>>
 }
 
-impl Registry {
-
-    /// Takes the read lock, recovering it if a writer panicked while holding it.
-    fn read_lock(&self) -> RwLockReadGuard<'_, HashMap<Uuid, Connected>> {
-        match self.connected.read() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                tracing::warn!("registry lock was poisoned, recovering");
-                poisoned.into_inner()
-            }
-        }
-    }
-
-    /// Takes the write lock, recovering it if a writer panicked while holding it.
-    fn write_lock(&self) -> RwLockWriteGuard<'_, HashMap<Uuid, Connected>> {
-        match self.connected.write() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                tracing::warn!("registry lock was poisoned, recovering");
-                poisoned.into_inner()
-            }
-        }
-    }
-}
-
 /// Whether a socket is the only one its user holds.
 #[derive(PartialEq, Eq)]
 pub enum Joined {
@@ -117,7 +93,7 @@ pub fn subscribe(
     status: Status,
     device: Option<SocketDevice>,
 ) -> (broadcast::Receiver<String>, Joined) {
-    let mut reg = state.registry.write_lock();
+    let mut reg = write_lock(&state.registry.connected);
 
     let mut joined = Joined::Additional;
     let connected = match reg.entry(user_id) {
@@ -158,7 +134,7 @@ pub fn unsubscribe(
 ) -> Option<Status> {
     drop(receiver);
 
-    let mut reg = state.registry.write_lock();
+    let mut reg = write_lock(&state.registry.connected);
 
     let connected = match reg.get_mut(&user_id) {
         Some(connected) => connected,
@@ -201,7 +177,7 @@ pub fn statuses_of(
     state: &AppState,
     users: &[Uuid],
 ) -> Vec<UserStatus> {
-    let reg = state.registry.read_lock();
+    let reg = read_lock(&state.registry.connected);
 
     let mut found = Vec::new();
     for user_id in users {
@@ -237,7 +213,7 @@ pub fn set_status(
     user_id: Uuid,
     status: Status,
 ) -> Option<Status> {
-    let mut reg = state.registry.write_lock();
+    let mut reg = write_lock(&state.registry.connected);
     let connected = reg.get_mut(&user_id)?;
 
     let previous = connected.status;
@@ -251,7 +227,7 @@ pub fn remove(
     state: &AppState,
     user_id: Uuid,
 ) {
-    let mut reg = state.registry.write_lock();
+    let mut reg = write_lock(&state.registry.connected);
     reg.remove(&user_id);
 }
 
@@ -366,7 +342,7 @@ pub fn inform_users(
         }
     };
 
-    let reg = state.registry.read_lock();
+    let reg = read_lock(&state.registry.connected);
 
     for user_id in users {
         if let Some(connected) = reg.get(user_id) {
@@ -380,7 +356,7 @@ pub fn offline_users(
     state: &AppState,
     users: &[Uuid],
 ) -> Vec<Uuid> {
-    let reg = state.registry.read_lock();
+    let reg = read_lock(&state.registry.connected);
 
     let mut found = Vec::new();
     for user_id in users {

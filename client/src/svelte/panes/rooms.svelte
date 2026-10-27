@@ -65,10 +65,8 @@
         flex: 1;
     }
 
-    .divider {
+    .divider-vertical {
         align-self: stretch;
-        width: 1px;
-        background: var(--border);
     }
 
     /* List */
@@ -237,9 +235,9 @@
     <!-- Header Row -->
     <div class="row">
         <h3>Rooms</h3>
-        <span class="divider" aria-hidden="true"></span>
+        <span class="divider-vertical" aria-hidden="true"></span>
         <span class="spacer"></span>
-        <span class="divider" aria-hidden="true"></span>
+        <span class="divider-vertical" aria-hidden="true"></span>
 
         <!-- Discover Rooms -->
         <button
@@ -290,7 +288,7 @@
         <!-- Selected Room Actions, hidden without a room but still taking space -->
         <span class="spacer"></span>
         <div class="room-actions" style:visibility={session.getSelectedRoom() === null ? "hidden" : null}>
-            <span class="divider" aria-hidden="true"></span>
+            <span class="divider-vertical" aria-hidden="true"></span>
 
             <!-- Close Room -->
             <button

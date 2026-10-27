@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::config;
 use crate::services::CLIENT;
+use crate::services::xbox::REDIRECT_PATH;
 use crate::services::xbox::auth::Failure;
 
 const AUTHORIZE_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize";
@@ -36,10 +37,11 @@ struct ErrorBody {
 
 /// Builds authorization request URL with state and code challenge
 pub fn authorize_url(xbox: &config::Xbox, state: &str, challenge: &str) -> String {
+    let redirect_uri = redirect_uri();
     let params = [
         ("client_id", xbox.client_id.as_str()),
         ("response_type", "code"),
-        ("redirect_uri", xbox.redirect_uri.as_str()),
+        ("redirect_uri", redirect_uri.as_str()),
         ("scope", SCOPE),
         ("state", state),
         ("code_challenge", challenge),
@@ -61,13 +63,14 @@ pub async fn redeem_code(
     verifier: &str,
     xbox: &config::Xbox,
 ) -> Result<Tokens, Failure> {
+    let redirect_uri = redirect_uri();
     let form = [
         ("client_id", xbox.client_id.as_str()),
         ("client_secret", xbox.client_secret.as_str()),
         ("code", code),
         ("code_verifier", verifier),
         ("grant_type", "authorization_code"),
-        ("redirect_uri", xbox.redirect_uri.as_str()),
+        ("redirect_uri", redirect_uri.as_str()),
         ("scope", SCOPE)
     ];
 
@@ -91,6 +94,10 @@ pub async fn refresh_tokens(
 }
 
 // Helper Methods //
+
+fn redirect_uri() -> String {
+    format!("{}{}", config::get().public_url(), REDIRECT_PATH)
+}
 
 /// Posts form to token endpoint
 async fn post(form: &[(&str, &str)]) -> Result<Tokens, Failure> {
