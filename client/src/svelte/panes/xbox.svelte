@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FriendResponse } from "@/bindings/services/xbox";
+  import type { FriendResponse } from "@/lib/api/xbox";
   import { failureText } from "@/lib/utils";
   import * as xbox from "@/lib/services/xbox.svelte";
   import icon_lock from "@/assets/icons/lock.svg?raw";
@@ -14,7 +14,6 @@
     }
 
     try {
-      await xbox.loadFriends();
       failure = null;
     } catch (error) {
       failure = failureText(error);

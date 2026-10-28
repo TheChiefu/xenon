@@ -7,7 +7,7 @@
   import * as status from "@/lib/users/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
   import { GlobalRole } from "@/bindings/types/users";
-  import { Status } from "@/bindings/shared";
+  import { Appearance } from "@/bindings/types/status";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/display/transitions";
@@ -18,7 +18,7 @@
 
   let menuOpen = $state(false);
 
-  const status = $derived(users.getStatus(profile.get()?.id ?? ""));
+  const myStatus = $derived(users.getStatus(profile.get()?.id ?? ""));
 
   // Messages
   const msg_sign_out = "Are you sure you want to sign out?";
@@ -58,7 +58,7 @@
   function onStatusChange(event: Event) {
     if (!(event.target instanceof HTMLSelectElement)) return;
 
-    status.set(event.target.value as Status);
+    status.set(event.target.value as Appearance);
   }
 
   function pressAway(event: PointerEvent) {
@@ -174,7 +174,7 @@
 <svelte:window onpointerdown={pressAway}/>
 
 <div class="identity">
-  <div class="frame status-{status.status}">
+  <div class="frame status-{myStatus.status}">
     <div class="card">
       <button
         class="user"
@@ -212,7 +212,7 @@
         value={status.getPreferred()}
         onchange={onStatusChange}
       >
-        {#each Object.values(Status) as value}
+        {#each Object.values(Appearance) as value}
           <option {value}>{LABELS_STATUS[value]}</option>
         {/each}
       </select>

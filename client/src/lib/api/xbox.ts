@@ -1,5 +1,14 @@
-import type { FriendResponse, LinkResponse, XboxPatch, XboxResponse } from "@/bindings/services/xbox";
+import type { LinkResponse, XboxPatch, XboxResponse } from "@/bindings/services/xbox";
 import { request } from "@/lib/utils";
+
+export interface FriendResponse {
+    gamertag: string;
+    picture_url: string | null;
+    online: boolean;
+    presence_text: string;
+    in_party: number;
+    party_locked: boolean;
+}
 
 export async function getAccount(): Promise<XboxResponse | null> {
     const response = await request("/me/xbox");

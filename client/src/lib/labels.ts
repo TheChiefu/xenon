@@ -2,8 +2,8 @@
 
 import { GlobalRole } from "@/bindings/types/users";
 import { Notify, Permission, Visibility } from "@/bindings/types/rooms";
-import { Platform } from "@/bindings/types/platforms";
-import { Status } from "@/bindings/shared";
+import { Availability, Platform } from "@/bindings/types/platforms";
+import { Appearance } from "@/bindings/types/status";
 import { CallCloseCode } from "@/bindings/sockets/call/events";
 import { Device } from "@/bindings/types/status";
 import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
@@ -70,7 +70,6 @@ export const LABELS_NOTIFY: Record<Notify, string> = {
 export const LABELS_PERMISSION: Record<Permission, string> = {
   [Permission.post]: "Send messages",
   [Permission.attach]: "Attach files",
-  [Permission.commands]: "Use commands",
   [Permission.delete_msg]: "Delete others' messages",
   [Permission.invite]: "Create invites",
   [Permission.rename]: "Edit name and visibility",
@@ -80,13 +79,18 @@ export const LABELS_PERMISSION: Record<Permission, string> = {
   [Permission.connect]: "Join voice",
   [Permission.speak]: "Speak in voice",
   [Permission.mute]: "Mute others",
-  [Permission.video]: "Show video",
-  [Permission.screenshare]: "Share screen",
+  [Permission.video]: "Show video / screenshare",
 };
 
 export const LABELS_PLATFORM: Record<Platform, string> = {
   [Platform.xbox]: "Xbox",
   [Platform.steam]: "Steam",
+};
+
+export const LABELS_AVAILABILITY: Record<Availability, string> = {
+  [Availability.online]: "Online",
+  [Availability.away]: "Away",
+  [Availability.offline]: "Offline",
 };
 
 export const LABELS_ROLE: Record<GlobalRole, string> = {
@@ -95,11 +99,11 @@ export const LABELS_ROLE: Record<GlobalRole, string> = {
   [GlobalRole.visitor]: "Visitor",
 };
 
-export const LABELS_STATUS: Record<Status, string> = {
-  [Status.online]: "Online",
-  [Status.busy]: "Do Not Disturb",
-  [Status.away]: "Away",
-  [Status.offline]: "Offline",
+export const LABELS_STATUS: Record<Appearance, string> = {
+  [Appearance.online]: "Online",
+  [Appearance.busy]: "Do Not Disturb",
+  [Appearance.away]: "Away",
+  [Appearance.offline]: "Offline",
 };
 
 export const LABELS_VISIBILITY: Record<Visibility, string> = {

@@ -1,15 +1,15 @@
 // Client Settings - Status this device presents to other users
 
-import { Status } from "@/bindings/shared";
+import { Appearance } from "@/bindings/types/status";
 import * as settings from "@/lib/client/settings.svelte";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
 
 const keyStatus = "default_status";
-const defaultStatus: Status = Status.online;
+const defaultStatus: Appearance = Appearance.online;
 const activityEvents = ["pointerdown", "keydown", "wheel"];
 
-let currentStatus: Status = $state(readPreferedStatus());
+let currentStatus: Appearance = $state(readPreferedStatus());
 let isAutoAway = $state(false);
 let awayTimer: number | undefined;
 
@@ -22,19 +22,19 @@ scheduleAway();
 
 // STATUS //
 
-export function get(): Status {
-  if (isAutoAway && currentStatus === Status.online) {
-    return Status.away;
+export function get(): Appearance {
+  if (isAutoAway && currentStatus === Appearance.online) {
+    return Appearance.away;
   }
   return currentStatus;
 }
 
 // The preferred status on this device
-export function getPreferred(): Status {
+export function getPreferred(): Appearance {
   return currentStatus;
 }
 
-export function set(status: Status): void {
+export function set(status: Appearance): void {
   isAutoAway = false;
   currentStatus = status;
   localStorage.setItem(keyStatus, status); // Set status preference on client
@@ -72,7 +72,7 @@ function scheduleAway(): void {
 }
 
 function onAway(): void {
-  if (currentStatus !== Status.online) {
+  if (currentStatus !== Appearance.online) {
     return;
   }
 
@@ -82,11 +82,11 @@ function onAway(): void {
 
 // STORAGE //
 
-function readPreferedStatus(): Status {
+function readPreferedStatus(): Appearance {
   const stored = localStorage.getItem(keyStatus);
-  const statuses: string[] = Object.values(Status);
+  const statuses: string[] = Object.values(Appearance);
   if (stored === null || !statuses.includes(stored)) {
     return defaultStatus;
   }
-  return stored as Status;
+  return stored as Appearance;
 }

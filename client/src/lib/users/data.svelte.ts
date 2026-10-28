@@ -3,9 +3,9 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { ServerInfo } from "@/bindings/routes/server";
 import type { RespondSummary } from "@/bindings/routes/users";
-import { Status } from "@/bindings/shared";
-import { GamePresence, type GameActivity } from "@/bindings/sockets/events";
-import { type Device } from "@/bindings/types/status";
+import { Appearance, type Device } from "@/bindings/types/status";
+import { Availability, Platform } from "@/bindings/types/platforms";
+import type { Activity, Metadata } from "@/bindings/types/platforms";
 import * as usersAPI from "@/lib/api/users";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -20,14 +20,22 @@ const REGEX_USERNAME: RegExp = new RegExp(
 
 // A user's status and what they are connected from
 export interface UserStatus {
-  status: Status;
+  status: Appearance;
   device: Device | null;
+}
+
+// What the UI shows for a user's game activity
+export interface GameActivity {
+  platform: Platform;
+  status: Availability;
+  title: string | null;
+  detail: string | null;
 }
 
 // Maps containing a user ID per type (summary, their status, game activity)
 const summaries: SvelteMap<string, RespondSummary> = new SvelteMap();
 const statuses: SvelteMap<string, UserStatus> = new SvelteMap();
-const activities: SvelteMap<string, GameActivity> = new SvelteMap();
+const activities: SvelteMap<string, Activity> = new SvelteMap();
 const avatars: SvelteMap<string, FetchedFile> = new SvelteMap();
 const banners: SvelteMap<string, FetchedFile> = new SvelteMap();
 
@@ -138,10 +146,10 @@ export function cache(user: RespondSummary): void {
 // STATUS //
 
 export function getStatus(id: string): UserStatus {
-  return statuses.get(id) ?? { status: Status.offline, device: null };
+  return statuses.get(id) ?? { status: Appearance.offline, device: null };
 }
 
-export function setStatus(id: string, status: Status, device: Device | null): void {
+export function setStatus(id: string, status: Appearance, device: Device | null): void {
   statuses.set(id, { status, device });
 }
 
@@ -151,18 +159,33 @@ export function clearStatuses(): void {
 
 // GAMES //
 
+// The first platform a user is active on, or undefined when none
 export function getActivity(id: string): GameActivity | undefined {
-  const gameActivity = activities.get(id);
-
-  if (gameActivity?.status === GamePresence.Offline) {
+  const activity = activities.get(id);
+  if (activity === undefined) {
     return undefined;
   }
 
-  return gameActivity;
+  for (const platform of [Platform.xbox, Platform.steam]) {
+    const metadata = activity[platform];
+    if (metadata !== null && metadata.availability !== Availability.offline) {
+      return {
+        platform,
+        status: metadata.availability,
+        title: metadata.game,
+        detail: metadata.activity,
+      };
+    }
+  }
+
+  return undefined;
 }
 
-export function setActivity(id: string, game: GameActivity): void {
-  activities.set(id, game);
+// Sets one platform's metadata for a user
+export function setActivity(id: string, platform: Platform, metadata: Metadata | null): void {
+  const activity = activities.get(id) ?? { xbox: null, steam: null };
+  activity[platform] = metadata;
+  activities.set(id, activity);
 }
 
 export function clearActivities(): void {
@@ -266,7 +289,7 @@ events.subscribe(ServerEventType.status_snapshot, (event) => {
   clearStatuses();
 
   for (const user of event.users) {
-    setStatus(user.user_id, user.status, user.device);
+    setStatus(user.user_id, user.appearance, user.device);
   }
 });
 
@@ -276,27 +299,17 @@ events.subscribe(ServerEventType.status_updated, (event) => {
 });
 
 // Replace all game activities from snapshot
-events.subscribe(ServerEventType.game_presence_snapshot, (event) => {
+events.subscribe(ServerEventType.platform_snapshot, (event) => {
   clearActivities();
 
   for (const user of event.users) {
-    setActivity(user.user_id, {
-      platform: user.platform,
-      status: user.status,
-      title: user.title,
-      detail: user.detail,
-    });
+    activities.set(user.user_id, user.activity);
   }
 });
 
 // Update a user's game activity
-events.subscribe(ServerEventType.game_presence_updated, (event) => {
-  setActivity(event.user_id, {
-    platform: event.platform,
-    status: event.status,
-    title: event.title,
-    detail: event.detail,
-  });
+events.subscribe(ServerEventType.platform_updated, (event) => {
+  setActivity(event.user_id, event.platform, event.metadata);
 });
 
 // Update a stored user's name, avatar and banner

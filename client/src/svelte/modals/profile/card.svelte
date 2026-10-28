@@ -2,9 +2,8 @@
   import type { LinkedAccount } from "@/bindings/types/users";
   import { Platform } from "@/bindings/types/platforms";
   import { type GlobalRole } from "@/bindings/types/users";
-  import { type Status } from "@/bindings/shared";
-  import type { Device } from "@/bindings/types/status";
-  import type { GameActivity } from "@/bindings/sockets/events";
+  import { type Appearance, type Device } from "@/bindings/types/status";
+  import type { GameActivity } from "@/lib/users/data.svelte";
   import { ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
   import type { FetchedFile } from "@/lib/utils";
   import * as settings from "@/lib/client/settings.svelte";
@@ -16,7 +15,7 @@
     display_name: string;
     username: string;
     description: string;
-    status?: Status | null;
+    status?: Appearance | null;
     device?: Device | null;
     game?: GameActivity | null;
     role: GlobalRole;

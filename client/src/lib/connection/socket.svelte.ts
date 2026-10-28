@@ -1,4 +1,4 @@
-import type { Status } from "@/bindings/shared";
+import type { Appearance } from "@/bindings/types/status";
 import type { ClientEvent, ServerEvent } from "@/bindings/sockets/session/events";
 import { Device } from "@/bindings/types/status";
 import { LocalEvent } from "@/lib/events";
@@ -90,7 +90,7 @@ function receive(data: string): void {
 }
 
 // Send user's new status to the server
-events.subscribe(LocalEvent.status_changed, (status: Status) => {
+events.subscribe(LocalEvent.status_changed, (status: Appearance) => {
   send({ type: "status", status });
 });
 

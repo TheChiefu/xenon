@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Status } from "@/bindings/shared";
-  import type { GameActivity } from "@/bindings/sockets/events";
-  import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_DEVICE, LABELS_GAME_PRESENCE, LABELS_PLATFORM } from "@/lib/labels";
+  import { Appearance } from "@/bindings/types/status";
+  import type { GameActivity } from "@/lib/users/data.svelte";
+  import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_AVAILABILITY, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";
   import * as members from "@/lib/rooms/members.svelte";
   import * as users from "@/lib/users/data.svelte";
@@ -46,7 +46,7 @@
 
   // Game title, followed by activity when reported
   function activityText(activity: GameActivity): string {
-    const title = activity.title ?? LABELS_GAME_PRESENCE[activity.status];
+    const title = activity.title ?? LABELS_AVAILABILITY[activity.status];
 
     if (activity.detail === null) {
       return title;
@@ -224,7 +224,7 @@
     {@const banner = users.getBanner(id)}
     {@const status = users.getStatus(id)}
     {@const activity = users.getActivity(id)}
-    {@const offline = status.status === Status.offline}
+    {@const offline = status.status === Appearance.offline}
     <button
       class="member"
       class:offline

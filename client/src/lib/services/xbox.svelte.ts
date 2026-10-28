@@ -1,6 +1,5 @@
-import type { FriendResponse } from "@/bindings/services/xbox";
+import type { FriendResponse } from "@/lib/api/xbox";
 import { Platform } from "@/bindings/types/platforms";
-import * as xboxAPI from "@/lib/api/xbox";
 import * as profile from "@/lib/users/profile.svelte";
 
 // State //
@@ -21,10 +20,4 @@ export function isLinked(): boolean {
   }
 
   return my_profile.linked_accounts.some((account) => account.platform === Platform.xbox);
-}
-
-// Server //
-
-export async function loadFriends(): Promise<void> {
-  friends = await xboxAPI.getFriends();
 }
