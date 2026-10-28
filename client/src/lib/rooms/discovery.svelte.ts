@@ -1,18 +1,18 @@
-import type { DiscoverableRoomResponse } from "@/bindings/routes/rooms";
+import type { RespondDiscoverability } from "@/bindings/routes/rooms";
 import type { ServerInfo } from "@/bindings/routes/server";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
 import { failureText } from "@/lib/utils";
 
-let listed: DiscoverableRoomResponse[] = $state([]);
+let listed: RespondDiscoverability[] = $state([]);
 let final_page: boolean = $state(true);
 let pending: boolean = $state(false);
 let error: string | null = $state(null);
 let joined: Set<string> = $state(new Set());
 let page_size: number = 1;
 
-export function getRooms(): DiscoverableRoomResponse[] {
+export function getRooms(): RespondDiscoverability[] {
   return listed;
 }
 

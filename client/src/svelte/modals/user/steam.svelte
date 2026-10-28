@@ -1,6 +1,6 @@
 <script lang="ts">
   import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
-  import { Platform } from "@/bindings/shared";
+  import { Platform } from "@/bindings/types/platforms";
   import icon_link from "@/assets/icons/link.svg?raw";
   import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
 

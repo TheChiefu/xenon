@@ -4,10 +4,11 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use crate::api::rooms::access;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::services::{push, steam, xbox};
+use crate::services::push;
+use crate::services::steam;
+use crate::services::xbox;
 use crate::state::AppState;
 use crate::types::platforms::Platform;
 use crate::types::users::{GlobalRole, LinkedAccount, UserProfile};
@@ -312,7 +313,7 @@ pub async fn delete(
 ) -> Result<Vec<Uuid>> {
 
     let pool = &state.pool;
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Optionally delete the accounts message history
     if delete_history {
@@ -360,7 +361,7 @@ pub async fn ban(
     target_id: Uuid,
 ) -> Result<()> {
 
-    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = state.pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Update user's ban row
     sqlx::query("UPDATE users SET banned = 1 WHERE id = ?1")
@@ -446,7 +447,7 @@ async fn leave_every_room(
 ) -> Result<Vec<Uuid>> {
     let rooms = db::member_room_ids(&mut *conn, user_id).await?;
     for room_id in &rooms {
-        access::remove(&mut *conn, *room_id, user_id).await?;
+        db::remove_from_room(&mut *conn, *room_id, user_id).await?;
     }
 
     // Return list of rooms remove from (to later notify members user left)

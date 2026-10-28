@@ -20,7 +20,7 @@ pub struct Responses {
 
 impl Responses {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.messages_per_page < 1 {
@@ -41,6 +41,10 @@ impl Responses {
 
         if self.users_per_lookup < 1 {
             return Err("responses.users_per_lookup must be at least 1".to_string());
+        }
+
+        if self.unread_count_max < 0 {
+            return Err("responses.unread_count_max must be at least 0".to_string());
         }
 
         Ok(())

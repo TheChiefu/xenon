@@ -8,10 +8,11 @@ use uuid::Uuid;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
 use crate::state::platforms;
-use crate::state::{inform_shared_members, snapshots, AppState};
+use crate::state;
+use crate::state::AppState;
 use crate::types::platforms::Platform;
 use crate::types::status::{Appearance, UserState};
-use crate::utils::{read_lock, write_lock};
+use crate::utils;
 
 /// The status each user last declared, keyed by user id
 #[derive(Clone, Default)]
@@ -24,7 +25,7 @@ pub fn get(
     state: &AppState,
     user_id: Uuid,
 ) -> Option<Appearance> {
-    let held = read_lock(&state.statuses.by_user);
+    let held = utils::read_lock(&state.statuses.by_user);
 
     match held.get(&user_id) {
         Some(appearance) => Some(*appearance),
@@ -38,7 +39,7 @@ pub fn set(
     user_id: Uuid,
     appearance: Appearance,
 ) {
-    let mut held = write_lock(&state.statuses.by_user);
+    let mut held = utils::write_lock(&state.statuses.by_user);
     held.insert(user_id, appearance);
 }
 
@@ -138,7 +139,7 @@ pub async fn on_join(
     announce(state, user_id, appearance).await;
 
     // Send all snapshots
-    for event in snapshots(state, user_id).await {
+    for event in state::snapshots(state, user_id).await {
         registry::inform_user(&state.registry, user_id, event);
     }
 }
@@ -159,5 +160,5 @@ pub async fn announce(
     let device = registry::device(&state.registry, user_id);
 
     let event = ServerEvent::StatusUpdated { user_id, status, device };
-    inform_shared_members(state, user_id, event).await;
+    state::inform_shared_members(state, user_id, event).await;
 }

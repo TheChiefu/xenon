@@ -14,7 +14,7 @@ pub struct Logging {
 
 impl Logging {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if !matches!(self.level.as_str(), "trace" | "debug" | "info" | "warn" | "error") {
@@ -22,10 +22,6 @@ impl Logging {
                 "logging.level must be trace, debug, info, warn, or error, got \"{}\"",
                 self.level
             ));
-        }
-
-        if self.file.is_empty() {
-            tracing::warn!("logging.file is not set, tracing calls go to stdout only")
         }
 
         Ok(())

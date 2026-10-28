@@ -15,7 +15,8 @@ use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
 use crate::state::{self, AppState};
 use crate::types::users::{GlobalRole, UserProfile};
-use crate::{api, config};
+use crate::api;
+use crate::config;
 
 // REQUESTS //
 

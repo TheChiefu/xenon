@@ -1,5 +1,5 @@
 import type { FriendResponse } from "@/bindings/services/xbox";
-import { Platform } from "@/bindings/shared";
+import { Platform } from "@/bindings/types/platforms";
 import * as xboxAPI from "@/lib/api/xbox";
 import * as profile from "@/lib/users/profile.svelte";
 

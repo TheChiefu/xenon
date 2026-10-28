@@ -19,11 +19,9 @@ use std::time::Duration;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use sqlx::SqlitePool;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
-use uuid::Uuid;
 
 use crate::error::Result;
 use crate::state::AppState;
-use crate::types::users::GlobalRole;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,11 +41,17 @@ async fn main() -> Result<()> {
 
     let pool = connect_database().await?;
 
-    // Ensure bootstrap account is created with admin access
-    ensure_account(&pool).await?;
+    // Tell the owner when no account exists yet
+    let mut conn = pool.acquire().await?;
+    if db::get_user_count(&mut conn).await? == 0 {
+        tracing::warn!("no accounts exist, please create one [> help]");
+    }
+    drop(conn);
 
     // Ensure VAPID keys exist for browsers to subscribe against
-    services::push::send::ensure_keypair(&pool).await?;
+    if config::get().push.is_some() {
+        services::push::send::ensure_keypair(&pool).await?;
+    }
 
     // Build outbound HTTP client if any service is enabled
     services::init();
@@ -113,56 +117,6 @@ async fn load_blocked_addresses(app_state: &AppState) -> Result<()> {
     let blocked = db::get_blocked_addresses(&mut conn).await?;
     app_state.address_limits.load(blocked);
     Ok(())
-}
-
-/// Creates the bootstrap account, printing its generated password once.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-///
-/// # Errors
-///
-/// Returns `AppError::Hash` if the password cannot be hashed, and
-async fn ensure_account(pool: &SqlitePool) -> Result<()> {
-    let password = utils::generate_code(12); // Fixed, one time password
-    let hash = utils::hash_password(&password)?;
-    let username = "admin";
-    let display_name = "Admin";
-    let id = Uuid::now_v7();
-
-    // Check if any account exists on the server, if none do create one
-    let mut conn = pool.acquire().await?;
-    let count = db::get_user_count(&mut conn).await?;
-
-    // Skip if accounts already exist
-    if count > 0 {
-        return Ok(());
-    }
-
-    // Attempt to create account
-    let mut conn = pool.acquire().await?;
-    let result = db::create_user(
-        &mut conn,
-        id,
-        username,
-        display_name,
-        &hash,
-        GlobalRole::Admin
-    ).await;
-
-    match result {
-        Ok(()) => {
-            // Printed, never logged. This is the only time the password is shown
-            println!("+-------- Admin account created --------+");
-            println!("           Username:\t{username}         ");
-            println!("           Password:\t{password}         ");
-            println!("  Save credentials (this is NOT logged)  ");
-            println!("+---------------------------------------+");
-            Ok(())
-        }
-        Err(e) => Err(e),
-    }
 }
 
 /// Sets where tracing output is written.
@@ -232,34 +186,4 @@ fn ensure_files() {
 
     tracing::info!("file storage ready at: {files_path}");
 
-}
-
-// Shutdown //
-
-/// Resolves on SIGTERM.
-#[cfg(unix)]
-async fn terminate() {
-    use tokio::signal::unix::{signal, SignalKind};
-    signal(SignalKind::terminate())
-        .expect("failed to install SIGTERM handler")
-        .recv()
-        .await;
-    tracing::info!("Received \"SIGTERM\", terminating program...");
-}
-
-#[cfg(not(unix))]
-async fn terminate() {
-    std::future::pending::<()>().await;
-}
-
-/// Resolves on the first shutdown signal.
-///
-/// Axum polls this alongside serving.
-async fn shutdown_signal() {
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {},
-        _ = terminate() => {},
-        _ = cli::EXIT.notified() => {},
-    }
-    tracing::info!("Shutting down server");
 }

@@ -19,7 +19,7 @@ pub struct Lengths {
 
 impl Lengths {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.username_min < 1 || self.username_max < self.username_min {

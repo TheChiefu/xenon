@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { MessageResponse } from "@/bindings/routes/messages";
-  import { GlobalRole, Permission, Visibility } from "@/bindings/shared";
+  import type { MessageInfo } from "@/bindings/types/messages";
+  import { GlobalRole } from "@/bindings/types/users";
+  import { Permission, Visibility } from "@/bindings/types/rooms";
   import Composer from "./composer.svelte";
   import Message from "./message.svelte";
   import * as messagesAPI from "@/lib/api/messages";
@@ -25,7 +26,7 @@
   const KEY_SCROLL_POS = "scroll_positions";
 
   const roomName: string = $derived(roomId === null ? "" : room.get(roomId)?.name ?? "");
-  const roomMessages: MessageResponse[] = $derived(roomId === null ? [] : messages.get(roomId));
+  const roomMessages: MessageInfo[] = $derived(roomId === null ? [] : messages.get(roomId));
   const selfId: string = $derived(profile.get()?.id ?? "");
   const canDeleteAny: boolean = $derived(roomId !== null && canDeleteOthers(roomId));
 
@@ -214,7 +215,7 @@
   }
 
   // Sends a message's new body, then stores the edit
-  async function edit(message: MessageResponse, body: string): Promise<void> {
+  async function edit(message: MessageInfo, body: string): Promise<void> {
     try {
       const response = await messagesAPI.edit(message.id, { body });
       messages.edit(message.room_id, message.id, body, response.edited_at);
@@ -225,7 +226,7 @@
   }
 
   // Deletes a message, then removes it from the room
-  async function remove(message: MessageResponse, skipConfirm: boolean): Promise<void> {
+  async function remove(message: MessageInfo, skipConfirm: boolean): Promise<void> {
     if (!skipConfirm && !await events.confirm(MSG_DELETE_MESSAGE)) {
       return;
     }

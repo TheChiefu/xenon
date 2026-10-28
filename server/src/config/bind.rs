@@ -3,6 +3,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
@@ -30,7 +31,7 @@ pub struct Bind {
 
 impl Bind {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.port == 0 {
@@ -48,8 +49,9 @@ impl Bind {
         }
 
         if let Some(url) = &self.public_url {
-            if !url.starts_with("http://") && !url.starts_with("https://") {
-                return Err("bind.public_url must start with http:// or https://".to_string());
+            match Url::parse(url) {
+                Ok(parsed) if matches!(parsed.scheme(), "http" | "https") => {}
+                _ => return Err(format!("bind.public_url must be a valid http:// or https:// URL, got \"{url}\"")),
             }
         }
 

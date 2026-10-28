@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { MessageResponse } from "@/bindings/routes/messages";
+    import type { MessageInfo } from "@/bindings/types/messages";
     import { parse } from "@/lib/markdown";
     import { LocalEvent } from "@/lib/events";
     import * as events from "@/lib/events";
@@ -8,7 +8,7 @@
     import * as youtube from "@/lib/embed/youtube";
 
     interface Props {
-        message: MessageResponse;
+        message: MessageInfo;
         author: string;
         canEdit?: boolean;
         canDelete?: boolean;

@@ -1,4 +1,4 @@
-import type { Folder } from "@/bindings/shared";
+import type { Folder } from "@/bindings/types/preferences";
 import * as layout from "@/lib/rooms/layout.svelte";
 
 // Types //

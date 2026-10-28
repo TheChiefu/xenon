@@ -1,6 +1,7 @@
 //! Propeties of a user
 
 use core::fmt;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,6 +9,7 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
+use crate::error::{AppError, Result};
 use crate::types::platforms::Platform;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
@@ -26,6 +28,19 @@ impl fmt::Display for GlobalRole {
             GlobalRole::Admin => write!(f, "Admin"),
             GlobalRole::Member => write!(f, "Member"),
             GlobalRole::Visitor => write!(f, "Visitor"),
+        }
+    }
+}
+
+impl FromStr for GlobalRole {
+    type Err = AppError;
+
+    fn from_str(role: &str) -> Result<Self> {
+        match role {
+            "admin" => Ok(GlobalRole::Admin),
+            "member" => Ok(GlobalRole::Member),
+            "visitor" => Ok(GlobalRole::Visitor),
+            _ => Err(AppError::Validation(format!("unknown role \"{role}\""))),
         }
     }
 }

@@ -15,6 +15,9 @@ use crate::types::time::DAY;
 use crate::types::users::GlobalRole;
 use crate::utils;
 
+/// Opens a transaction holding the write lock from the start
+pub const BEGIN_IMMEDIATE: &str = "BEGIN IMMEDIATE";
+
 /// Creates a new user
 pub async fn create_user(
     conn: &mut sqlx::SqliteConnection,
@@ -152,6 +155,94 @@ pub async fn staff_over_room(
     .await?;
 
     Ok(public)
+}
+
+/// Reports whether a user is banned from a room
+pub async fn banned_from_room(
+    conn: &mut sqlx::SqliteConnection,
+    room_id: Uuid,
+    user_id: Uuid,
+) -> Result<bool> {
+
+    let banned: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM room_bans WHERE room_id = ?1 AND user_id = ?2)"
+    )
+    .bind(room_id)
+    .bind(user_id)
+    .fetch_one(&mut *conn)
+    .await?;
+
+    Ok(banned)
+}
+
+/// Reports whether a user holds an invite to a room
+pub async fn invited_to_room(
+    conn: &mut sqlx::SqliteConnection,
+    room_id: Uuid,
+    user_id: Uuid,
+) -> Result<bool> {
+
+    let invited: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM room_invites WHERE room_id = ?1 AND user_id = ?2)"
+    )
+    .bind(room_id)
+    .bind(user_id)
+    .fetch_one(&mut *conn)
+    .await?;
+
+    Ok(invited)
+}
+
+/// Removes a member from a room, deleting the room once no members remain
+pub async fn remove_from_room(
+    conn: &mut sqlx::SqliteConnection,
+    room_id: Uuid,
+    user_id: Uuid,
+) -> Result<()> {
+
+    // Attempt to remove user from room access
+    let result = sqlx::query(
+        "DELETE FROM room_access WHERE room_id = ?1 AND user_id = ?2"
+    )
+    .bind(room_id)
+    .bind(user_id)
+    .execute(&mut *conn)
+    .await?;
+
+    // No membership to remove (404)
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+
+    // They were a member, so remove their read state as well
+    sqlx::query("DELETE FROM read_state WHERE room_id = ?1 AND user_id = ?2")
+    .bind(room_id)
+    .bind(user_id)
+    .execute(&mut *conn)
+    .await?;
+
+    // Check if any members still exist in the room
+    let has_members: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM room_access WHERE room_id = ?1)"
+    )
+    .bind(room_id)
+    .fetch_one(&mut *conn)
+    .await?;
+
+    // If no members, delete the room
+    if !has_members {
+        sqlx::query(
+            "
+            DELETE FROM rooms
+            WHERE id = ?1
+            "
+        )
+        .bind(room_id)
+        .execute(&mut *conn)
+        .await?;
+    }
+
+    Ok(())
 }
 
 /// Lists the ids of every member of a room

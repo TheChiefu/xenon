@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { AttachmentRequest } from "@/bindings/shared";
+  import type { AttachmentRequest } from "@/bindings/types/messages";
   import * as filesAPI from "@/lib/api/files";
   import * as messagesAPI from "@/lib/api/messages";
   import * as messages from "@/lib/messages/data.svelte";

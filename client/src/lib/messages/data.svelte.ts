@@ -1,13 +1,13 @@
 // What the client stores for each room's messages
 
 import { SvelteMap } from "svelte/reactivity";
-import type { MessageResponse } from "@/bindings/routes/messages";
+import type { MessageInfo } from "@/bindings/types/messages";
 import * as messagesAPI from "@/lib/api/messages";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 
 // Messages per room ID, each room's messages per message ID in the order they were added
-const rooms: SvelteMap<string, SvelteMap<string, MessageResponse>> = new SvelteMap();
+const rooms: SvelteMap<string, SvelteMap<string, MessageInfo>> = new SvelteMap();
 
 const olderMessagesRemain: SvelteMap<string, boolean> = new SvelteMap();
 
@@ -18,7 +18,7 @@ export function hasOlderMessages(roomId: string): boolean {
 }
 
 // A room's stored messages
-export function get(roomId: string): MessageResponse[] {
+export function get(roomId: string): MessageInfo[] {
   const messages = rooms.get(roomId);
   if (messages === undefined) {
     return [];
@@ -54,7 +54,7 @@ export async function loadOlder(roomId: string): Promise<void> {
 // EVENTS //
 
 // Adds a message to its stored room, unless its ID is already present
-export function add(message: MessageResponse): void {
+export function add(message: MessageInfo): void {
   const messages = rooms.get(message.room_id);
   if (messages === undefined || messages.has(message.id)) {
     return;
@@ -98,8 +98,8 @@ export function clear(): void {
 
 // HELPERS //
 
-function toMap(list: MessageResponse[]): SvelteMap<string, MessageResponse> {
-  const messages: SvelteMap<string, MessageResponse> = new SvelteMap();
+function toMap(list: MessageInfo[]): SvelteMap<string, MessageInfo> {
+  const messages: SvelteMap<string, MessageInfo> = new SvelteMap();
   for (const message of list) {
     messages.set(message.id, message);
   }

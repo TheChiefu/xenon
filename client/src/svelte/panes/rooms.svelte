@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { Folder } from "@/bindings/shared";
-    import { Visibility } from "@/bindings/shared";
+    import type { Folder } from "@/bindings/types/preferences";
+    import { Visibility } from "@/bindings/types/rooms";
     import { LABELS_VISIBILITY } from "@/lib/labels";
     import { Section } from "@/lib/rooms/layout.svelte";
     import * as layout from "@/lib/rooms/layout.svelte";

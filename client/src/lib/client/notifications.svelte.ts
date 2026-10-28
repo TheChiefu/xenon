@@ -24,6 +24,10 @@ function decodeBase64Url(value: string): number[] {
 // Fetches the server's VAPID key
 async function fetchVAPID(url: string): Promise<Uint8Array<ArrayBuffer>> {
   const response = await fetch(`${url}/push/vapid`, {method: "GET"});
+  if (response.status === 404) {
+    throw new Error("Push notifications are not enabled on this server");
+  }
+
   const data = await response.json();
 
   // Report any failures
@@ -118,7 +122,7 @@ export async function disablePush(): Promise<string | undefined> {
 
   try {
     // Delete existing push subscription
-    await request("/me/push", "DELETE", { endpoint: pushSubscription.endpoint });
+    await request("/me/push", "DELETE", { endpoint: pushSubscription.endpoint }).catch(() => undefined);
 
     // No failures, unsubscribe on local browser
     await pushSubscription.unsubscribe();

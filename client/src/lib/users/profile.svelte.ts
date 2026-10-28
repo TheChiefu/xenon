@@ -1,17 +1,17 @@
-import type { UserProfileResponse } from "@/bindings/routes/users";
+import type { UserProfile } from "@/bindings/types/users";
 import * as users from "@/lib/users/data.svelte";
 import { request } from "@/lib/utils";
 
-let profile: UserProfileResponse | null = $state(null);
+let profile: UserProfile | null = $state(null);
 
-export function get(): UserProfileResponse | null {
+export function get(): UserProfile | null {
   return profile;
 }
 
 // Fetches the caller's own profile
 export async function load(): Promise<void> {
   const response = await request("/me");
-  const fetched = await response.json() as UserProfileResponse;
+  const fetched = await response.json() as UserProfile;
   profile = fetched;
 
   // Add own summary to user summaries

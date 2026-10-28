@@ -14,7 +14,7 @@ pub struct Push {
 
 impl Push {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if !self.subject.starts_with("mailto:") && !self.subject.starts_with("https://") {

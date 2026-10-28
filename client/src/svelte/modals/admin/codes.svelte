@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { RegistrationCode } from "@/bindings/shared";
+  import type { RegistrationCode } from "@/bindings/types/auth";
   import { MSG_ERROR, MSG_REVOKE_CODE, refreshedText } from "@/lib/labels";
   import * as authAPI from "@/lib/api/auth";
   import * as events from "@/lib/events";

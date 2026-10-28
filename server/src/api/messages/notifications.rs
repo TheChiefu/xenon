@@ -4,8 +4,10 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use crate::api::rooms::access::{self, NotifyUserPair};
-use crate::api::{rooms, users};
+use crate::api::rooms;
+use crate::api::rooms::access;
+use crate::api::rooms::access::NotifyUserPair;
+use crate::api::users;
 use crate::error::Result;
 use crate::services::push::send::{self, Payload};
 use crate::state::AppState;

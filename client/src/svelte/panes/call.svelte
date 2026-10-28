@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Permission } from "@/bindings/shared";
+  import { Permission } from "@/bindings/types/rooms";
   import * as members from "@/lib/rooms/members.svelte";
   import * as rooms from "@/lib/rooms/data.svelte";
   import * as users from "@/lib/users/data.svelte";

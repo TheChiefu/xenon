@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Permission, Visibility } from "@/bindings/shared";
+  import { Permission, Visibility } from "@/bindings/types/rooms";
   import { DESCRIPTIONS_VISIBILITY, LABELS_PERMISSION, LABELS_VISIBILITY } from "@/lib/labels";
   import { dialogFly } from "@/lib/display/transitions";
   import { getError, isPending, submit } from "@/lib/rooms/creation.svelte";

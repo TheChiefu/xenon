@@ -9,11 +9,17 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::api;
+use crate::cli;
+use crate::db;
 use crate::error::{AppError, Result};
 use crate::state::{self, AppState};
+use crate::types::users::GlobalRole;
 use crate::utils;
+use crate::validate;
 
 pub const COMMANDS: &[&str] = &[
+    "user create <username>",
+    "user role <username> <role>",
     "user unlock <username>",
     "user reset <username>",
     "user get <username>",
@@ -25,6 +31,8 @@ pub const COMMANDS: &[&str] = &[
 /// Runs the `user` command named by the arguments
 pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
     match args {
+        ["create", username] => create(&state.pool, username).await,
+        ["role", username, role] => set_role(&state.pool, username, role).await,
         ["unlock", username] => unlock(&state.pool, username).await,
         ["reset", username] => reset(&state.pool, username).await,
         ["get", username] => get(&state.pool, username).await,
@@ -32,8 +40,35 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
         ["unban", username] => unban(&state.pool, username).await,
         ["delete", username] => delete(state, username, false).await,
         ["delete", username, "--messages"] => delete(state, username, true).await,
-        _ => Err(super::usage(COMMANDS)),
+        _ => Err(cli::usage(COMMANDS)),
     }
+}
+
+/// Creates an account with a generated password, printing it once
+async fn create(pool: &SqlitePool, username: &str) -> Result<()> {
+    validate::username(username)?;
+
+    let password = utils::generate_code(12);
+    let hash = utils::hash_password(&password)?;
+
+    let mut conn = pool.acquire().await?;
+    db::create_user(&mut conn, Uuid::now_v7(), username, username, &hash, GlobalRole::Visitor).await?;
+
+    // Printed, never logged
+    println!("created user account \"{username}\" with password: {password}");
+    Ok(())
+}
+
+/// Sets an account's global role
+async fn set_role(pool: &SqlitePool, username: &str, role: &str) -> Result<()> {
+    let role: GlobalRole = role.parse()?;
+    let user_id = get_user_id(pool, username).await?;
+
+    let mut conn = pool.acquire().await?;
+    db::set_global_role(&mut conn, user_id, role).await?;
+
+    println!("set role of \"{username}\" to {role}");
+    Ok(())
 }
 
 /// Bans an account

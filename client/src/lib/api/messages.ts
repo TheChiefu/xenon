@@ -1,4 +1,5 @@
-import type { EditMessageRequest, EditMessageResponse, MessageResponse, PostMessageRequest } from "@/bindings/routes/messages";
+import type { RequestMessageEdit, RespondMessageEdit, RequestMessageSend } from "@/bindings/routes/messages";
+import type { MessageInfo } from "@/bindings/types/messages";
 import type { ServerInfo } from "@/bindings/routes/server";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -15,7 +16,7 @@ export function pageSize(): number | null {
     return page_size;
 }
 
-export async function fetch(roomId: string, before?: number, after?: number): Promise<MessageResponse[]> {
+export async function fetch(roomId: string, before?: number, after?: number): Promise<MessageInfo[]> {
     const query = new URLSearchParams();
 
     if (before !== undefined) {
@@ -27,26 +28,26 @@ export async function fetch(roomId: string, before?: number, after?: number): Pr
     }
 
     const response = await request(`/rooms/${roomId}/messages?${query}`);
-    return await response.json() as MessageResponse[];
+    return await response.json() as MessageInfo[];
 }
 
-export async function get(messageId: string): Promise<MessageResponse> {
+export async function get(messageId: string): Promise<MessageInfo> {
     const response = await request(`/messages/${messageId}`);
-    return await response.json() as MessageResponse;
+    return await response.json() as MessageInfo;
 }
 
-export async function post(roomId: string, body: PostMessageRequest): Promise<MessageResponse> {
+export async function post(roomId: string, body: RequestMessageSend): Promise<MessageInfo> {
     if (max_attachments !== null && body.attachments.length > max_attachments) {
         throw new Error(`A message can have at most ${max_attachments} attachments`);
     }
 
     const response = await request(`/rooms/${roomId}/messages`, "POST", body);
-    return await response.json() as MessageResponse;
+    return await response.json() as MessageInfo;
 }
 
-export async function edit(messageId: string, body: EditMessageRequest): Promise<EditMessageResponse> {
+export async function edit(messageId: string, body: RequestMessageEdit): Promise<RespondMessageEdit> {
     const response = await request(`/messages/${messageId}`, "PATCH", body);
-    return await response.json() as EditMessageResponse;
+    return await response.json() as RespondMessageEdit;
 }
 
 export async function remove(messageId: string): Promise<void> {

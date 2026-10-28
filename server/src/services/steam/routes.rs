@@ -1,22 +1,34 @@
-use std::{collections::{BTreeMap, HashMap}, sync::RwLock};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::RwLock;
 
-use axum::{extract::{Query, State}, http::StatusCode, response::{Html, IntoResponse, Response}, Json};
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Response};
+use axum::Json;
 use serde::{Deserialize, Serialize};
-use sqlx::{SqlitePool};
+use sqlx::SqlitePool;
+use url::form_urlencoded::Serializer;
 use uuid::Uuid;
 
-use crate::{config, error::{AppError, Result}, routes::AuthUser};
+use crate::config;
+use crate::error::{AppError, Result};
+use crate::routes::AuthUser;
+use crate::services::CLIENT;
 use crate::services::steam;
 use crate::services::steam::{accounts, api, REDIRECT_PATH};
 use crate::state::AppState;
-use crate::utils::{generate_code, write_lock};
+use crate::utils;
 
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
 // Constants //
+macro_rules! steam_id_url {
+    () => {"https://steamcommunity.com/openid/id/"}
+}
+const STEAM_ID_URL: &str = steam_id_url!();
+const STEAM_LOGIN_URL: &str = concat!(steam_id_url!(), "login");
 
-const STEAM_LOGIN_URL: &str = "https://steamcommunity.com/openid/login";
 const OPENID_MODE: &str = "openid.mode";
 const OPENID_CLAIMED_ID: &str = "openid.claimed_id";
 const OPENID_IDENTIFIER_SELECT: &str = "http://specs.openid.net/auth/2.0/identifier_select";
@@ -90,11 +102,11 @@ pub struct LinkResponse {
 
 pub async fn start(
     AuthUser(user_id, ..): AuthUser,
-) -> Result<Json<LinkResponse>> {
-    let token = generate_code(64);
-    let login_url = login_url(user_id, &token)?;
-    write_lock(&LINK_TOKENS).insert(user_id, token);
-    Ok(Json(LinkResponse { login_url }))
+) -> Json<LinkResponse> {
+    let token = utils::generate_code(64);
+    let login_url = login_url(user_id, &token);
+    utils::write_lock(&LINK_TOKENS).insert(user_id, token);
+    Json(LinkResponse { login_url })
 }
 
 pub async fn redirect(
@@ -105,7 +117,8 @@ pub async fn redirect(
         Ok(()) => Html(LINKED_PAGE).into_response(),
         Err(e) => {
             tracing::warn!("Steam linking failed: {e}");
-            format!("Steam linking failed: {e}").into_response()
+            let (status, message) = e.status_and_message();
+            (status, format!("linking failed: {message}")).into_response()
         }
     }
 }
@@ -121,30 +134,34 @@ pub async fn unlink(
 // Helper Methods //
 
 // Construct Steam login url for user to sign in at
-fn login_url(user_id: Uuid, token: &str) -> Result<String> {
+fn login_url(user_id: Uuid, token: &str) -> String {
     let public_url = config::get().public_url();
 
-    let return_to = reqwest::Url::parse_with_params(
-        &format!("{public_url}{REDIRECT_PATH}"),
-        [(XENON_USER_ID, user_id.to_string().as_str()), (XENON_TOKEN, token)]
-    )?;
+    let return_query = Serializer::new(String::new())
+        .extend_pairs([
+            (XENON_USER_ID, user_id.to_string().as_str()),
+            (XENON_TOKEN, token)
+        ])
+        .finish();
+    let return_to = format!("{public_url}{REDIRECT_PATH}?{return_query}");
 
-    let login_url = reqwest::Url::parse_with_params(STEAM_LOGIN_URL, [
-        ("openid.ns", "http://specs.openid.net/auth/2.0"),
-        (OPENID_MODE, "checkid_setup"),
-        ("openid.return_to", return_to.as_str()),
-        ("openid.realm", public_url),
-        ("openid.identity", OPENID_IDENTIFIER_SELECT),
-        (OPENID_CLAIMED_ID, OPENID_IDENTIFIER_SELECT),
-    ])?
-    .to_string();
+    let login_query = Serializer::new(String::new())
+        .extend_pairs([
+            ("openid.ns", "http://specs.openid.net/auth/2.0"),
+            (OPENID_MODE, "checkid_setup"),
+            ("openid.return_to", return_to.as_str()),
+            ("openid.realm", public_url),
+            ("openid.identity", OPENID_IDENTIFIER_SELECT),
+            (OPENID_CLAIMED_ID, OPENID_IDENTIFIER_SELECT),
+        ])
+        .finish();
 
-    Ok(login_url)
+    format!("{STEAM_LOGIN_URL}?{login_query}")
 }
 
 // Attempt to link account to steam and parse steam ID
 async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
-    let token = write_lock(&LINK_TOKENS).remove(&query.user_id);
+    let token = utils::write_lock(&LINK_TOKENS).remove(&query.user_id);
 
     if token.as_deref() != Some(query.token.as_str()) {
         return Err(AppError::Forbidden);
@@ -171,7 +188,7 @@ async fn verify(params: &HashMap<String, String>) -> Result<()> {
         "check_authentication".to_string()
     );
 
-    let body = reqwest::Client::new()
+    let body = CLIENT
         .post(STEAM_LOGIN_URL)
         .form(&params)
         .send()
@@ -198,11 +215,11 @@ fn parse_steam_id(params: &HashMap<String, String>) -> Result<String> {
         return Err(AppError::Validation(format!("Missing {OPENID_CLAIMED_ID}")));
     };
 
-    let Some(steam_id) = claimed_id.rsplit('/').next() else {
+    let Some(steam_id) = claimed_id.strip_prefix(STEAM_ID_URL) else {
         return Err(AppError::Validation(format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
     };
 
-    if steam_id.is_empty() {
+    if steam_id.parse::<u64>().is_err() {
         return Err(AppError::Validation(format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
     }
 

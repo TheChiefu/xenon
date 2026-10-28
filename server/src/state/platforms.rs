@@ -7,10 +7,11 @@ use uuid::Uuid;
 
 use crate::sockets::session::events::ServerEvent;
 use crate::state::status;
-use crate::state::{inform_shared_members, AppState};
+use crate::state;
+use crate::state::AppState;
 use crate::types::platforms::{Activity, Metadata, Platform, UserActivity};
 use crate::types::status::Appearance;
-use crate::utils::{read_lock, write_lock};
+use crate::utils;
 
 /// What each user's linked accounts last reported, keyed by user id
 #[derive(Clone, Default)]
@@ -38,7 +39,7 @@ pub async fn report_metadata(
         platform,
         metadata: Some(metadata)
     };
-    inform_shared_members(state, user_id, event).await;
+    state::inform_shared_members(state, user_id, event).await;
 }
 
 // Build the platform activity of every given member
@@ -46,7 +47,7 @@ pub fn snapshot(
     state: &AppState,
     members: &[Uuid],
 ) -> Vec<UserActivity> {
-    let held = read_lock(&state.platforms.by_user);
+    let held = utils::read_lock(&state.platforms.by_user);
 
     let mut users = Vec::new();
     for member_id in members {
@@ -73,17 +74,17 @@ pub async fn clear_metadata(state: &AppState, user_id: Uuid, platform: Platform)
 // Send event that input user's platform presence cleared
 async fn inform_cleared(state: &AppState, user_id: Uuid, platform: Platform) {
     let event = ServerEvent::PlatformUpdated { user_id, platform, metadata: None };
-    inform_shared_members(state, user_id, event).await;
+    state::inform_shared_members(state, user_id, event).await;
 }
 
 fn store_metadata(state: &AppState, user_id: Uuid, platform: Platform, metadata: Metadata) {
-    let mut held = write_lock(&state.platforms.by_user);
+    let mut held = utils::write_lock(&state.platforms.by_user);
     let activity = held.entry(user_id).or_default();
     activity.set(platform, Some(metadata));
 }
 
 fn remove_metadata(state: &AppState, user_id: Uuid, platform: Platform) -> bool {
-    let mut held = write_lock(&state.platforms.by_user);
+    let mut held = utils::write_lock(&state.platforms.by_user);
 
     let Some(activity) = held.get_mut(&user_id) else {
         return false;

@@ -36,6 +36,7 @@ pub enum AppError {
     Db(sqlx::Error),
     Hash(argon2::password_hash::Error),
     Validation(String),
+    Unavailable(String),
     Io(std::io::Error),
     Http(reqwest::Error),
     Url(url::ParseError),
@@ -51,6 +52,7 @@ impl fmt::Display for AppError {
             AppError::Db(e) => write!(f, "database error: {e}"),
             AppError::Hash(e) => write!(f, "password hashing error: {e}"),
             AppError::Validation(msg) => write!(f, "{msg}"),
+            AppError::Unavailable(msg) => write!(f, "{msg}"),
             AppError::Forbidden => write!(f,"action not allowed"),
             AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
             AppError::Io(e) => write!(f, "i/o error: {e}"),
@@ -119,16 +121,15 @@ impl AppError {
         tracing::error!("internal error {id}: {self}");
         (StatusCode::INTERNAL_SERVER_ERROR, format!("internal server error ({id})"))
     }
-}
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, message) = match &self {
+    pub fn status_and_message(&self) -> (StatusCode, String) {
+        match self {
             AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::Banned => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::InvalidRegistrationCode => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::UsernameTaken => (StatusCode::CONFLICT, self.to_string()),
             AppError::Validation(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            AppError::Unavailable(_) => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
             AppError::TooLarge(_) => (StatusCode::PAYLOAD_TOO_LARGE, self.to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
@@ -151,8 +152,13 @@ impl IntoResponse for AppError {
 
             // Never reaches client
             AppError::Hash(_) | AppError::Http(_) | AppError::Url(_) => self.internal_error(),
-        };
+        }
+    }
+}
 
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, message) = self.status_and_message();
         (status, Json(ErrorResponse { error: message })).into_response()
     }
 }

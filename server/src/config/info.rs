@@ -10,25 +10,6 @@ pub struct Info {
     pub description: String,
 }
 
-impl Info {
-
-    /// Warns about every empty value in the section
-    pub(super) fn validate(&self) {
-
-        if self.name.is_empty() {
-            tracing::warn!("no server name provided")
-        }
-
-        if self.kind.is_empty() {
-            tracing::warn!("no server kind/type provided")
-        }
-
-        if self.description.is_empty() {
-            tracing::warn!("no server description provided")
-        }
-    }
-}
-
 impl Default for Info {
     fn default() -> Self {
         Info {

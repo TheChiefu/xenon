@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Component } from "svelte";
-  import { Permission } from "@/bindings/shared";
+  import { Permission } from "@/bindings/types/rooms";
   import { dialogFly } from "@/lib/display/transitions";
   import { collapsible } from "@/lib/display/collapse";
   import { modal } from "@/lib/display/modal";

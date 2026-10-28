@@ -1,4 +1,4 @@
-//! The map of connected users, and sending events to them.
+//! The map of connected users, and sending events to them
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::config;
 use crate::sockets::session::events::ServerEvent;
 use crate::types::status::Device;
-use crate::utils::{read_lock, write_lock};
+use crate::utils;
 
 // Data Structs //
 
@@ -41,14 +41,13 @@ pub fn next_socket_id() -> u64 {
     NEXT_SOCKET_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Return a receiver on a user's channel, creating the entry if this is their
-/// first connection.
+/// Return a receiver on a user's channel, create entry if a first connection
 pub fn subscribe(
     registry: &Registry,
     user_id: Uuid,
     device: Option<SocketDevice>,
 ) -> broadcast::Receiver<String> {
-    let mut reg = write_lock(&registry.connected);
+    let mut reg = utils::write_lock(&registry.connected);
 
     let connected = match reg.entry(user_id) {
 
@@ -79,7 +78,7 @@ pub fn unsubscribe(
 ) {
     drop(receiver);
 
-    let mut reg = write_lock(&registry.connected);
+    let mut reg = utils::write_lock(&registry.connected);
 
     let connected = match reg.get_mut(&user_id) {
         Some(connected) => connected,
@@ -108,7 +107,7 @@ pub fn is_connected(
     registry: &Registry,
     user_id: Uuid,
 ) -> bool {
-    let reg = read_lock(&registry.connected);
+    let reg = utils::read_lock(&registry.connected);
     reg.contains_key(&user_id)
 }
 
@@ -117,7 +116,7 @@ pub fn device(
     registry: &Registry,
     user_id: Uuid,
 ) -> Option<Device> {
-    let reg = read_lock(&registry.connected);
+    let reg = utils::read_lock(&registry.connected);
 
     let connected = reg.get(&user_id)?;
     match connected.devices.last() {
@@ -131,7 +130,7 @@ pub fn remove(
     registry: &Registry,
     user_id: Uuid,
 ) {
-    let mut reg = write_lock(&registry.connected);
+    let mut reg = utils::write_lock(&registry.connected);
     reg.remove(&user_id);
 }
 
@@ -152,15 +151,11 @@ pub fn inform_users(
     users: &[Uuid],
     event: ServerEvent,
 ) {
-    let payload = match serde_json::to_string(&event) {
-        Ok(payload) => payload,
-        Err(e) => {
-            tracing::error!("failed to serialize server event: {e}");
-            return;
-        }
+    let Some(payload) = crate::sockets::encode(&event) else {
+        return;
     };
 
-    let reg = read_lock(&registry.connected);
+    let reg = utils::read_lock(&registry.connected);
 
     for user_id in users {
         if let Some(connected) = reg.get(user_id) {
@@ -174,7 +169,7 @@ pub fn offline_users(
     registry: &Registry,
     users: &[Uuid],
 ) -> Vec<Uuid> {
-    let reg = read_lock(&registry.connected);
+    let reg = utils::read_lock(&registry.connected);
 
     let mut found = Vec::new();
     for user_id in users {

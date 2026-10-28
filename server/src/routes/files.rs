@@ -18,7 +18,9 @@ use crate::types::bytesize::MEBIBYTE;
 use crate::error::{AppError, Result};
 use crate::api::files::File;
 use crate::routes::AuthUser;
-use crate::{api, config, validate};
+use crate::api;
+use crate::config;
+use crate::validate;
 
 // Data Structs //
 
@@ -56,9 +58,7 @@ pub async fn upload(
 ) -> Result<(StatusCode, Json<RespondFile>)> {
 
     // Reject unallowed roles to upload
-    if !api::files::can_upload(&pool, caller_id).await? {
-        return Err(AppError::Forbidden);
-    }
+    api::files::require_upload(&pool, caller_id).await?;
 
     // Reject a request with no content length
     let Some(value) = headers.get(header::CONTENT_LENGTH) else {

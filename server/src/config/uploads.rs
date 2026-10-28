@@ -17,7 +17,7 @@ pub struct Uploads {
 
 impl Uploads {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if ByteSize::to_int(self.file_size_max) <= 0 {

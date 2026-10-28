@@ -11,21 +11,30 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use uuid::Uuid;
 
+/// Serialize an event for the wire, or None if serialization fails
+pub fn encode<T: Serialize>(event: &T) -> Option<String> {
+    match serde_json::to_string(event) {
+        Ok(payload) => Some(payload),
+        Err(e) => {
+            tracing::error!("failed to serialize socket event: {e}");
+            None
+        }
+    }
+}
+
+/// Send an event, returns whether the socket is still open
 pub async fn send<T: Serialize>(
     socket: &mut SplitSink<WebSocket, Message>,
     event: &T,
 ) -> bool {
-    let payload = match serde_json::to_string(event) {
-        Ok(payload) => payload,
-        Err(e) => {
-            tracing::error!("failed to serialize socket event: {e}");
-            return true;
-        }
+    let Some(payload) = encode(event) else {
+        return true;
     };
 
     socket.send(Message::Text(payload.into())).await.is_ok()
 }
 
+/// Read the next event, or None once the socket closes
 pub async fn read<T: DeserializeOwned>(
     socket: &mut SplitStream<WebSocket>,
     user_id: Uuid,

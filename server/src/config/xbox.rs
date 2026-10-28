@@ -20,7 +20,7 @@ pub struct Xbox {
 
 impl Xbox {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.client_id.is_empty() {

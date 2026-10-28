@@ -1,5 +1,5 @@
 import type { Attachment } from "svelte/attachments";
-import type { RoomListItem } from "@/bindings/shared";
+import type { RoomListItem } from "@/bindings/types/preferences";
 import { Section } from "@/lib/rooms/layout.svelte";
 import * as layout from "@/lib/rooms/layout.svelte";
 

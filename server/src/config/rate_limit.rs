@@ -24,7 +24,7 @@ pub struct RateLimit {
 
 impl RateLimit {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.address_register_failures_max < 1 {

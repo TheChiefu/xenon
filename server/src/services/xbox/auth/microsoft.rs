@@ -4,6 +4,7 @@
 // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
 
 use serde::Deserialize;
+use url::form_urlencoded::Serializer;
 
 use crate::config;
 use crate::services::CLIENT;
@@ -38,23 +39,19 @@ struct ErrorBody {
 /// Builds authorization request URL with state and code challenge
 pub fn authorize_url(xbox: &config::Xbox, state: &str, challenge: &str) -> String {
     let redirect_uri = redirect_uri();
-    let params = [
-        ("client_id", xbox.client_id.as_str()),
-        ("response_type", "code"),
-        ("redirect_uri", redirect_uri.as_str()),
-        ("scope", SCOPE),
-        ("state", state),
-        ("code_challenge", challenge),
-        ("code_challenge_method", "S256")
-    ];
+    let query = Serializer::new(String::new())
+        .extend_pairs([
+            ("client_id", xbox.client_id.as_str()),
+            ("response_type", "code"),
+            ("redirect_uri", redirect_uri.as_str()),
+            ("scope", SCOPE),
+            ("state", state),
+            ("code_challenge", challenge),
+            ("code_challenge_method", "S256")
+        ])
+        .finish();
 
-    match reqwest::Url::parse_with_params(AUTHORIZE_URL, params) {
-        Ok(url) => url.to_string(),
-        Err(e) => {
-            tracing::error!("could not build the Microsoft sign-in address: {e}");
-            String::new()
-        }
-    }
+    format!("{AUTHORIZE_URL}?{query}")
 }
 
 /// Redeems an authorization code for tokens

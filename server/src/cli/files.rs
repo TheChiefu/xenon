@@ -5,6 +5,7 @@ use std::num::NonZeroUsize;
 use sqlx::SqlitePool;
 
 use crate::api;
+use crate::cli;
 use crate::error::{AppError, Result};
 use crate::state::AppState;
 
@@ -18,7 +19,7 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
     match args {
         ["clean"] => clean(&state.pool, None).await,
         ["clean", "-t", threads] => clean(&state.pool, Some(threads)).await,
-        _ => Err(super::usage(COMMANDS)),
+        _ => Err(cli::usage(COMMANDS)),
     }
 }
 
@@ -26,7 +27,9 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
 async fn clean(pool: &SqlitePool, threads: Option<&str>) -> Result<()> {
     let threads = thread_count(threads)?;
     let unused_files = api::files::delete_unused_rows(pool).await?;
-    api::files::delete_unused_files(&unused_files, threads).await?;
+    let bytes_deleted = api::files::delete_unused_files(&unused_files, threads).await?;
+
+    println!("Deleted {0} unused files ({1} bytes)", unused_files.len(), bytes_deleted);
     Ok(())
 }
 

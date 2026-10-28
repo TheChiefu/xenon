@@ -10,7 +10,11 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::api;
+use crate::api::messages;
+use crate::api::messages::{Cursor, Posted};
+use crate::api::messages::notifications;
+use crate::api::messages::attachments;
+use crate::api::messages::attachments::Attachment;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
 use crate::sockets::session::events::ServerEvent;
@@ -76,7 +80,7 @@ pub async fn post(
     };
 
     // Attempt to post a message
-    let result = api::messages::post(
+    let result = messages::post(
         &app_state.pool,
         room_id,
         author_id,
@@ -86,17 +90,14 @@ pub async fn post(
     ).await?;
 
     let (status, message) = match result {
-        api::messages::Posted::Created(msg) => (StatusCode::CREATED, msg),
-        api::messages::Posted::Duplicate(msg) => (StatusCode::OK, msg),
+        Posted::Created(msg) => (StatusCode::CREATED, msg),
+        Posted::Duplicate(msg) => (StatusCode::OK, msg),
     };
 
     // Get all attachments in message and attach to response
-    let files = api::messages::attachments::in_message(&app_state.pool, message.id).await?;
+    let files = attachments::in_message(&app_state.pool, message.id).await?;
 
-    let mut attachments = Vec::with_capacity(files.len());
-    for file in files {
-        attachments.push(AttachmentInfo::from(file));
-    }
+    let attachments = attachment_infos(files);
 
     let response = MessageInfo::new(message, attachments);
 
@@ -106,7 +107,9 @@ pub async fn post(
         state::broadcast(&app_state, room_id, msg_event).await;
 
         // Notify users who opted in
-        notify_users(&app_state, room_id, &response).await?;
+        if let Err(e) = notify_users(&app_state, room_id, &response).await {
+            tracing::error!("could not notify members of {room_id}: {e}");
+        }
     }
 
     // Message is duplicate (no broadcast)
@@ -123,24 +126,21 @@ pub async fn fetch(
 
     // Get http query (?before, ?after) and convert it into a cursor
     let cursor = match (query.after, query.before) {
-        (None, None) => api::messages::Cursor::Latest,
-        (Some(seq), None) => api::messages::Cursor::After(seq),
-        (None, Some(seq)) => api::messages::Cursor::Before(seq),
+        (None, None) => Cursor::Latest,
+        (Some(seq), None) => Cursor::After(seq),
+        (None, Some(seq)) => Cursor::Before(seq),
         (Some(_), Some(_)) => {
             return Err(AppError::Validation("cannot use before/after".to_string()))
         }
     };
 
     // Attempt to fetch messages
-    let result = api::messages::fetch(&pool, room_id, user_id, cursor).await?;
+    let result = messages::fetch(&pool, room_id, user_id, cursor).await?;
 
     // Convert returned vector of internal messages into vector of HTTP message responses
     let mut response = Vec::with_capacity(result.len());
     for (message, files) in result {
-        let mut attachments = Vec::with_capacity(files.len());
-        for file in files {
-            attachments.push(AttachmentInfo::from(file));
-        }
+        let attachments = attachment_infos(files);
 
         response.push(MessageInfo::new(message, attachments));
     }
@@ -155,12 +155,9 @@ pub async fn get(
     Path(message_id): Path<Uuid>,
 ) -> Result<Json<MessageInfo>> {
 
-    let (message, files) = api::messages::get(&pool, message_id, user_id).await?;
+    let (message, files) = messages::get(&pool, message_id, user_id).await?;
 
-    let mut attachments = Vec::with_capacity(files.len());
-    for file in files {
-        attachments.push(AttachmentInfo::from(file));
-    }
+    let attachments = attachment_infos(files);
 
     Ok(Json(MessageInfo::new(message, attachments)))
 }
@@ -172,7 +169,7 @@ pub async fn delete(
     Path(message_id): Path<Uuid>,
 ) -> Result<StatusCode> {
 
-    let room_id = api::messages::delete(&app_state.pool, message_id, caller_id).await?;
+    let room_id = messages::delete(&app_state.pool, message_id, caller_id).await?;
 
     let event = ServerEvent::MessageDeleted { room_id, message_id };
     state::broadcast(&app_state, room_id, event).await;
@@ -188,7 +185,7 @@ pub async fn update(
     Json(request): Json<RequestMessageEdit>,
 ) -> Result<Json<RespondMessageEdit>> {
 
-    let result = api::messages::edit(
+    let result = messages::edit(
         &app_state.pool,
         message_id,
         caller_id,
@@ -208,6 +205,15 @@ pub async fn update(
 
 // Helper Methods //
 
+// Convert stored attachments into response form
+fn attachment_infos(files: Vec<Attachment>) -> Vec<AttachmentInfo> {
+    let mut infos = Vec::with_capacity(files.len());
+    for file in files {
+        infos.push(AttachmentInfo::from(file));
+    }
+    infos
+}
+
 // Send notification event to room members
 async fn notify_users(
     app_state: &AppState,
@@ -220,7 +226,7 @@ async fn notify_users(
         return Ok(());
     };
 
-    let notification = api::messages::notifications::notify(
+    let notification = notifications::notify(
         app_state,
         room_id,
         author_id,

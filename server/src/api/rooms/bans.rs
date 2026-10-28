@@ -2,36 +2,11 @@
 
 use uuid::Uuid;
 
-use crate::api::rooms;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::types::rooms::Permission;
 
 // API Methods //
-
-/// Reports whether a user holds a ban on a room.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room the ban applies to.
-/// * `user_id` - User the ban is against.
-pub async fn exists(
-    conn: &mut sqlx::SqliteConnection,
-    room_id: Uuid,
-    user_id: Uuid,
-) -> Result<bool> {
-
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM room_bans WHERE room_id = ?1 AND user_id = ?2)"
-    )
-    .bind(room_id)
-    .bind(user_id)
-    .fetch_one(&mut *conn)
-    .await?;
-
-    Ok(exists)
-}
 
 /// Lists the users banned from a room.
 ///
@@ -91,7 +66,7 @@ pub async fn create(
     target_id: Uuid,
 ) -> Result<()> {
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     require_permission(&mut tx, room_id, caller_id).await?;
 
@@ -121,7 +96,7 @@ pub async fn create(
 
     // Remove the target's membership. A user who is not in the room can still
     // be banned, so NotFound is discarded and every other error is returned
-    match rooms::access::remove(&mut tx, room_id, target_id).await {
+    match db::remove_from_room(&mut tx, room_id, target_id).await {
         Err(AppError::NotFound) => (),
         Err(err) => return Err(err),
         Ok(()) => ()

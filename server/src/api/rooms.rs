@@ -8,7 +8,7 @@ pub mod read;
 use sqlx::types::Json;
 use uuid::Uuid;
 
-use crate::db::{self, effective_permissions};
+use crate::db;
 use crate::error::{AppError, Result};
 use crate::types::rooms::{Permission, RoomInfo, Visibility};
 use crate::types::users::GlobalRole;
@@ -79,22 +79,15 @@ pub async fn update(
 
     // Extract name if available
     let renaming = name.is_some();
-    let mut name = name.unwrap_or("");
-
-    // A name of nothing but spaces is stored as empty
-    if name.trim().is_empty() {
-        name = "";
-    }
-
-    validate::room_name(name)?;
+    let name = validate::room_name(name.unwrap_or(""))?;
 
     let revealing = visibility.is_some();
     let granting = default_permissions.is_some();
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check if user has permissions
-    let perms = effective_permissions(&mut tx, room_id, caller_id).await?;
+    let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
     let perms = perms.ok_or(AppError::Forbidden)?;
 
     // Check permissions for requested actions
@@ -140,16 +133,10 @@ pub async fn create(
     visibility: Visibility,
 ) -> Result<Uuid> {
 
-    // A name of nothing but spaces is stored as the empty name
-    let mut clean_room_name = name;
-    if clean_room_name.trim().is_empty() {
-        clean_room_name = "";
-    }
-
-    validate::room_name(clean_room_name)?;
+    let name = validate::room_name(name)?;
 
     // Open transaction
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check if user can create a room
     let allowed = [GlobalRole::Admin, GlobalRole::Member];
@@ -166,7 +153,7 @@ pub async fn create(
         "
     )
     .bind(room_id)
-    .bind(clean_room_name)
+    .bind(name)
     .bind(visibility)
     .bind(Json(default_permissions))
     .bind(now)
@@ -204,7 +191,7 @@ pub async fn delete(
     caller_id: Uuid,
 ) -> Result<Vec<Uuid>> {
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Deleting a room requires Permission::DeleteRoom
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
@@ -238,7 +225,7 @@ pub async fn join(
 ) -> Result<()> {
 
     // Open transaction
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check room visibility
     let visibility: Option<Visibility> = sqlx::query_scalar(
@@ -262,11 +249,11 @@ pub async fn join(
         None => return Err(AppError::Forbidden)
     };
 
-    if requires_invite && !invites::exists(&mut tx, room_id, user_id).await? {
+    if requires_invite && !db::invited_to_room(&mut tx, room_id, user_id).await? {
         return Err(AppError::Forbidden);
     }
 
-    if bans::exists(&mut tx, room_id, user_id).await? {
+    if db::banned_from_room(&mut tx, room_id, user_id).await? {
         return Err(AppError::Forbidden);
     }
 
@@ -305,8 +292,8 @@ pub async fn leave(
     user_id: Uuid,
 ) -> Result<()> {
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    access::remove(&mut tx, room_id, user_id).await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
+    db::remove_from_room(&mut tx, room_id, user_id).await?;
     tx.commit().await?;
 
     Ok(())

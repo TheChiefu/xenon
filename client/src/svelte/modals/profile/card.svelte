@@ -1,7 +1,10 @@
 <script lang="ts">
-  import type { LinkedAccountResponse } from "@/bindings/routes/users";
-  import { Platform, type GlobalRole, type Status } from "@/bindings/shared";
-  import type { Device, GameActivity } from "@/bindings/sockets/events";
+  import type { LinkedAccount } from "@/bindings/types/users";
+  import { Platform } from "@/bindings/types/platforms";
+  import { type GlobalRole } from "@/bindings/types/users";
+  import { type Status } from "@/bindings/shared";
+  import type { Device } from "@/bindings/types/status";
+  import type { GameActivity } from "@/bindings/sockets/events";
   import { ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
   import type { FetchedFile } from "@/lib/utils";
   import * as settings from "@/lib/client/settings.svelte";
@@ -17,7 +20,7 @@
     device?: Device | null;
     game?: GameActivity | null;
     role: GlobalRole;
-    links: LinkedAccountResponse[];
+    links: LinkedAccount[];
     created_at: string;
     avatar?: FetchedFile | null;
     banner?: FetchedFile | null;

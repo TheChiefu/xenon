@@ -8,4 +8,4 @@ export type UserActivity = { user_id: string, activity: Activity, };
 
 export enum Platform { "xbox" = "xbox", "steam" = "steam" }
 
-export enum Availability { "Online" = "Online", "Offline" = "Offline", "Away" = "Away" }
+export enum Availability { "online" = "online", "offline" = "offline", "away" = "away" }

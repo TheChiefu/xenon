@@ -1,4 +1,4 @@
-import type { CreateRoomRequest } from "@/bindings/routes/rooms";
+import type { RequestCreateRoom } from "@/bindings/routes/rooms";
 import * as roomsAPI from "@/lib/api/rooms";
 import * as layout from "@/lib/rooms/layout.svelte";
 import { failureText } from "@/lib/utils";
@@ -36,7 +36,7 @@ export function open(): void {
 
 // Server //
 
-export async function submit(body: CreateRoomRequest): Promise<void> {
+export async function submit(body: RequestCreateRoom): Promise<void> {
   pending = true;
   error = null;
 

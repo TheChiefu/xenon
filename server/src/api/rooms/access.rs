@@ -3,7 +3,6 @@
 use sqlx::types::Json;
 use uuid::Uuid;
 
-use crate::api::rooms::{bans, invites};
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::types::rooms::{Notify, Permission};
@@ -47,8 +46,8 @@ pub async fn get(
     }
 
     let permissions = db::effective_permissions(&mut conn, room_id, target_id).await?;
-    let invited = invites::exists(&mut conn, room_id, target_id).await?;
-    let banned = bans::exists(&mut conn, room_id, target_id).await?;
+    let invited = db::invited_to_room(&mut conn, room_id, target_id).await?;
+    let banned = db::banned_from_room(&mut conn, room_id, target_id).await?;
 
     Ok(Access { permissions, invited, banned })
 }
@@ -63,15 +62,7 @@ pub async fn list(
     let mut conn = pool.acquire().await?;
 
     // Check if the caller is a member of the room
-    let is_member: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM room_access WHERE room_id = ?1 AND user_id = ?2)"
-    )
-    .bind(room_id)
-    .bind(caller_id)
-    .fetch_one(&mut *conn)
-    .await?;
-
-    if !is_member {
+    if db::effective_permissions(&mut conn, room_id, caller_id).await?.is_none() {
         return Err(AppError::Forbidden);
     }
 
@@ -102,7 +93,7 @@ pub async fn update(
 ) -> Result<()> {
 
     // One transaction, so the permissions read here cannot change before the write
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check caller's permission in the room
     let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
@@ -176,61 +167,6 @@ pub async fn set_notify(
 
     if affected.rows_affected() == 0 {
         return Err(AppError::NotFound);
-    }
-
-    Ok(())
-}
-
-// Remove a member from a room
-pub async fn remove(
-    conn: &mut sqlx::SqliteConnection,
-    room_id: Uuid,
-    user_id: Uuid,
-) -> Result<()> {
-
-    // Attempt to remove user from room access
-    let result = sqlx::query(
-        "DELETE FROM room_access WHERE room_id = ?1 AND user_id = ?2"
-    )
-    .bind(room_id)
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
-
-    // No membership to remove (404)
-    if result.rows_affected() == 0 {
-        return Err(AppError::NotFound);
-    }
-
-    // They were a member, so remove their read state as well
-    sqlx::query("DELETE FROM read_state WHERE room_id = ?1 AND user_id = ?2")
-    .bind(room_id)
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
-
-    // Check if any members still exist in the room
-    let has_members: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM room_access WHERE room_id = ?1)"
-    )
-    .bind(room_id)
-    .fetch_one(&mut *conn)
-    .await?;
-
-    // If no members, delete the room
-    if !has_members {
-        sqlx::query(
-            "
-            DELETE FROM rooms
-            WHERE id = ?1
-            "
-        )
-        .bind(room_id)
-        .execute(&mut *conn)
-        .await?;
-
-        // No room left, exit
-        return Ok(());
     }
 
     Ok(())

@@ -6,7 +6,8 @@
   import * as users from "@/lib/users/data.svelte";
   import * as status from "@/lib/users/status.svelte";
   import { LABELS_STATUS } from "@/lib/labels";
-  import { GlobalRole, Status } from "@/bindings/shared";
+  import { GlobalRole } from "@/bindings/types/users";
+  import { Status } from "@/bindings/shared";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/display/transitions";

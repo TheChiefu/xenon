@@ -1,5 +1,5 @@
 import type { ServerInfo } from "@/bindings/routes/server";
-import type { UserSummaryResponse } from "@/bindings/routes/users";
+import type { RespondSummary } from "@/bindings/routes/users";
 import * as usersAPI from "@/lib/api/users";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -8,7 +8,7 @@ import { failureText } from "@/lib/utils";
 let page_size: number = 1;
 
 export class UserSearch {
-  users: UserSummaryResponse[] = $state([]);
+  users: RespondSummary[] = $state([]);
   final_page: boolean = $state(true);
   pending: boolean = $state(false);
   error: string | null = $state(null);

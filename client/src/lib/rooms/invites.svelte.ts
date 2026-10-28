@@ -1,14 +1,14 @@
-import type { ReceivedInviteResponse } from "@/bindings/routes/rooms";
+import type { RespondRoomInvite } from "@/bindings/routes/me";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 import { failureText } from "@/lib/utils";
 
-let received: ReceivedInviteResponse[] = $state([]);
+let received: RespondRoomInvite[] = $state([]);
 let pending: boolean = $state(false);
 let error: string | null = $state(null);
 
-export function getInvites(): ReceivedInviteResponse[] {
+export function getInvites(): RespondRoomInvite[] {
   return received;
 }
 

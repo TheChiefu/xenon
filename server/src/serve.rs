@@ -7,21 +7,11 @@ use axum_server::tls_rustls::RustlsConfig;
 use crate::cli;
 use crate::config;
 
-/// How long open connections are given to finish once shutdown begins.
+/// How long open connections are given to finish once shutdown begins
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(10);
 
-/// Serves over TLS using the configured certificate and key.
-///
+/// Serve over TLS using the configured certificate and key
 /// Exits the process if either file cannot be read or parsed.
-///
-/// # Arguments
-///
-/// * `app` - Router carrying every route.
-/// * `bind_addr` - Address the listener binds.
-///
-/// # Panics
-///
-/// Panics if no certificate is configured
 pub async fn tls(app: Router, bind_addr: SocketAddr) {
     let certificate = config::get().bind.certificate.as_ref().expect("certificate checked by caller");
     let key = config::get().bind.key.as_ref().expect("key checked by caller");
@@ -39,7 +29,7 @@ pub async fn tls(app: Router, bind_addr: SocketAddr) {
     tokio::spawn({
         let handle = handle.clone();
         async move {
-            crate::shutdown_signal().await;
+            shutdown_signal().await;
             handle.graceful_shutdown(Some(SHUTDOWN_GRACE));
         }
     });
@@ -58,12 +48,7 @@ pub async fn tls(app: Router, bind_addr: SocketAddr) {
         .expect("failed to serve axum application");
 }
 
-/// Serves unencrypted, warning if the address is reachable off the host.
-///
-/// # Arguments
-///
-/// * `app` - Router carrying every route.
-/// * `bind_addr` - Address the listener binds.
+/// Serve unencrypted (warning if the address is reachable off the host)
 pub async fn plaintext(app: Router, bind_addr: SocketAddr) {
     if !config::get().binds_loopback() {
         tracing::warn!(
@@ -80,7 +65,36 @@ pub async fn plaintext(app: Router, bind_addr: SocketAddr) {
     cli::READY.notify_one();
 
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-        .with_graceful_shutdown(crate::shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .expect("failed to serve axum application");
+}
+
+// Shutdown //
+
+/// Resolve on SIGTERM
+#[cfg(unix)]
+async fn terminate() {
+    use tokio::signal::unix::{signal, SignalKind};
+    signal(SignalKind::terminate())
+        .expect("failed to install SIGTERM handler")
+        .recv()
+        .await;
+    tracing::info!("Received \"SIGTERM\", terminating program...");
+}
+
+#[cfg(not(unix))]
+async fn terminate() {
+    std::future::pending::<()>().await;
+}
+
+/// Resolve on the first shutdown signal
+/// Axum polls this alongside serving
+async fn shutdown_signal() {
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {},
+        _ = terminate() => {},
+        _ = cli::EXIT.notified() => {},
+    }
+    tracing::info!("Shutting down server");
 }

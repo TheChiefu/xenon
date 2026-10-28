@@ -17,6 +17,7 @@ pub enum Platform {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/platforms.ts", repr(enum = name)))]
+#[serde(rename_all = "lowercase")]
 pub enum Availability {
     Online,
     Offline,

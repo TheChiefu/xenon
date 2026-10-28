@@ -42,14 +42,15 @@ struct Stream {
 
 // API Methods //
 
-// Check whether a user's role may upload files
-pub async fn can_upload(
+// Rejects a user whose role may not upload files
+pub async fn require_upload(
     pool: &SqlitePool,
     caller_id: Uuid,
-) -> Result<bool> {
+) -> Result<()> {
     let mut conn = pool.acquire().await?;
-    let role = db::global_role(&mut conn, caller_id).await?;
-    Ok(role == GlobalRole::Admin || role == GlobalRole::Member)
+    let allowed = [GlobalRole::Admin, GlobalRole::Member];
+    db::require_role(&mut conn, caller_id, &allowed).await?;
+    Ok(())
 }
 
 /// Store an upload, keyed on the hash of its bytes
@@ -82,8 +83,8 @@ where
 
     // Build sharded path and move tmp file into it (permanent location)
     let hex = hex::encode(&stream.sha256);
-    let shard_dir = create_shard_path(files_path, &hex);
-    if let Err(e) = move_to_shard(&tmp_path, &shard_dir, &hex).await {
+    let path = blob_path(files_path, &hex);
+    if let Err(e) = move_to_shard(&tmp_path, &path).await {
         // Move failed, delete tmp file to avoid leaving unused data on disk
         let _ = tokio::fs::remove_file(&tmp_path).await;
         return Err(e);
@@ -92,7 +93,7 @@ where
     // them (ie. no references in the DB) can delete them at a later point
 
     // Insert file info into Database
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
     let stored = insert(&mut tx, filename, stream.sha256, stream.byte_size, stream.mime).await?;
     tx.commit().await?;
 
@@ -125,8 +126,7 @@ pub async fn fetch(
 
     // Rebuild path based on SHA256
     let hex_sha = hex::encode(&file.sha256);
-    let directory = create_shard_path(&config::get().storage.files, &hex_sha);
-    let path = directory.join(&hex_sha);
+    let path = blob_path(&config::get().storage.files, &hex_sha);
 
     // Get file reader handle
     match tokio::fs::File::open(&path).await {
@@ -159,15 +159,15 @@ pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
     Ok(files)
 }
 
-// Deletes each file's bytes from disk
-pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<()> {
+// Deletes each file's bytes from disk, returning the bytes freed
+pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<i64> {
     let files_path = &config::get().storage.files;
 
     let mut deletes = Vec::new();
     let mut bytes_deleted = 0;
     for file in files {
         let hex = hex::encode(&file.sha256);
-        let path = create_shard_path(files_path, &hex).join(&hex);
+        let path = blob_path(files_path, &hex);
         deletes.push(tokio::fs::remove_file(path));
         bytes_deleted += file.byte_size;
     }
@@ -177,13 +177,7 @@ pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<()> {
         .try_collect::<Vec<()>>()
         .await?;
 
-    println!(
-        "Deleted {0} unused files ({1} bytes)",
-        files.len(),
-        bytes_deleted,
-    );
-
-    Ok(())
+    Ok(bytes_deleted)
 }
 
 // Helper Methods //
@@ -210,10 +204,17 @@ fn create_shard_path(files_path: &str, hex: &str) -> PathBuf {
         .join(&hex[2..4]) // Second Level second 2 hex chars
 }
 
+// Maps a hash to the file holding its bytes, such as `files/ab/cd/abcd...`
+fn blob_path(files_path: &str, hex: &str) -> PathBuf {
+    create_shard_path(files_path, hex).join(hex)
+}
+
 // Create shard directory and rename the temp file into it
-async fn move_to_shard(tmp_path: &Path, shard_dir: &Path, hex: &str) -> Result<()> {
-    tokio::fs::create_dir_all(shard_dir).await?;
-    tokio::fs::rename(tmp_path, shard_dir.join(hex)).await?;
+async fn move_to_shard(tmp_path: &Path, blob_path: &Path) -> Result<()> {
+    if let Some(shard_dir) = blob_path.parent() {
+        tokio::fs::create_dir_all(shard_dir).await?;
+    }
+    tokio::fs::rename(tmp_path, blob_path).await?;
     Ok(())
 }
 

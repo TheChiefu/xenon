@@ -17,7 +17,7 @@ use crate::config;
 use crate::error::AppError;
 use crate::services::xbox::accounts;
 use crate::services::xbox::accounts::Account;
-use crate::utils::{now_ms, ms_rfc3339, read_lock, write_lock};
+use crate::utils;
 
 // Data Types //
 
@@ -41,7 +41,10 @@ impl fmt::Display for Failure {
 
 impl From<Failure> for AppError {
     fn from(failure: Failure) -> Self {
-        AppError::Validation(failure.to_string())
+        match failure {
+            Failure::Dead(message) => AppError::Validation(message),
+            Failure::Retry(message) => AppError::Unavailable(message),
+        }
     }
 }
 
@@ -99,7 +102,7 @@ pub async fn get_header(
 
 /// Removes cached Authorization header for a user
 pub fn remove_header(user_id: Uuid) {
-    write_lock(&AUTHORIZATIONS).remove(&user_id);
+    utils::write_lock(&AUTHORIZATIONS).remove(&user_id);
 }
 
 // Helper Methods //
@@ -124,7 +127,7 @@ async fn request_header(
     let xsts = xsts::request_xsts_token(&user_token).await?;
 
     // Check for expiry or invalid claims
-    let Some(expires_at) = ms_rfc3339(&xsts.not_after) else {
+    let Some(expires_at) = utils::ms_rfc3339(&xsts.not_after) else {
         return Err(Failure::Retry("XSTS expiry was unreadable".into()));
     };
     let Some(claims) = xsts.get_display_claims() else {
@@ -133,7 +136,7 @@ async fn request_header(
 
     // Builds Authorization header from user hash and XSTS token, then cache it
     let value = format!("XBL3.0 x={};{}", claims.uhs, xsts.token);
-    write_lock(&AUTHORIZATIONS).insert(
+    utils::write_lock(&AUTHORIZATIONS).insert(
         account.user_id,
         Authorization {
             value: value.clone(),
@@ -146,10 +149,10 @@ async fn request_header(
 
 /// Returns cached Authorization header if not expired
 fn get_cached_header(user_id: Uuid) -> Option<String> {
-    let authorizations = read_lock(&AUTHORIZATIONS);
+    let authorizations = utils::read_lock(&AUTHORIZATIONS);
     let authorization = authorizations.get(&user_id)?;
 
-    match authorization.expires_at > now_ms() {
+    match authorization.expires_at > utils::now_ms() {
         true => Some(authorization.value.clone()),
         false => None
     }

@@ -9,6 +9,19 @@ pub struct Services {
     pub request_timeout_seconds: u64
 }
 
+impl Services {
+
+    /// Errors on the first invalid value in the section
+    pub(super) fn validate(&self) -> Result<(), String> {
+
+        if self.request_timeout_seconds < 1 {
+            return Err("services.request_timeout_seconds must be at least 1".to_string());
+        }
+
+        Ok(())
+    }
+}
+
 impl Default for Services {
     fn default() -> Self {
         Services {

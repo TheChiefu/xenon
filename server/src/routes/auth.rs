@@ -14,7 +14,8 @@ use crate::error::Result;
 use crate::routes::{AuthUser, ClientIp};
 use crate::state::AppState;
 use crate::types::auth::{Registration, RegistrationCode};
-use crate::{api, validate};
+use crate::api;
+use crate::validate;
 
 // REQUESTS //
 #[derive(Deserialize)]

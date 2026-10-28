@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onDestroy } from "svelte";
-import type { AttachmentResponse } from "@/bindings/routes/messages";
+import type { AttachmentInfo } from "@/bindings/types/messages";
 import type { ActionReturn } from "svelte/action";
 import { fetchFileBlob, type FetchedFile } from "@/lib/utils";
 import Image from "./attachments/image.svelte";
@@ -10,7 +10,7 @@ import File from "./attachments/file.svelte";
 import Pending from "./attachments/pending.svelte";
 
 interface Props {
-    attachment: AttachmentResponse;
+    attachment: AttachmentInfo;
 }
 
 let { attachment }: Props = $props();

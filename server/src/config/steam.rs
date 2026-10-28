@@ -10,6 +10,8 @@ pub struct Steam {
 }
 
 impl Steam {
+
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.web_api_key.is_empty() {

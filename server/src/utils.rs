@@ -1,4 +1,4 @@
-//! Clock, random-token, and password-hashing helpers.
+//! Utility data structures and methods
 
 use std::panic::Location;
 use std::sync::{LazyLock, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -12,20 +12,16 @@ use sha2::{Digest, Sha256};
 use crate::error::{AppError, Result};
 use crate::types::time::{DAY, HOUR, MINUTE, SECOND};
 
-/// How many bytes a session token carries.
+/// How many bytes a session token carries
 const SESSION_TOKEN_BYTES: usize = 32;
 
-/// A session token in both the form the client keeps and the form the server stores.
 pub struct SessionToken {
     pub secret: String, // Goes to client (never stored on server)
     pub hash: [u8; 32] // Goes in sessions.token_hash (never leaves server)
 }
 
-/// Returns the current time in milliseconds since the Unix epoch.
-///
-/// # Panics
-///
-/// Panics if the system clock reads before 1970.
+
+/// Return the current time in milliseconds since the Unix epoch
 pub fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -33,7 +29,7 @@ pub fn now_ms() -> i64 {
         .as_millis() as i64
 }
 
-/// Generates a random code from uppercase alphanumerics.
+/// Generate a random code from uppercase alphanumerics
 pub fn generate_code(length: usize) -> String {
     const CODE_ALPHABET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -49,32 +45,14 @@ pub fn generate_code(length: usize) -> String {
 
 // Password Management //
 
-/// Hashes a password with Argon2id, returning a PHC string.
-///
-/// # Arguments
-///
-/// * `password` - Password to hash.
-///
-/// # Errors
-///
-/// Returns `AppError::Hash` if the algorithm cannot run.
+/// Hash a password with Argon2id, returning a PHC string
 pub fn hash_password(password: &str) -> Result<String> {
     let salt = SaltString::generate(&mut OsRng);
     let hash = Argon2::default().hash_password(password.as_bytes(), &salt)?;
     Ok(hash.to_string())
 }
 
-/// Reports whether a password matches a stored hash.
-///
-/// # Arguments
-///
-/// * `password` - Password to check.
-/// * `stored_hash` - PHC string read from the database.
-///
-/// # Errors
-///
-/// Returns `AppError::Hash` if the stored hash is unreadable or the algorithm
-/// cannot run.
+/// Report whether a password matches a stored hash
 pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool> {
     let parsed = PasswordHash::new(stored_hash)?;
 
@@ -87,7 +65,7 @@ pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool> {
 
 // Session Management //
 
-/// Generates a session token and its stored hash.
+/// Generate a session token and its stored hash
 pub fn generate_session_token() -> SessionToken {
     let mut bytes = [0u8; SESSION_TOKEN_BYTES];
     OsRng.fill_bytes(&mut bytes);
@@ -98,11 +76,7 @@ pub fn generate_session_token() -> SessionToken {
     }
 }
 
-/// Hashes a session token the client presented, matching the stored form.
-///
-/// # Arguments
-///
-/// * `secret` - Session token as the client sent it.
+/// Hash a session token the client presented
 pub fn hash_session_token(secret: &str) -> Option<[u8; 32]> {
     let bytes = hex::decode(secret).ok()?;
     if bytes.len() != SESSION_TOKEN_BYTES {
@@ -118,25 +92,12 @@ static DECOY_HASH: LazyLock<String> = LazyLock::new(|| {
     .expect("hashing a fixed string cannot fail")
 });
 
-/// Burns the CPU time a password verification costs, against a fixed hash.
-///
-/// An unknown username runs this, so it takes the same time as a wrong password.
-///
-/// # Arguments
-///
-/// * `password` - Password to verify against the decoy hash.
+/// Burn CPU time a password verification costs, against a fixed hash
 pub fn burn_verify(password: &str) {
     let _ = verify_password(password, &DECOY_HASH);
 }
 
-/// Reads an RFC 3339 timestamp in UTC as milliseconds since the Unix epoch.
-///
-/// Fractional seconds are ignored. Returns `None` when a field is missing or
-/// does not parse.
-///
-/// # Arguments
-///
-/// * `timestamp` - Timestamp in the form `2026-10-12T12:34:56.1234567Z`.
+/// Read an RFC 3339 timestamp in UTC as milliseconds since the Unix epoch
 pub fn ms_rfc3339(timestamp: &str) -> Option<i64> {
     const MONTH_START: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
 
@@ -146,6 +107,11 @@ pub fn ms_rfc3339(timestamp: &str) -> Option<i64> {
     let year: i64 = fields.next()?.parse().ok()?;
     let month: i64 = fields.next()?.parse().ok()?;
     let day: i64 = fields.next()?.parse().ok()?;
+
+    // Catch invalud month and days
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
 
     let mut fields = clock.split(':');
     let hour: i64 = fields.next()?.parse().ok()?;

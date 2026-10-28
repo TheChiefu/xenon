@@ -1,5 +1,5 @@
-import type { CodeResponse, CreateRegistrationCodeRequest, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, RevokeRegistrationCodeRequest } from "@/bindings/routes/auth";
-import type { RegistrationCode } from "@/bindings/shared";
+import type { RequestLogin, RequestRegistrationCreate, RequestRegistrationRevoke, RespondLogin, RespondRegistration, RespondRegistrationCode } from "@/bindings/routes/auth";
+import type { Registration, RegistrationCode } from "@/bindings/types/auth";
 import { request } from "@/lib/utils";
 
 export async function listRegistrationCodes(): Promise<RegistrationCode[]> {
@@ -7,18 +7,18 @@ export async function listRegistrationCodes(): Promise<RegistrationCode[]> {
     return await response.json() as RegistrationCode[];
 }
 
-export async function createRegistrationCode(body: CreateRegistrationCodeRequest): Promise<string> {
+export async function createRegistrationCode(body: RequestRegistrationCreate): Promise<string> {
     const response = await request("/codes", "POST", body);
-    return (await response.json() as CodeResponse).code;
+    return (await response.json() as RespondRegistrationCode).code;
 }
 
 export async function revokeRegistrationCode(code: string): Promise<void> {
-    const body: RevokeRegistrationCodeRequest = { code };
+    const body: RequestRegistrationRevoke = { code };
     await request("/codes", "DELETE", body);
 }
 
 export async function login(username: string, password: string, url: string): Promise<string> {
-    const request: LoginRequest = { username, password };
+    const request: RequestLogin = { username, password };
 
     const response = await fetch(`${url}/login`, {
         method: "POST",
@@ -32,7 +32,7 @@ export async function login(username: string, password: string, url: string): Pr
         throw new Error(data.error);
     }
 
-    return (data as LoginResponse).token;
+    return (data as RespondLogin).token;
 }
 
 // Revokes an account's session on its server
@@ -50,7 +50,7 @@ export async function register(
     registration_code: string | null,
     url: string
 ): Promise<string> {
-    const request: RegisterRequest = { username, password, display_name, registration_code };
+    const request: Registration = { username, password, display_name, registration_code };
 
     const response = await fetch(`${url}/users`, {
         method: "POST",
@@ -64,5 +64,5 @@ export async function register(
         throw new Error(data.error);
     }
 
-    return (data as RegisterResponse).session_token;
+    return (data as RespondRegistration).session_token;
 }

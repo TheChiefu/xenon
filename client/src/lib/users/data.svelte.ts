@@ -2,9 +2,10 @@
 
 import { SvelteMap } from "svelte/reactivity";
 import type { ServerInfo } from "@/bindings/routes/server";
-import type { UserSummaryResponse } from "@/bindings/routes/users";
+import type { RespondSummary } from "@/bindings/routes/users";
 import { Status } from "@/bindings/shared";
-import { GamePresence, type Device, type GameActivity } from "@/bindings/sockets/events";
+import { GamePresence, type GameActivity } from "@/bindings/sockets/events";
+import { type Device } from "@/bindings/types/status";
 import * as usersAPI from "@/lib/api/users";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -24,7 +25,7 @@ export interface UserStatus {
 }
 
 // Maps containing a user ID per type (summary, their status, game activity)
-const summaries: SvelteMap<string, UserSummaryResponse> = new SvelteMap();
+const summaries: SvelteMap<string, RespondSummary> = new SvelteMap();
 const statuses: SvelteMap<string, UserStatus> = new SvelteMap();
 const activities: SvelteMap<string, GameActivity> = new SvelteMap();
 const avatars: SvelteMap<string, FetchedFile> = new SvelteMap();
@@ -36,7 +37,7 @@ let per_page: number = 1;
 // SUMMARIES //
 
 // What is held for a user, or undefined until a lookup fills it
-export function get(id: string): UserSummaryResponse | undefined {
+export function get(id: string): RespondSummary | undefined {
   return summaries.get(id);
 }
 
@@ -69,7 +70,7 @@ export async function load(ids: (string | null)[]): Promise<void> {
 }
 
 // Finds a user by username
-export async function findByUsername(username: string): Promise<UserSummaryResponse | undefined> {
+export async function findByUsername(username: string): Promise<RespondSummary | undefined> {
   for (const user of summaries.values()) {
     if (user.username === username) {
       return user;
@@ -130,7 +131,7 @@ export async function resolveMentions(text: string): Promise<string> {
 }
 
 // Replaces what is held, for a profile change the server reports
-export function cache(user: UserSummaryResponse): void {
+export function cache(user: RespondSummary): void {
   summaries.set(user.id, user);
 }
 

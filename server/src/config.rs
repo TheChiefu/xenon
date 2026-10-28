@@ -110,7 +110,10 @@ pub fn init(path: &str) {
             }
         },
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => write_default(path),
-        Err(e) => panic!("could not read {path}: {e}"),
+        Err(e) => {
+            eprintln!("{path}: {e}");
+            std::process::exit(1);
+        },
     };
 
     if let Err(reason) = config.validate() {
@@ -144,7 +147,7 @@ fn write_default(path: &str) -> Config {
 
 impl Config {
 
-    /// Ensure loaded config file has real values, reject any invalid ones
+    /// Errors on the first invalid value in any section
     fn validate(&self) -> Result<(), String> {
 
         if self.version != CONFIG_VERSION {
@@ -183,11 +186,11 @@ impl Config {
         self.lengths.validate()?;
         self.uploads.validate()?;
         self.responses.validate()?;
+        self.services.validate()?;
         self.sockets.validate()?;
         self.calls.validate()?;
         self.rate_limit.validate()?;
         self.logging.validate()?;
-        self.info.validate();
 
         Ok(())
     }

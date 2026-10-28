@@ -79,7 +79,7 @@ pub async fn post(
     validate_post(body, attachments)?;
 
     // Start transaction
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check user perms
     let perms = db::effective_permissions(&mut tx, room_id, author_id).await?;
@@ -216,18 +216,7 @@ pub async fn get(
 ) -> Result<(Message, Vec<Attachment>)> {
 
     let mut conn = pool.acquire().await?;
-
-    let message: Message = sqlx::query_as(
-        "
-        SELECT seq, id, room_id, author_id, body, created_at, edited_at
-        FROM messages
-        WHERE id = ?1
-        "
-    )
-    .bind(message_id)
-    .fetch_optional(&mut *conn)
-    .await?
-    .ok_or(AppError::NotFound)?;
+    let message = fetch_by_id(&mut conn, message_id).await?;
 
     // Check if user has permission to access the room
     let perms = db::effective_permissions(&mut conn, message.room_id, user_id).await?;
@@ -247,7 +236,7 @@ pub async fn delete(
     caller_id: Uuid,
 ) -> Result<Uuid> {
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
     let message = fetch_by_id(&mut tx, message_id).await?;
     let room_id = message.room_id;
 
@@ -284,7 +273,7 @@ pub async fn edit(
         validate::message_body(text)?;
     }
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check author
     let message = fetch_by_id(&mut tx, message_id).await?;

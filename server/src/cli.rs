@@ -1,5 +1,8 @@
 //! Commands for server
 //!
+//! Bypasses layers (ie not bound to API or DB) since it's expected
+//! direct access to machine is given, which is elevated privlidge over server
+//! 
 //! Run the server inside `screen` to deatch from user console:
 //! - Start server:         `screen -S xenon ./xenon`
 //! - Detach from screen:   Ctrl+A then D

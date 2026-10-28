@@ -1,6 +1,6 @@
 import type { Status } from "@/bindings/shared";
 import type { ClientEvent, ServerEvent } from "@/bindings/sockets/session/events";
-import { Device } from "@/bindings/sockets/session/presence";
+import { Device } from "@/bindings/types/status";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
 import * as session from "@/lib/connection/session.svelte";

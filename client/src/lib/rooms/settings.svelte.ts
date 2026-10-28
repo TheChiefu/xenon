@@ -1,5 +1,6 @@
-import type { AccessResponse, RoomPatch, RoomResponse } from "@/bindings/routes/rooms";
-import { Permission, type Notify } from "@/bindings/shared";
+import type { RespondAccess, Patch } from "@/bindings/routes/rooms";
+import type { RoomInfo } from "@/bindings/types/rooms";
+import { Permission, type Notify } from "@/bindings/types/rooms";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -10,19 +11,19 @@ import { failureText } from "@/lib/utils";
 
 let room_id: string | null = $state(null);
 let selected_id: string | null = $state(null);
-let access: AccessResponse | null = $state(null);
+let access: RespondAccess | null = $state(null);
 let pending: boolean = $state(false);
 let error: string | null = $state(null);
 
 // ROOM //
 
 // Gets the open room
-export function getRoom(): RoomResponse | undefined {
+export function getRoom(): RoomInfo | undefined {
   return room_id === null ? undefined : room.get(room_id);
 }
 
 // Updates the open room
-export async function saveRoom(patch: RoomPatch): Promise<boolean> {
+export async function saveRoom(patch: Patch): Promise<boolean> {
   const id = room_id;
   if (id === null) return false;
   return run(() => roomsAPI.update(id, patch));
@@ -111,7 +112,7 @@ export function getSelectedId(): string | null {
 }
 
 // Gets the selected user's access to the open room
-export function getAccess(): AccessResponse | null {
+export function getAccess(): RespondAccess | null {
   return access;
 }
 

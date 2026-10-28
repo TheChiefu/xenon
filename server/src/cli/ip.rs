@@ -4,6 +4,7 @@ use std::net::IpAddr;
 
 use sqlx::SqlitePool;
 
+use crate::cli;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::state::AppState;
@@ -20,7 +21,7 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
         ["list"] => list_blocked(&state.pool).await,
         ["block", address] => block_address(state, address).await,
         ["unblock", address] => unblock_address(state, address).await,
-        _ => Err(super::usage(COMMANDS)),
+        _ => Err(cli::usage(COMMANDS)),
     }
 }
 

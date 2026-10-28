@@ -2,7 +2,6 @@
 
 use uuid::Uuid;
 
-use crate::api::rooms::bans;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::types::rooms::Permission;
@@ -33,17 +32,20 @@ pub async fn create(
     target_id: Uuid,
 ) -> Result<()> {
 
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check if user has permission to create an invite
-    let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
-    can_invite(perms, caller_id, target_id)?;
+    require_permission(&mut tx, room_id, caller_id).await?;
+
+    if caller_id == target_id {
+        return Err(AppError::Validation("cannot invite yourself".to_string()));
+    }
 
     if db::effective_permissions(&mut tx, room_id, target_id).await?.is_some() {
         return Err(AppError::Validation("user is already a member".to_string()));
     }
 
-    if bans::exists(&mut tx, room_id, target_id).await? {
+    if db::banned_from_room(&mut tx, room_id, target_id).await? {
         return Err(AppError::Validation("user is banned from this room".to_string()));
     }
 
@@ -93,29 +95,6 @@ pub async fn list_for_user(
     Ok(invites)
 }
 
-/// Reports whether a user holds an invite to a room.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room the invite is to.
-/// * `user_id` - User the invite is addressed to.
-pub async fn exists(
-    conn: &mut sqlx::SqliteConnection,
-    room_id: Uuid,
-    user_id: Uuid,
-) -> Result<bool> {
-
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM room_invites WHERE room_id = ?1 AND user_id = ?2)"
-    )
-    .bind(room_id)
-    .bind(user_id)
-    .fetch_one(&mut *conn)
-    .await?;
-
-    Ok(exists)
-}
 
 /// Lists the users a room has invited.
 ///
@@ -251,38 +230,6 @@ async fn require_permission(
 
     let perms = db::effective_permissions(&mut *conn, room_id, caller_id).await?;
     if !perms.is_some_and(|p| p.contains(&Permission::Invite)) {
-        return Err(AppError::Forbidden);
-    }
-
-    Ok(())
-}
-
-/// Checks whether the caller may invite the target.
-///
-/// # Arguments
-///
-/// * `perms` - Caller's resolved permissions, `None` when they are not a member.
-/// * `caller_id` - Who is issuing the invite.
-/// * `target_id` - Who is being invited.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller is not a member or lacks
-/// `Permission::Invite`, and `AppError::Validation` if the two ids are equal.
-fn can_invite(perms: Option<Vec<Permission>>, caller_id: Uuid, target_id: Uuid) -> Result<()> {
-
-    // Permissions could not be found
-    let Some(perms) = perms else {
-        return Err(AppError::Forbidden);
-    };
-
-    // Caller tries to invite themselves
-    if caller_id == target_id {
-        return Err(AppError::Validation("cannot invite yourself".to_string()));
-    }
-
-    // If caller does not have invite permissions
-    if !perms.contains(&Permission::Invite) {
         return Err(AppError::Forbidden);
     }
 

@@ -34,7 +34,7 @@ pub struct Database {
 
 impl Database {
 
-    /// Returns the first invalid value in the section
+    /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.path.is_empty() {

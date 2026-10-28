@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 use crate::config;
 use crate::error::Result;
+use crate::services::CLIENT;
 
 const PLAYER_SUMMARIES_URL: &str = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/";
 
@@ -57,12 +58,18 @@ pub async fn player_summaries(steam_ids: &[&str]) -> Result<Vec<PlayerSummary>> 
         ("steamids", steam_ids.join(",").as_str()),
     ])?;
 
-    let summaries: SummariesResponse = reqwest::Client::new()
-        .get(url)
-        .send()
-        .await?
-        .json()
-        .await?;
+    // Strips URL from errors so Web API key is never logged
+    let summaries = async {
+        CLIENT
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<SummariesResponse>()
+            .await
+    }
+    .await
+    .map_err(reqwest::Error::without_url)?;
 
     Ok(summaries.response.players)
 }

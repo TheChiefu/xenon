@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Notify, Permission, Visibility } from "@/bindings/shared";
+  import { Notify, Permission, Visibility } from "@/bindings/types/rooms";
   import { DESCRIPTIONS_VISIBILITY, LABELS_NOTIFY, LABELS_PERMISSION, LABELS_VISIBILITY, MSG_DELETE_ROOM, MSG_ERROR, MSG_LEAVE_ROOM, MSG_SAVED } from "@/lib/labels";
   import * as events from "@/lib/events";
   import * as settings from "@/lib/rooms/settings.svelte";

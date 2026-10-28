@@ -1,5 +1,5 @@
-import type { RoomResponse } from "@/bindings/routes/rooms";
-import type { Folder, RoomListItem } from "@/bindings/shared";
+import type { RoomInfo } from "@/bindings/types/rooms";
+import type { Folder, RoomListItem } from "@/bindings/types/preferences";
 import * as roomsAPI from "@/lib/api/rooms";
 import { ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -67,7 +67,7 @@ export function folderDelete(folder: Folder): void {
   layout.splice(index, 1, ...folder.rooms);
 }
 
-export function roomAdd(data: RoomResponse): void {
+export function roomAdd(data: RoomInfo): void {
   room.add(data);
   layout.push(data.id);
 }

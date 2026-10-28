@@ -1,7 +1,7 @@
 <script lang="ts">
   // Modal window showing a user's public profile, for the user ID stored by the viewer
 
-  import type { UserProfileResponse } from "@/bindings/routes/users";
+  import type { UserProfile } from "@/bindings/types/users";
   import ProfileCard from "./card.svelte";
   import * as usersAPI from "@/lib/api/users";
   import * as users from "@/lib/users/data.svelte";
@@ -16,7 +16,7 @@
   let { onClose }: Props = $props();
   let dialog = $state<HTMLDialogElement | null>(null);
 
-  let profile: UserProfileResponse | null = $state(null);
+  let profile: UserProfile | null = $state(null);
   let failure: string | null = $state(null);
 
   const userId: string | null = $derived(profile_viewer.getUserId());

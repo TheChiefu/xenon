@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SearchResult } from "@/bindings/routes/search";
-  import type { SearchRequest } from "@/bindings/shared";
+  import type { SearchRequest } from "@/bindings/types/messages";
   import * as searchAPI from "@/lib/api/search";
   import { dialogFly } from "@/lib/display/transitions";
   import { modal } from "@/lib/display/modal";

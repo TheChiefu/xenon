@@ -40,7 +40,7 @@
   import type { ToolbarButton } from "@/lib/display/toolbar";
   import { Kind } from "@/lib/display/toolbar";
   import * as xbox from "@/lib/services/xbox.svelte";
-  import { Platform } from "@/bindings/shared";
+  import { Platform } from "@/bindings/types/platforms";
   import { ICONS_PLATFORM } from "@/lib/labels";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";

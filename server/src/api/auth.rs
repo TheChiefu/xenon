@@ -116,7 +116,7 @@ pub async fn revoke_registration_code(
         WHERE code = ?1
         "
     )
-    .bind(code.trim().to_ascii_uppercase())
+    .bind(validate::registration_code(code))
     .execute(&mut *conn)
     .await?;
 
@@ -215,7 +215,7 @@ async fn create_account(
                 AND (max_uses IS NULL OR uses < max_uses)
             ",
         )
-        .bind(code.trim().to_ascii_uppercase())
+        .bind(validate::registration_code(code))
         .bind(utils::now_ms())
         .execute(&mut *conn)
         .await?
@@ -231,7 +231,7 @@ async fn create_account(
     let password_hash = utils::hash_password(password)?;
 
     // Open transaction
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Create user
     let id = Uuid::now_v7();
@@ -285,7 +285,7 @@ pub async fn change_password(
     }
 
     // Update password in DB
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
     sqlx::query(
         "
         UPDATE users SET password_hash = ?1

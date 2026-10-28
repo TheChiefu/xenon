@@ -2,7 +2,8 @@
 
 use uuid::Uuid;
 
-use crate::{config, error::{AppError, Result}};
+use crate::config;
+use crate::error::{AppError, Result};
 
 /// A user's stored read position in one room
 #[derive(sqlx::FromRow)]

@@ -2,7 +2,7 @@
   import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
   import { MSG_SAVED, MSG_ERROR, MSG_UNLINK_XBOX, refreshedText } from "@/lib/labels";
   import * as events from "@/lib/events";
-  import { Platform } from "@/bindings/shared";
+  import { Platform } from "@/bindings/types/platforms";
   import type { LinkResponse, XboxResponse } from "@/bindings/services/xbox";
   import * as xboxAPI from "@/lib/api/xbox";
   import { failureText } from "@/lib/utils";

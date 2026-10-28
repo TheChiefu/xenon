@@ -22,16 +22,9 @@ const FILE_NAME_MAX: usize = 255;
 /// Shortest text the trigram search index can match
 const SEARCH_TEXT_MIN: usize = 3;
 
-/// Checks a login name's length and character set.
-///
-/// # Arguments
-///
-/// * `name` - Login name being claimed.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the name is outside its length limits or
-/// holds anything but lowercase letters, digits, underscores, and hyphens.
+
+
+/// Check a login name's length and character set
 pub fn username(name: &str) -> Result<()> {
     let len = name.chars().count();
     let min = config::get().lengths.username_min;
@@ -58,15 +51,7 @@ pub fn username(name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Checks a display name's length.
-///
-/// # Arguments
-///
-/// * `name` - Name shown to other users.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the name is outside its length limits.
+/// Check a display name's length
 pub fn display_name(name: &str) -> Result<()> {
     let len = name.chars().count();
     let min = config::get().lengths.display_name_min;
@@ -81,15 +66,7 @@ pub fn display_name(name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Checks a profile description's length.
-///
-/// # Arguments
-///
-/// * `text` - Description shown on the user's profile.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the description is over the length limit.
+/// Check a profile description's length
 pub fn profile_description(text: &str) -> Result<()> {
     let len = text.chars().count();
     let max = config::get().lengths.profile_description_max;
@@ -103,15 +80,7 @@ pub fn profile_description(text: &str) -> Result<()> {
     Ok(())
 }
 
-/// Checks a password's length.
-///
-/// # Arguments
-///
-/// * `password` - Password being set.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the password is outside its length limits.
+/// Check a password's length
 pub fn password(password: &str) -> Result<()> {
     let len = password.chars().count();
     let min = config::get().lengths.password_min;
@@ -126,7 +95,7 @@ pub fn password(password: &str) -> Result<()> {
     Ok(())
 }
 
-/// Checks the settings a registration code is created with
+/// Check the settings a registration code is created with
 pub fn registration_code_params(max_uses: i64, lifetime: i64, length: usize) -> Result<()> {
 
     if max_uses < 1 {
@@ -153,16 +122,9 @@ pub fn registration_code_params(max_uses: i64, lifetime: i64, length: usize) -> 
     Ok(())
 }
 
-/// Checks a room name's length.
-///
-/// # Arguments
-///
-/// * `name` - Room name as the client sent it.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the name is over the length limit.
-pub fn room_name(name: &str) -> Result<()> {
+/// Check a room name's length and returns it as stored
+/// A name of nothing but spaces is stored as empty
+pub fn room_name(name: &str) -> Result<&str> {
     let len = name.chars().count();
     let max = config::get().lengths.room_name_max;
 
@@ -172,19 +134,19 @@ pub fn room_name(name: &str) -> Result<()> {
         ));
     }
 
-    Ok(())
+    if name.trim().is_empty() {
+        return Ok("");
+    }
+
+    Ok(name)
 }
 
-/// Strips any directory a client sent and returns the name alone.
-///
-/// # Arguments
-///
-/// * `path` - File path as the client sent it.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the path names a directory or the
-/// remaining name is over the filesystem limit.
+/// Return a typed registration code in its stored form, trimmed and uppercase
+pub fn registration_code(code: &str) -> String {
+    code.trim().to_ascii_uppercase()
+}
+
+/// Strip any directory a client sent and returns the name alone
 pub fn file_name(path: &str) -> Result<String> {
 
     // Find separators in path (client's OS is unknown match both slashes)
@@ -212,15 +174,7 @@ pub fn file_name(path: &str) -> Result<String> {
     Ok(name.to_string())
 }
 
-/// Checks a message body's length.
-///
-/// # Arguments
-///
-/// * `content` - Message contents.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the body is over the length limit.
+/// Check a message body's length
 pub fn message_body(content: &str) -> Result<()> {
     let len = content.chars().count();
     let max = config::get().lengths.message_body_max;
@@ -233,7 +187,7 @@ pub fn message_body(content: &str) -> Result<()> {
     Ok(())
 }
 
-/// Checks a search has at least one filter and that each filter is usable
+/// Check a search has at least one filter and that each filter is usable
 pub fn search(request: &SearchRequest) -> Result<()> {
     let has_filter = request.text.is_some()
         || request.file.is_some()
@@ -277,7 +231,7 @@ pub fn search(request: &SearchRequest) -> Result<()> {
     Ok(())
 }
 
-/// Checks searched text against the trigram minimum and its field's maximum
+/// Check searched text against the trigram minimum and its field's maximum
 fn search_length(field: &str, text: &str, max: usize) -> Result<()> {
     let len = text.chars().count();
     let min = SEARCH_TEXT_MIN;
@@ -291,7 +245,7 @@ fn search_length(field: &str, text: &str, max: usize) -> Result<()> {
     Ok(())
 }
 
-/// Checks that a room list layout is a JSON array of RoomListItem
+/// Check that a room list layout is a JSON array of RoomListItem
 pub fn room_layout(layout: &str) -> Result<()> {
     let parsed: serde_json::Result<Vec<RoomListItem>> = serde_json::from_str(layout);
 

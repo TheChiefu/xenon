@@ -1,5 +1,5 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import type { Notify, Permission } from "@/bindings/shared";
+import type { Notify, Permission } from "@/bindings/types/rooms";
 import * as roomsAPI from "@/lib/api/rooms";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";

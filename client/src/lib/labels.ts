@@ -1,8 +1,11 @@
 // Text the client shows for each value
 
-import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
+import { GlobalRole } from "@/bindings/types/users";
+import { Notify, Permission, Visibility } from "@/bindings/types/rooms";
+import { Platform } from "@/bindings/types/platforms";
+import { Status } from "@/bindings/shared";
 import { CallCloseCode } from "@/bindings/sockets/call/events";
-import { Device } from "@/bindings/sockets/session/presence";
+import { Device } from "@/bindings/types/status";
 import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";

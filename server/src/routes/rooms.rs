@@ -18,7 +18,8 @@ use crate::sockets::session::registry;
 use crate::state::status;
 use crate::state::{self, AppState};
 use crate::types::rooms::{Notify, Permission, RoomInfo, Visibility};
-use crate::{api, config};
+use crate::api;
+use crate::config;
 
 // REQUESTS //
 
@@ -145,16 +146,17 @@ pub async fn patch_user(
     Json(body): Json<PatchAccess>,
 ) -> Result<StatusCode> {
 
+    // Notify can only be set on the caller's own membership
+    if body.notify.is_some() && caller_id != target_id {
+        return Err(AppError::Forbidden);
+    }
+
     if let Some(permissions) = body.permissions {
         api::rooms::access::update(&pool, room_id, caller_id, target_id, permissions).await?;
     }
 
     // Set caller's notification preference
     if let Some(notify) = body.notify {
-        if caller_id != target_id {
-            return Err(AppError::Forbidden);
-        }
-
         api::rooms::access::set_notify(&pool, room_id, caller_id, notify).await?;
     }
 

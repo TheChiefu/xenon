@@ -10,7 +10,7 @@ use ts_rs::TS;
 
 use crate::config;
 use crate::sockets::call::events::CallServerEvent;
-use crate::utils::{read_lock, write_lock};
+use crate::utils;
 
 // Data Structs //
 
@@ -56,8 +56,8 @@ pub fn join(
     calls: &ActiveCalls,
     room_id: Uuid,
     user_id: Uuid,
-) -> std::result::Result<mpsc::Receiver<String>, JoinRefused> {
-    let mut guard = write_lock(&calls.routes);
+) -> Result<mpsc::Receiver<String>, JoinRefused> {
+    let mut guard = utils::write_lock(&calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -84,7 +84,7 @@ pub fn leave(
     calls: &ActiveCalls,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    let mut guard = write_lock(&calls.routes);
+    let mut guard = utils::write_lock(&calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -110,7 +110,7 @@ pub fn end(
     calls: &ActiveCalls,
     room_id: Uuid,
 ) {
-    let mut guard = write_lock(&calls.routes);
+    let mut guard = utils::write_lock(&calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -129,7 +129,7 @@ pub fn participants(
     calls: &ActiveCalls,
     room_id: Uuid,
 ) -> Vec<Uuid> {
-    let routes = read_lock(&calls.routes);
+    let routes = utils::read_lock(&calls.routes);
 
     let mut found = Vec::new();
     if let Some(participants) = routes.by_room.get(&room_id) {
@@ -146,7 +146,7 @@ pub fn snapshot(
     calls: &ActiveCalls,
     room_ids: &[Uuid],
 ) -> Vec<RoomCall> {
-    let routes = read_lock(&calls.routes);
+    let routes = utils::read_lock(&calls.routes);
 
     let mut calls = Vec::new();
     for room_id in room_ids {
@@ -172,7 +172,7 @@ pub fn participant_call(
     calls: &ActiveCalls,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    let routes = read_lock(&calls.routes);
+    let routes = utils::read_lock(&calls.routes);
 
     match routes.by_user.get(&user_id) {
         Some(room_id) => Some(*room_id),
@@ -188,15 +188,11 @@ pub fn forward(
     payload: String,
 ) {
     let event = CallServerEvent::Signal { from, payload };
-    let text = match serde_json::to_string(&event) {
-        Ok(text) => text,
-        Err(e) => {
-            tracing::error!("failed to serialize call signal: {e}");
-            return;
-        }
+    let Some(text) = crate::sockets::encode(&event) else {
+        return;
     };
 
-    let routes = read_lock(&calls.routes);
+    let routes = utils::read_lock(&calls.routes);
 
     // The sender must be in a call
     let Some(room_id) = routes.by_user.get(&from) else {

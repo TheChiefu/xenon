@@ -1,4 +1,4 @@
-import type { FileResponse } from "@/bindings/routes/files";
+import type { RespondFile } from "@/bindings/routes/files";
 import type { ServerInfo } from "@/bindings/routes/server";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
@@ -6,7 +6,7 @@ import { formatBytes, request } from "@/lib/utils";
 
 let max_bytes: number | null = null;
 
-export async function upload(file: File): Promise<FileResponse> {
+export async function upload(file: File): Promise<RespondFile> {
 
     // Reject a file over the server's limit before sending it
     if (max_bytes !== null && file.size > max_bytes) {
@@ -17,7 +17,7 @@ export async function upload(file: File): Promise<FileResponse> {
     form.append("file", file);
 
     const response = await request("/files", "POST", form);
-    return await response.json() as FileResponse;
+    return await response.json() as RespondFile;
 }
 
 // Generate a new random file name with optional prefix 

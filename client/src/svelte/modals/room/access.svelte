@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Permission } from "@/bindings/shared";
+  import { Permission } from "@/bindings/types/rooms";
   import { LABELS_PERMISSION, MSG_BAN_USER, MSG_ERROR } from "@/lib/labels";
   import * as events from "@/lib/events";
   import * as settings from "@/lib/rooms/settings.svelte";

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { UserProfileResponse, UserSummaryResponse } from "@/bindings/routes/users";
-  import { GlobalRole } from "@/bindings/shared";
+  import type { UserProfile } from "@/bindings/types/users";
+  import type { RespondSummary } from "@/bindings/routes/users";
+  import { GlobalRole } from "@/bindings/types/users";
   import {
     CHOICE_CANCEL,
     CHOICE_DELETE,
@@ -23,8 +24,8 @@
 
   const user_search = new UserSearch();
   let username = $state("");
-  let selected = $state<UserSummaryResponse | null>(null);
-  let profile = $state<UserProfileResponse | null>(null);
+  let selected = $state<RespondSummary | null>(null);
+  let profile = $state<UserProfile | null>(null);
   let notify = $state("");
 
   const selected_is_admin = $derived(selected?.global_role === GlobalRole.admin);
@@ -46,7 +47,7 @@
 
   // SELECTION //
 
-  async function select(user: UserSummaryResponse) {
+  async function select(user: RespondSummary) {
     selected = user;
     profile = null;
     notify = "";

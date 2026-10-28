@@ -12,11 +12,14 @@ use crate::config;
 /// Outbound HTTP client shared by every service
 pub static CLIENT: LazyLock<Client> = LazyLock::new(build_client);
 
-/// Builds outbound HTTP client at startup when config enables a service
+/// Build outbound HTTP client at startup when config enables a service
 pub fn init() {
     let config = config::get();
 
-    if config.xbox.is_none() && config.push.is_none() {
+    if config.xbox.is_none()
+        && config.push.is_none()
+        && config.steam.is_none()
+    {
         return;
     }
 
@@ -25,7 +28,7 @@ pub fn init() {
 
 // Helper Methods //
 
-/// Builds outbound HTTP client with request timeout, exits server if it cannot be built
+/// Build outbound HTTP client with request timeout, exits server if it cannot be built
 fn build_client() -> Client {
     let timeout = Duration::from_secs(config::get().services.request_timeout_seconds);
 

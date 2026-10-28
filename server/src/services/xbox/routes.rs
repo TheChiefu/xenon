@@ -24,7 +24,7 @@ use crate::services::xbox::auth;
 use crate::services::xbox::auth::microsoft;
 use crate::services::xbox::auth::xsts;
 use crate::state::AppState;
-use crate::utils::{generate_code, write_lock};
+use crate::utils;
 
 /// Page shown after linking, in tab client opened
 const LINKED_PAGE: &str = r#"
@@ -113,13 +113,13 @@ pub async fn start(AuthUser(user_id, ..): AuthUser) -> Result<Json<LinkResponse>
     let xbox = config::get().xbox();
 
     // Random PKCE code verifier, kept until Microsoft redirects back
-    let verifier = generate_code(64);
+    let verifier = utils::generate_code(64);
 
     // SHA-256 hash of code verifier, sent as code challenge
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
 
     // Replaces any earlier code verifier for this user
-    write_lock(&VERIFIERS).insert(user_id, verifier);
+    utils::write_lock(&VERIFIERS).insert(user_id, verifier);
 
     let authorize_url = microsoft::authorize_url(xbox, &user_id.to_string(), &challenge);
 
@@ -139,7 +139,8 @@ pub async fn redirect(
         Ok(()) => Html(LINKED_PAGE).into_response(),
         Err(e) => {
             tracing::warn!("{user_id}: Xbox linking failed: {e}");
-            format!("Xbox linking failed: {e}").into_response()
+            let (status, message) = e.status_and_message();
+            (status, format!("linking failed: {message}")).into_response()
         }
     }
 }
@@ -186,7 +187,7 @@ async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
     let xbox = config::get().xbox();
 
     // Code verifier is removed so it can't be used twice
-    let verifier = write_lock(&VERIFIERS).remove(&query.state);
+    let verifier = utils::write_lock(&VERIFIERS).remove(&query.state);
 
     // No code verifier means this server never started sign-in
     let Some(verifier) = verifier else {

@@ -6,7 +6,7 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::error::Result;
-use crate::utils::now_ms;
+use crate::utils;
 
 /// A browser's push subscription
 #[derive(Deserialize, sqlx::FromRow)]
@@ -66,7 +66,7 @@ pub async fn set_keypair(
     )
     .bind(public_key)
     .bind(private_key)
-    .bind(now_ms())
+    .bind(utils::now_ms())
     .execute(&mut *conn)
     .await?;
 
