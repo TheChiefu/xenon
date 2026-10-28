@@ -6,9 +6,11 @@ pub mod platforms;
 pub mod status;
 
 use axum::extract::FromRef;
-use sqlx::SqlitePool;
+use sqlx::pool::PoolConnection;
+use sqlx::{Sqlite, SqlitePool};
 use uuid::Uuid;
 
+use crate::config;
 use crate::db;
 use crate::error::Result;
 use crate::ratelimit::{AddressLimits, LoginFailures};
@@ -134,7 +136,7 @@ pub async fn broadcast(
     room_id: Uuid,
     event: ServerEvent,
 ) {
-    let mut conn = match state.pool.acquire().await {
+    let mut conn = match acquire_retrying(&state.pool).await {
         Ok(conn) => conn,
         Err(e) => {
             tracing::error!("broadcast could not acquire a connection: {e}");
@@ -200,4 +202,27 @@ pub async fn member_rooms(
     let mut conn = state.pool.acquire().await?;
     let room_ids = db::member_room_ids(&mut conn, user_id).await?;
     Ok(room_ids)
+}
+
+// Helper Methods //
+
+/// Acquires a connection, retrying on failure with a wait between attempts.
+async fn acquire_retrying(
+    pool: &SqlitePool
+) -> Result<PoolConnection<Sqlite>> {
+    let retries = config::get().database.broadcast_retries;
+    let delay = config::get().database.broadcast_retry_delay();
+    let mut attempt = 0;
+
+    loop {
+        match pool.acquire().await {
+            Ok(conn) => return Ok(conn),
+            Err(e) if attempt < retries => {
+                tracing::warn!("acquire attempt {attempt} failed: {e}");
+                tokio::time::sleep(delay).await;
+                attempt += 1;
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
 }
