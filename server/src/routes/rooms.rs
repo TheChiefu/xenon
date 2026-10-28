@@ -11,80 +11,84 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::error::{AppError, Result};
-use crate::api::rooms::Room;
-use crate::shared::{Notify, Permission, Visibility};
 use crate::routes::AuthUser;
-use crate::sockets::events::ServerEvent;
 use crate::sockets::call;
-use crate::sockets::chat::{presence, registry};
-use crate::state::AppState;
+use crate::sockets::session::events::ServerEvent;
+use crate::sockets::session::registry;
+use crate::state::status;
+use crate::state::{self, AppState};
+use crate::types::rooms::{Notify, Permission, RoomInfo, Visibility};
 use crate::{api, config};
 
-// Data Structs //
+// REQUESTS //
 
-/// POST body for creating a room
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct CreateRoomRequest {
+pub struct RequestCreateRoom {
     pub name: String,
     pub visibility: Visibility,
     pub default_permissions: Vec<Permission>,
     pub claim_all: bool,
 }
 
-/// Response carrying the id of a newly created room
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct CreateRoomResponse {
-    pub id: Uuid,
-}
-
-/// A room
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct RoomResponse {
-    pub id: Uuid,
-    pub name: String,
-    pub visibility: Visibility,
-    pub default_permissions: Vec<Permission>,
-}
-
-impl From<Room> for RoomResponse {
-    fn from(room: Room) -> Self {
-        Self {
-            id: room.id,
-            name: room.name,
-            visibility: room.visibility,
-            default_permissions: room.default_permissions.0,
-        }
-    }
-}
-
-/// PUT body for storing the caller's read position in a room
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct ReadRequest {
+pub struct RequestRead {
     pub last_read_seq: i64,
 }
 
-/// The caller's read position in one room and how many messages are past it
+// RESPONSES //
+
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct ReadResponse {
-    pub room_id: Uuid,
-    pub last_read_seq: i64,
-    pub unread: i64,
+pub struct RespondCreated {
+    pub id: Uuid,
 }
 
-/// A room, as the discoverable directory sees it
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct DiscoverableRoomResponse {
+pub struct RespondDiscoverability {
     pub id: Uuid,
     pub name: String,
     pub visibility: Visibility,
     pub created_at: i64,
 }
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct RespondMember {
+    pub user_id: Uuid,
+    pub permissions: Vec<Permission>,
+    pub granted_at: i64,
+    pub notify: Option<Notify>
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct RespondAccess {
+    pub permissions: Option<Vec<Permission>>,
+    pub invited: bool,
+    pub banned: bool,
+}
+
+// PATCHES //
+
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct Patch {
+    pub name: Option<String>,
+    pub visibility: Option<Visibility>,
+    pub default_permissions: Option<Vec<Permission>>,
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
+pub struct PatchAccess {
+    pub permissions: Option<Vec<Permission>>,
+    pub notify: Option<Notify>
+}
+
+// Data Structs //
 
 /// Query string for a paged room listing
 #[derive(Deserialize)]
@@ -93,66 +97,20 @@ pub struct DirectoryQuery {
     pub limit: Option<i64>
 }
 
-#[derive(Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct RoomPatch {
-    pub name: Option<String>,
-    pub visibility: Option<Visibility>,
-    pub default_permissions: Option<Vec<Permission>>,
-}
-
-#[derive(Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct RoomAccessPatch {
-    pub permissions: Option<Vec<Permission>>,
-    pub notify: Option<Notify>
-}
-
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct MemberResponse {
-    pub user_id: Uuid,
-    pub permissions: Vec<Permission>,
-    pub granted_at: i64,
-    pub notify: Option<Notify>
-}
-
-/// A user's access to a room
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct AccessResponse {
-    pub permissions: Option<Vec<Permission>>,
-    pub invited: bool,
-    pub banned: bool,
-}
-
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/rooms.ts"))]
-pub struct ReceivedInviteResponse {
-    pub room_id: Uuid,
-    pub room_name: Option<String>
-}
-
 // Routing Methods //
 
-/// Lists the members of a room
-///
-/// # Arguments
-///
-/// * `caller_id` - User making the request.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to list from.
+// List the members of a room
 pub async fn list_members(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<Vec<MemberResponse>>> {
+) -> Result<Json<Vec<RespondMember>>> {
 
     let members = api::rooms::access::list(&pool, room_id, caller_id).await?;
 
     let mut response = Vec::with_capacity(members.len());
     for member in members {
-        response.push(MemberResponse {
+        response.push(RespondMember {
             user_id: member.user_id,
             permissions: member.permissions.0,
             granted_at: member.granted_at,
@@ -163,40 +121,28 @@ pub async fn list_members(
     Ok(Json(response))
 }
 
-/// Gets a user's access to a room
+// Get a user's access to a room
 pub async fn get_member(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path((room_id, target_id)): Path<(Uuid, Uuid)>,
-) -> Result<Json<AccessResponse>> {
+) -> Result<Json<RespondAccess>> {
 
     let access = api::rooms::access::get(&pool, room_id, caller_id, target_id).await?;
 
-    Ok(Json(AccessResponse {
+    Ok(Json(RespondAccess {
         permissions: access.permissions,
         invited: access.invited,
         banned: access.banned
     }))
 }
 
-/// Writes a member's row in a room
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is making the change.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the row belongs to.
-/// * `target_id` - Whose row is being written.
-/// * `body` - Fields to write.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if `notify` names anyone but the caller.
-pub async fn patch(
+// Patch a member's information in a room
+pub async fn patch_user(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path((room_id, target_id)): Path<(Uuid, Uuid)>,
-    Json(body): Json<RoomAccessPatch>,
+    Json(body): Json<PatchAccess>,
 ) -> Result<StatusCode> {
 
     if let Some(permissions) = body.permissions {
@@ -215,14 +161,7 @@ pub async fn patch(
     Ok(StatusCode::OK)
 }
 
-/// Invites a user to a room
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is issuing the invite.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room being invited to.
-/// * `target_id` - Who to invite.
+// Invite a user to a room
 pub async fn invite_user(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -232,42 +171,12 @@ pub async fn invite_user(
     api::rooms::invites::create(&app_state.pool, room_id, caller_id, target_id).await?;
 
     let event = ServerEvent::Invited { room_id };
-    registry::inform_user(&app_state, target_id, event);
+    registry::inform_user(&app_state.registry, target_id, event);
 
     Ok(StatusCode::CREATED)
 }
 
-/// Gets the room invites the caller is a recipient of
-///
-/// # Arguments
-///
-/// * `user_id` - User who receives the invites.
-/// * `pool` - Pool of SQL connections.
-pub async fn list_my_invites(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<ReceivedInviteResponse>>> {
-
-    let invites = api::rooms::invites::list_for_user(&pool, user_id).await?;
-
-    let mut response = Vec::with_capacity(invites.len());
-    for invite in invites {
-        response.push(ReceivedInviteResponse {
-            room_id: invite.room_id,
-            room_name: invite.room_name
-        });
-    }
-
-    Ok(Json(response))
-}
-
-/// Gets the users a room has invited
-///
-/// # Arguments
-///
-/// * `caller_id` - User making the request.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to look in.
+/// Get the users a room has invited
 pub async fn list_invites(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -279,32 +188,7 @@ pub async fn list_invites(
     Ok(Json(user_ids))
 }
 
-/// Declines a room invite
-///
-/// # Arguments
-///
-/// * `caller_id` - Recipient of the invite.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the invite is to.
-pub async fn decline_invite(
-    AuthUser(caller_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-    Path(room_id): Path<Uuid>,
-) -> Result<StatusCode> {
-
-    api::rooms::invites::decline(&pool, room_id, caller_id).await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Withdraws an invite the room issued
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is withdrawing the invite.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room the invite is to.
-/// * `target_id` - User the invite was addressed to.
+/// Withdraw an invite the room issued
 pub async fn revoke_invite(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -315,18 +199,12 @@ pub async fn revoke_invite(
 
     // Notify user invite was revoked
     let event = ServerEvent::InviteRevoked { room_id };
-    registry::inform_user(&app_state, target_id, event);
+    registry::inform_user(&app_state.registry, target_id, event);
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Gets the users banned from a room
-///
-/// # Arguments
-///
-/// * `caller_id` - User making the request.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to look in.
+/// Get list of users banned from a room
 pub async fn list_bans(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -338,14 +216,7 @@ pub async fn list_bans(
     Ok(Json(user_ids))
 }
 
-/// Bans a user from a room
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is issuing the ban.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room being banned from.
-/// * `target_id` - Who to ban.
+/// Ban a user from the room
 pub async fn ban_user(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -355,31 +226,21 @@ pub async fn ban_user(
     api::rooms::bans::create(&app_state.pool, room_id, caller_id, target_id).await?;
 
     let event = ServerEvent::Banned { room_id };
-    registry::inform_user(&app_state, target_id, event);
+    registry::inform_user(&app_state.registry, target_id, event);
 
     // Ban removes the membership, notify members user left
     let event = ServerEvent::MemberLeft { room_id, user_id: target_id };
-    registry::broadcast(&app_state, room_id, event).await;
+    state::broadcast(&app_state, room_id, event).await;
 
     // Ban removes the user from the room's call
-    if call::registry::participant_call(&app_state, target_id) == Some(room_id) {
-        call::registry::leave(&app_state, target_id);
-
-        let event = ServerEvent::ParticipantLeft { room_id, user_id: target_id };
-        registry::broadcast(&app_state, room_id, event).await;
+    if call::registry::participant_call(&app_state.calls, target_id) == Some(room_id) {
+        state::leave_call(&app_state, target_id).await;
     }
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Lifts a user's ban on a room
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is lifting the ban.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room being unbanned from.
-/// * `target_id` - Who is being unbanned.
+/// Unban a user from a room
 pub async fn unban_user(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -390,19 +251,12 @@ pub async fn unban_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Updates a room
-/// 
-/// # Arguments
-/// 
-/// * `caller_id` - Who is updating the room
-/// * `app_state` - Pool and socket registry
-/// * `room_id` - What room is being updated
-/// * `body` - Patched room information
+/// Update a room
 pub async fn update(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(room_id): Path<Uuid>,
-    Json(body): Json<RoomPatch>,
+    Json(body): Json<Patch>,
 ) -> Result<StatusCode> {
 
     // Update the room with the given patch
@@ -417,23 +271,17 @@ pub async fn update(
 
     // Notify all room members, room has updated
     let event = ServerEvent::RoomUpdated { room_id };
-    registry::broadcast(&app_state, room_id, event).await;
+    state::broadcast(&app_state, room_id, event).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Creates a room
-///
-/// # Arguments
-///
-/// * `caller_id` - The room's creator.
-/// * `pool` - Pool of SQL connections.
-/// * `body` - Properties to create the room with.
-pub async fn create_room(
+/// Create a room
+pub async fn create(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-    Json(body): Json<CreateRoomRequest>,
-) -> Result<(StatusCode, Json<CreateRoomResponse>)> {
+    Json(body): Json<RequestCreateRoom>,
+) -> Result<(StatusCode, Json<RespondCreated>)> {
 
     let default_permissions = body.default_permissions;
 
@@ -454,40 +302,28 @@ pub async fn create_room(
         body.visibility
     ).await?;
 
-    Ok((StatusCode::CREATED, Json(CreateRoomResponse { id })))
+    Ok((StatusCode::CREATED, Json(RespondCreated { id })))
 }
 
-/// Deletes a room
-///
-/// # Arguments
-///
-/// * `caller_id` - The user making the delete request.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room to delete.
-pub async fn delete_room(
+/// Delete a room
+pub async fn delete(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(room_id): Path<Uuid>,
 ) -> Result<StatusCode> {
 
     let members = api::rooms::delete(&app_state.pool, room_id, caller_id).await?;
-    call::registry::end(&app_state, room_id);
+    call::registry::end(&app_state.calls, room_id);
 
     // Notify everyone who was in the room
     let event = ServerEvent::RoomDeleted { room_id };
-    registry::inform_users(&app_state, &members, event);
+    registry::inform_users(&app_state.registry, &members, event);
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Joins a room
-///
-/// # Arguments
-///
-/// * `user_id` - The user joining.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room to join.
-pub async fn join_room(
+/// Join a room
+pub async fn join(
     AuthUser(user_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(room_id): Path<Uuid>,
@@ -496,21 +332,15 @@ pub async fn join_room(
     api::rooms::join(&app_state.pool, room_id, user_id).await?;
 
     let event = ServerEvent::MemberJoined { room_id, user_id };
-    registry::broadcast(&app_state, room_id, event).await;
+    state::broadcast(&app_state, room_id, event).await;
 
-    presence::on_join(&app_state, user_id).await;
+    status::on_join(&app_state, user_id).await;
 
     Ok(StatusCode::OK)
 }
 
-/// Leaves a room
-///
-/// # Arguments
-///
-/// * `user_id` - The user leaving.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room to leave.
-pub async fn leave_room(
+/// Leave a room
+pub async fn leave(
     AuthUser(user_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(room_id): Path<Uuid>,
@@ -520,59 +350,18 @@ pub async fn leave_room(
 
     // The membership is already gone, so this reaches the remaining members
     let event = ServerEvent::MemberLeft { room_id, user_id };
-    registry::broadcast(&app_state, room_id, event.clone()).await;
-    registry::inform_user(&app_state, user_id, event);
+    state::broadcast(&app_state, room_id, event.clone()).await;
+    registry::inform_user(&app_state.registry, user_id, event);
 
     Ok(StatusCode::OK)
 }
 
-/// Gets the rooms the caller is a member of
-///
-/// # Arguments
-///
-/// * `user_id` - Whose rooms to list.
-/// * `pool` - Pool of SQL connections.
-pub async fn list_my_rooms(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<RoomResponse>>> {
-
-    let rooms = api::rooms::list_mine(&pool, user_id).await?;
-
-    let mut response = Vec::with_capacity(rooms.len());
-    for room in rooms {
-        response.push(RoomResponse::from(room));
-    }
-
-    Ok(Json(response))
-}
-
-/// Gets the caller's read position in each room they have one for
-pub async fn list_my_reads(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<ReadResponse>>> {
-
-    let entries = api::rooms::read::list(&pool, user_id).await?;
-
-    let mut response = Vec::with_capacity(entries.len());
-    for entry in entries {
-        response.push(ReadResponse {
-            room_id: entry.room_id,
-            last_read_seq: entry.last_read_seq,
-            unread: entry.unread
-        });
-    }
-
-    Ok(Json(response))
-}
-
-/// Stores the caller's read position in a room
+/// Store the caller's read position in a room
 pub async fn mark_read(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-    Json(body): Json<ReadRequest>,
+    Json(body): Json<RequestRead>,
 ) -> Result<StatusCode> {
 
     api::rooms::read::mark(&pool, room_id, user_id, body.last_read_seq).await?;
@@ -580,35 +369,24 @@ pub async fn mark_read(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Gets one room
-///
-/// # Arguments
-///
-/// * `caller_id` - User making the request.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to get.
-pub async fn get_room(
+/// Get one room
+pub async fn get(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
-) -> Result<Json<RoomResponse>> {
+) -> Result<Json<RoomInfo>> {
 
     let room = api::rooms::get(&pool, room_id, caller_id).await?;
 
-    Ok(Json(RoomResponse::from(room)))
+    Ok(Json(RoomInfo::from(room)))
 }
 
-/// Gets one page of the Public rooms on the server
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `query` - Cursor to page from, and how many rooms to return.
-pub async fn list_discoverable_rooms(
+/// Get one page of the Public rooms on the server
+pub async fn list_discoverable(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
     Query(query): Query<DirectoryQuery>,
-) -> Result<Json<Vec<DiscoverableRoomResponse>>> {
+) -> Result<Json<Vec<RespondDiscoverability>>> {
 
     let max = config::get().responses.rooms_per_page;
     let limit = query.limit.unwrap_or(max).clamp(1, max);
@@ -617,7 +395,7 @@ pub async fn list_discoverable_rooms(
 
     let mut response = Vec::with_capacity(rooms.len());
     for room in rooms {
-        response.push(DiscoverableRoomResponse {
+        response.push(RespondDiscoverability {
             id: room.id,
             name: room.name,
             visibility: room.visibility,

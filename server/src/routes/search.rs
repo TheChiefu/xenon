@@ -13,11 +13,10 @@ use crate::api;
 use crate::api::messages::search::Found;
 use crate::error::Result;
 use crate::routes::AuthUser;
-use crate::shared::SearchRequest;
+use crate::types::messages::SearchRequest;
 
 // Data Structs //
 
-/// A matched message
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/search.ts"))]
 pub struct SearchResult {
@@ -29,14 +28,6 @@ pub struct SearchResult {
     pub created_at: i64,
     pub edited_at: Option<i64>,
     pub files: Vec<String>, // Attached file names matching the file filter
-}
-
-/// One page of matches and how many matches there are in total
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/search.ts"))]
-pub struct SearchResponse {
-    pub results: Vec<SearchResult>,
-    pub total: i64,
 }
 
 impl From<Found> for SearchResult {
@@ -54,14 +45,23 @@ impl From<Found> for SearchResult {
     }
 }
 
+// RESPONSES //
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/search.ts"))]
+pub struct RespondSearch {
+    pub results: Vec<SearchResult>,
+    pub total: i64,
+}
+
 // Routing Methods //
 
-/// Searches messages in every room the caller is a member of
+/// Search for messages in every room the caller is a member of
 pub async fn messages(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Json(body): Json<SearchRequest>,
-) -> Result<Json<SearchResponse>> {
+) -> Result<Json<RespondSearch>> {
 
     let page = api::messages::search::search(&pool, user_id, &body).await?;
 
@@ -70,5 +70,5 @@ pub async fn messages(
         results.push(SearchResult::from(entry));
     }
 
-    Ok(Json(SearchResponse { results, total: page.total }))
+    Ok(Json(RespondSearch { results, total: page.total }))
 }

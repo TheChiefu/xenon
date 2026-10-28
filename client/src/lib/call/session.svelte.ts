@@ -1,5 +1,5 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import { CallCloseCode, type CallServerEvent } from "@/bindings/sockets/events";
+import { CallCloseCode, type CallServerEvent } from "@/bindings/sockets/call/events";
 import { CallEventType, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 import * as profile from "@/lib/users/profile.svelte";

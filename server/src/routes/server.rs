@@ -33,7 +33,7 @@ pub struct ServerInfo {
 
 // Routing Methods //
 
-/// Gets the server's name, version, kind, and description.
+/// Get the server's information
 pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
 
     let info = ServerInfo {
@@ -53,23 +53,19 @@ pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
     Ok((StatusCode::OK, Json(info)))
 }
 
-/// Gets the server version.
+/// Get the server version
 pub async fn version() -> Result<Json<String>> {
-
     let version = env!("CARGO_PKG_VERSION").to_string();
-
     Ok(Json(version))
 }
 
-/// Gets what kind of server is deployed, such as "Development" or "Release".
+/// Get what kind of server is deployed, such as "Development" or "Release"
 pub async fn kind() -> Result<Json<String>> {
-
     let kind = config::get().info.kind.clone();
-
     Ok(Json(kind))
 }
 
-/// Respond server is up and healthy
+/// Respond that the server is up and healthy
 pub async fn health_check() -> Result<(StatusCode, Json<String>)> {
     Ok((StatusCode::OK, Json("Up and running".to_string())))
 }

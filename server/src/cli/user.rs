@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::api;
 use crate::error::{AppError, Result};
-use crate::state::AppState;
+use crate::state::{self, AppState};
 use crate::utils;
 
 pub const COMMANDS: &[&str] = &[
@@ -40,6 +40,7 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
 async fn ban(state: &AppState, username: &str) -> Result<()> {
     let user_id = get_user_id(&state.pool, username).await?;
     api::users::ban(state, user_id).await?;
+    state::disconnect(state, user_id).await;
 
     println!("banned user account: \"{username}\"");
     Ok(())
@@ -57,7 +58,9 @@ async fn unban(pool: &SqlitePool, username: &str) -> Result<()> {
 /// Deletes an account
 async fn delete(state: &AppState, username: &str, delete_history: bool) -> Result<()> {
     let user_id = get_user_id(&state.pool, username).await?;
-    api::users::delete(state, user_id, delete_history).await?;
+    let rooms = api::users::delete(state, user_id, delete_history).await?;
+    state::disconnect(state, user_id).await;
+    state::broadcast_member_left(state, user_id, rooms).await;
 
     println!("deleted user account: \"{username}\"");
     Ok(())

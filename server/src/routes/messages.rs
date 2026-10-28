@@ -1,7 +1,5 @@
 //! HTTP handlers for messages.
 
-use std::collections::HashMap;
-
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -13,134 +11,57 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::api;
-use crate::api::messages::attachments::Attachment;
-use crate::api::rooms::access::NotifyUserPair;
 use crate::error::{AppError, Result};
-use crate::api::messages::Message;
-use crate::services::push::send;
-use crate::services::push::send::Payload;
-use crate::shared::{AttachmentRequest, Notify};
 use crate::routes::AuthUser;
-use crate::sockets::events::ServerEvent;
-use crate::sockets::chat::registry;
-use crate::state::AppState;
+use crate::sockets::session::events::ServerEvent;
+use crate::sockets::session::registry;
+use crate::state::{self, AppState};
+use crate::types::messages::{AttachmentInfo, AttachmentRequest, MessageInfo};
 
-// Data Structs //
+// REQUESTS //
 
-/// POST body for a new message.
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
-pub struct PostMessageRequest {
+pub struct RequestMessageSend {
     pub body: Option<String>,
     pub client_nonce: String,
     #[serde(default)]
     pub attachments: Vec<AttachmentRequest>
 }
 
-/// PATCH body for editing a message.
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
-pub struct EditMessageRequest {
+pub struct RequestMessageEdit {
     pub body: Option<String>
 }
 
-/// One file as a message attaches it.
-#[derive(Clone, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
-pub struct AttachmentResponse {
-    pub id: Uuid,
-    pub filename: String,
-    pub mime: String,
-    pub byte_size: i64,
-    pub spoiler: bool,
-}
+// RESPONSES //
 
-impl From<Attachment> for AttachmentResponse {
-    fn from(attachment: Attachment) -> Self {
-        Self {
-            id: attachment.file.id,
-            filename: attachment.file.filename,
-            mime: attachment.file.mime,
-            byte_size: attachment.file.byte_size,
-            spoiler: attachment.spoiler,
-        }
-    }
-}
-
-/// A message and the files attached to it.
-#[derive(Clone, Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
-pub struct MessageResponse {
-    pub seq: i64,
-    pub id: Uuid,
-    pub room_id: Uuid,
-    pub author_id: Option<Uuid>,
-    pub body: Option<String>,
-    pub created_at: i64,
-    pub edited_at: Option<i64>,
-    pub attachments: Vec<AttachmentResponse>
-}
-
-/// Response carrying when a message was edited.
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/messages.ts"))]
-pub struct EditMessageResponse {
+pub struct RespondMessageEdit {
     pub edited_at: i64
 }
 
-/// What a notification shows
-#[derive(Clone)]
-struct Announcement {
-    room_name: String,
-    author: String,
-    body: String
-}
+// DATA TYPES //
 
-/// Query string selecting which page of a room's history to read.
 #[derive(Deserialize)]
 pub struct FetchQuery {
     pub after: Option<i64>,
     pub before: Option<i64>,
 }
 
-impl MessageResponse {
 
-    /// Joins a stored message to the files attached to it.
-    ///
-    /// # Arguments
-    ///
-    /// * `message` - The stored message.
-    /// * `attachments` - Files the message carries.
-    pub fn new(message: Message, attachments: Vec<AttachmentResponse>) -> Self {
-        Self {
-            seq: message.seq,
-            id: message.id,
-            room_id: message.room_id,
-            author_id: message.author_id,
-            body: message.body,
-            created_at: message.created_at,
-            edited_at: message.edited_at,
-            attachments
-        }
-    }
-}
 
 // Routing Methods //
 
-/// Posts a message to a room.
-///
-/// # Arguments
-///
-/// * `author_id` - The message's author.
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room to post in.
-/// * `body` - Message contents, nonce, and any attachments.
-pub async fn post_message(
+// Post a message to a room
+pub async fn post(
     AuthUser(author_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(room_id): Path<Uuid>,
-    Json(body): Json<PostMessageRequest>,
-) -> Result<(StatusCode, Json<MessageResponse>)> {
+    Json(body): Json<RequestMessageSend>,
+) -> Result<(StatusCode, Json<MessageInfo>)> {
 
     // Check for malformed nonce (check if hex)
     let bytes = match hex::decode(&body.client_nonce) {
@@ -170,21 +91,19 @@ pub async fn post_message(
     };
 
     // Get all attachments in message and attach to response
-    let mut conn = app_state.pool.acquire().await?; 
-    let files = api::messages::attachments::for_message(&mut conn, message.id).await?;
-    drop(conn); // Once connection is done being needed, drop it
+    let files = api::messages::attachments::in_message(&app_state.pool, message.id).await?;
 
     let mut attachments = Vec::with_capacity(files.len());
     for file in files {
-        attachments.push(AttachmentResponse::from(file));
+        attachments.push(AttachmentInfo::from(file));
     }
 
-    let response = MessageResponse::new(message, attachments);
+    let response = MessageInfo::new(message, attachments);
 
     // If message is posted, broadcast to all subscribed users in room
     if status == StatusCode::CREATED {
         let msg_event = ServerEvent::Message { room_id, message: response.clone() };
-        registry::broadcast(&app_state, room_id, msg_event).await;
+        state::broadcast(&app_state, room_id, msg_event).await;
 
         // Notify users who opted in
         notify_users(&app_state, room_id, &response).await?;
@@ -194,20 +113,13 @@ pub async fn post_message(
     Ok((status, Json(response)))
 }
 
-/// Gets one page of a room's messages.
-///
-/// # Arguments
-///
-/// * `user_id` - Who the messages are fetched for.
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to read from.
-/// * `query` - Cursor to page from.
-pub async fn fetch_messages(
+// Fetch one page of a room's messages
+pub async fn fetch(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(room_id): Path<Uuid>,
     Query(query): Query<FetchQuery>,
-) -> Result<Json<Vec<MessageResponse>>> {
+) -> Result<Json<Vec<MessageInfo>>> {
 
     // Get http query (?before, ?after) and convert it into a cursor
     let cursor = match (query.after, query.before) {
@@ -227,40 +139,34 @@ pub async fn fetch_messages(
     for (message, files) in result {
         let mut attachments = Vec::with_capacity(files.len());
         for file in files {
-            attachments.push(AttachmentResponse::from(file));
+            attachments.push(AttachmentInfo::from(file));
         }
 
-        response.push(MessageResponse::new(message, attachments));
+        response.push(MessageInfo::new(message, attachments));
     }
 
     Ok(Json(response))
 }
 
-/// Gets one message
-pub async fn get_message(
+// Get a message
+pub async fn get(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(message_id): Path<Uuid>,
-) -> Result<Json<MessageResponse>> {
+) -> Result<Json<MessageInfo>> {
 
     let (message, files) = api::messages::get(&pool, message_id, user_id).await?;
 
     let mut attachments = Vec::with_capacity(files.len());
     for file in files {
-        attachments.push(AttachmentResponse::from(file));
+        attachments.push(AttachmentInfo::from(file));
     }
 
-    Ok(Json(MessageResponse::new(message, attachments)))
+    Ok(Json(MessageInfo::new(message, attachments)))
 }
 
-/// Deletes a message.
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is deleting the message.
-/// * `app_state` - Pool and socket registry.
-/// * `message_id` - Message to delete.
-pub async fn delete_message(
+// Delete a message
+pub async fn delete(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(message_id): Path<Uuid>,
@@ -269,25 +175,18 @@ pub async fn delete_message(
     let room_id = api::messages::delete(&app_state.pool, message_id, caller_id).await?;
 
     let event = ServerEvent::MessageDeleted { room_id, message_id };
-    registry::broadcast(&app_state, room_id, event).await;
+    state::broadcast(&app_state, room_id, event).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Edits a message.
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is editing the message.
-/// * `app_state` - Pool and socket registry.
-/// * `message_id` - Message to edit.
-/// * `request` - The new body.
-pub async fn update_message(
+// Edit a message
+pub async fn update(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(message_id): Path<Uuid>,
-    Json(request): Json<EditMessageRequest>,
-) -> Result<Json<EditMessageResponse>> {
+    Json(request): Json<RequestMessageEdit>,
+) -> Result<Json<RespondMessageEdit>> {
 
     let result = api::messages::edit(
         &app_state.pool,
@@ -302,24 +201,18 @@ pub async fn update_message(
         body: request.body,
         edited_at: result.edited_at
     };
-    registry::broadcast(&app_state, result.room_id, event).await;
+    state::broadcast(&app_state, result.room_id, event).await;
 
-    Ok(Json(EditMessageResponse { edited_at: result.edited_at }))
+    Ok(Json(RespondMessageEdit { edited_at: result.edited_at }))
 }
 
 // Helper Methods //
 
-/// Sends a notification event to the room's members who asked for one.
-///
-/// # Arguments
-///
-/// * `app_state` - Pool and socket registry.
-/// * `room_id` - Room the message was posted to.
-/// * `message` - Message being announced.
+// Send notification event to room members
 async fn notify_users(
     app_state: &AppState,
     room_id: Uuid,
-    message: &MessageResponse,
+    message: &MessageInfo,
 ) -> Result<()> {
 
     // Skip notifying when the message has no author
@@ -327,186 +220,24 @@ async fn notify_users(
         return Ok(());
     };
 
-    // Construct message to send to users
-    let body = match &message.body {
-        Some(val) => val,
-        None => "Attachment(s)"
-    };
-
-    // Check who is mentioned and construct the announcement
-    let mentioned = mentioned_ids(body);
-    let announcement = announce(app_state, room_id, author_id, body, &mentioned).await?;
-
-    // Get list of recipients eligible for receiving the notification
-    let mut conn = app_state.pool.acquire().await?;
-    let pairs = api::rooms::access::list_notify_pairs(&mut *conn, room_id).await?;
-    let recipients = recipients(&pairs, author_id, &mentioned);
+    let notification = api::messages::notifications::notify(
+        app_state,
+        room_id,
+        author_id,
+        message.body.as_deref()
+    ).await?;
 
     // Create notification server event
     let event = ServerEvent::Notification {
         room_id,
-        room_name: announcement.room_name.clone(),
-        author: announcement.author.clone(),
-        body: announcement.body.clone()
+        room_name: notification.room_name,
+        author: notification.author,
+        body: notification.body
     };
 
     // Notify connections users
-    registry::inform_users(app_state, &recipients, event);
-
-    // Push notifications to offline users
-    let offline = registry::offline_users(app_state, &recipients);
-    let payload = Payload {
-        room_id,
-        room: announcement.room_name,
-        author: announcement.author,
-        body: send::shorten(&announcement.body),
-        renotify: false
-    };
-
-    send::notify_offline(app_state, payload, offline);
+    registry::inform_users(&app_state.registry, &notification.recipients, event);
 
     Ok(())
-
-}
-
-/// Builds what a notification based on message,
-/// with mentions read as display names
-async fn announce(
-    app_state: &AppState,
-    room_id: Uuid,
-    author_id: Uuid,
-    body: &str,
-    mentioned: &[Uuid],
-) -> Result<Announcement> {
-
-    // The author is a member, so the room resolves for them
-    let room = api::rooms::get(&app_state.pool, room_id, author_id).await?;
-    let author = api::users::get(&app_state.pool, author_id).await?;
-
-    // Get display names of everyone mentioned
-    let names = api::users::display_names(&app_state.pool, mentioned).await?;
-
-    Ok(Announcement {
-        room_name: room.name,
-        author: author.display_name,
-        body: name_mentions(body, &names)
-    })
-}
-
-/// Selects the room's members who asked to be told about this message.
-///
-/// # Arguments
-///
-/// * `pairs` - Every member and what they opted into.
-/// * `author_id` - The message's author, who is not notified.
-/// * `mentioned` - Accounts the body names.
-fn recipients(
-    pairs: &[NotifyUserPair],
-    author_id: Uuid,
-    mentioned: &[Uuid],
-) -> Vec<Uuid> {
-    let mut found = Vec::new();
-
-    for pair in pairs {
-
-        // Author does not notify themselves
-        if pair.user_id == author_id {
-            continue;
-        }
-
-        // Users who do not opt in don't get notified
-        if pair.notify == Notify::None {
-            continue;
-        }
-
-        // Users who fully opt in, get notified
-        if pair.notify == Notify::All {
-            found.push(pair.user_id);
-            continue;
-        }
-
-        // Users who are mentioned, get notified
-        if pair.notify == Notify::Mentions && mentioned.contains(&pair.user_id) {
-            found.push(pair.user_id);
-        }
-    }
-
-    found
-}
-
-/// Collects the accounts a message body mentions, each account once.
-///
-/// A mention is `@` followed by the account's hyphenated uuid. An `@` not
-/// followed by a valid uuid is ignored.
-///
-/// # Arguments
-///
-/// * `body` - Message contents as they are stored.
-fn mentioned_ids(body: &str) -> Vec<Uuid> {
-    let mut found: Vec<Uuid> = Vec::new();
-    let mut text = body;
-
-    while let Some(byte_index) = text.find('@') {
-
-        // Retrieve and parse UUID from mention
-        let after_at = byte_index + 1;
-        let id = mention_id(text, after_at);
-
-        if let Some(id) = id {
-            if !found.contains(&id) {
-                found.push(id);
-            }
-        }
-
-        // Next iteration starts after current mention
-        text = &text[after_at..];
-    }
-
-    found
-}
-
-/// Replaces each mention in a message body with the account's display name.
-///
-/// A mention whose id is absent from `names` is left unchanged. The uuid is
-/// parsed rather than matched as text, so it resolves in any letter case.
-///
-/// # Arguments
-///
-/// * `body` - Message contents as they are stored.
-/// * `names` - Display name for each account, keyed by id.
-fn name_mentions(body: &str, names: &HashMap<Uuid, String>) -> String {
-    let mut output = String::with_capacity(body.len());
-    let mut text = body;
-
-    while let Some(byte_index) = text.find('@') {
-
-        // Retrieve and parse UUID from mention
-        let after_at: usize = byte_index + 1;
-        let id = mention_id(text, after_at);
-
-        // Copies text up to and including the '@'
-        output.push_str(&text[..after_at]);
-
-        // The display name is written instead of the uuid
-        if let Some(id) = id {
-            if let Some(name) = names.get(&id) {
-                output.push_str(name);
-                text = &text[after_at + uuid::fmt::Hyphenated::LENGTH..];
-                continue;
-            }
-        }
-
-        // Next iteration starts after current mention
-        text = &text[after_at..];
-    }
-
-    output.push_str(text);
-    output
-}
-
-/// Attempt to extract UUID from mention, given a text body and after "@" byte position
-fn mention_id(text: &str, after_at: usize) -> Option<Uuid> {
-    text.get(after_at..after_at + uuid::fmt::Hyphenated::LENGTH)
-        .and_then(|uuid| Uuid::try_parse(uuid).ok())
 }
 

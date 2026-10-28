@@ -1,5 +1,4 @@
 mod api;
-mod bytesize;
 mod cli;
 mod config;
 mod db;
@@ -8,9 +7,9 @@ mod ratelimit;
 mod routes;
 mod serve;
 mod services;
-mod shared;
 mod sockets;
 mod state;
+mod types;
 mod utils;
 mod validate;
 
@@ -23,8 +22,8 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::shared::GlobalRole;
 use crate::state::AppState;
+use crate::types::users::GlobalRole;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -63,6 +62,7 @@ async fn main() -> Result<()> {
     tokio::spawn(cli::console(app_state.clone()));
 
     services::xbox::start(app_state.clone());
+    services::steam::start(app_state.clone());
 
     let app: axum::Router = routes::router(app_state);
     let bind_addr = config::get().socket_addr();

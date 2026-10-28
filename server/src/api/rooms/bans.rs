@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::api::rooms;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::Permission;
+use crate::types::rooms::Permission;
 
 // API Methods //
 

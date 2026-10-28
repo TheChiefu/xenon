@@ -24,13 +24,6 @@ pub struct Database {
 
     /// Seconds a statement waits for the write lock
     pub busy_timeout_seconds: u64,
-
-    /// Times a broadcast retries reading who to send to, on top of the first try
-    pub broadcast_retries: u32,
-
-    /// Milliseconds waited between broadcast retries
-    pub broadcast_retry_delay_ms: u64,
-
 }
 
 impl Database {
@@ -60,11 +53,6 @@ impl Database {
             seconds => Some(Duration::from_secs(seconds))
         }
     }
-
-    /// How long a broadcast waits between retries.
-    pub fn broadcast_retry_delay(&self) -> Duration {
-        Duration::from_millis(self.broadcast_retry_delay_ms)
-    }
 }
 
 impl Default for Database {
@@ -76,8 +64,6 @@ impl Default for Database {
             acquire_timeout_seconds: 30,
             idle_timeout_seconds: 600,
             busy_timeout_seconds: 5,
-            broadcast_retries: 2,
-            broadcast_retry_delay_ms: 100,
         }
     }
 }

@@ -6,11 +6,10 @@ use uuid::Uuid;
 
 use crate::error::{AppError, Result};
 use crate::api::files::File;
-use crate::shared::AttachmentRequest;
+use crate::types::messages::{AttachmentInfo, AttachmentRequest};
 
 // Data Structs //
 
-/// A file as one message attaches it.
 #[derive(sqlx::FromRow)]
 pub struct Attachment {
     #[sqlx(flatten)]
@@ -18,9 +17,18 @@ pub struct Attachment {
     pub spoiler: bool,
 }
 
-/// A file joined to the message it is attached to.
-///
-/// One query covers many messages, so every row carries its `message_id`.
+impl From<Attachment> for AttachmentInfo {
+    fn from(attachment: Attachment) -> Self {
+        Self {
+            id: attachment.file.id,
+            filename: attachment.file.filename,
+            mime: attachment.file.mime,
+            byte_size: attachment.file.byte_size,
+            spoiler: attachment.spoiler,
+        }
+    }
+}
+
 #[derive(sqlx::FromRow)]
 struct AttachmentRow {
     message_id: Uuid,
@@ -30,18 +38,8 @@ struct AttachmentRow {
 
 // API Methods //
 
-/// Links files to a message, ordered as the client sent them.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `message_id` - Message the files belong to.
-/// * `attachments` - Files the message carries.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if an id names a file that is not stored.
-pub async fn insert(
+// Link file(s) to a message
+pub async fn link(
     conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
     attachments: &[AttachmentRequest],
@@ -79,14 +77,9 @@ pub async fn insert(
     Ok(())
 }
 
-/// Reads every file attached to one message, ordered by ordinal.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `message_id` - Message the files are attached to.
-pub async fn for_message(
-    conn: &mut sqlx::SqliteConnection,
+// Read every file attached to a message
+pub async fn in_message(
+    pool: &sqlx::SqlitePool,
     message_id: Uuid,
 ) -> Result<Vec<Attachment>> {
 
@@ -100,25 +93,18 @@ pub async fn for_message(
         "
     )
     .bind(message_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(result)
 }
 
-/// Reads the attachments for a page of messages, keyed by message.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room the page was read from.
-/// * `low` - Lowest seq in the page.
-/// * `high` - Highest seq in the page.
-pub async fn for_message_range(
+// Read all attachments of a page of messages
+pub async fn in_room_range(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
-    low: i64,
-    high: i64,
+    start: i64,
+    end: i64,
 ) -> Result<HashMap<Uuid, Vec<Attachment>>> {
 
     let rows = sqlx::query_as::<_, AttachmentRow>(
@@ -132,8 +118,8 @@ pub async fn for_message_range(
         "
     )
     .bind(room_id)
-    .bind(low)
-    .bind(high)
+    .bind(start)
+    .bind(end)
     .fetch_all(&mut *conn)
     .await?;
 

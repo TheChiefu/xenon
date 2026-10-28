@@ -1,4 +1,4 @@
-//! The `files` table, and the bytes it points at on disk.
+//! The `files` table, and the bytes it points at on disk
 
 use std::path::{Path, PathBuf};
 
@@ -8,14 +8,16 @@ use sqlx::SqlitePool;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::bytesize::ByteSize;
+use crate::types::bytesize::ByteSize;
 use crate::config;
+use crate::db;
 use crate::error::{AppError, Result};
+use crate::types::users::GlobalRole;
 use crate::utils;
 
 // Data Structs //
 
-/// A `files` row
+// A `files` row
 #[derive(sqlx::FromRow)]
 pub struct File {
     pub id: Uuid,
@@ -25,14 +27,13 @@ pub struct File {
     pub byte_size: i64,
 }
 
-/// Outcome of an upload. Bytes the server already holds return the stored row
-/// rather than writing a second copy.
+// Outcome of an upload
 pub enum Stored {
-    Created(File),
-    Duplicate(File)
+    Created(File), // New file
+    Duplicate(File) // File already exists
 }
 
-/// Metadata produced by reading an upload.
+// Metadata produced by reading an upload
 struct Stream {
     sha256: Vec<u8>,
     byte_size: i64,
@@ -41,22 +42,17 @@ struct Stream {
 
 // API Methods //
 
-/// Stores an upload, keyed on the hash of its bytes.
-///
-/// The stream is written to a temp file first, since the final path is the hash
-/// and is unknown until the last byte is read.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `filename` - Name the file is stored under.
-/// * `reader` - Byte stream of the uploaded file.
-///
-/// # Errors
-///
-/// Returns `AppError::TooLarge` if the stream passes the configured byte limit,
-/// `AppError::Validation` if it is empty, and `AppError::Io` if a disk
-/// operation fails.
+// Check whether a user's role may upload files
+pub async fn can_upload(
+    pool: &SqlitePool,
+    caller_id: Uuid,
+) -> Result<bool> {
+    let mut conn = pool.acquire().await?;
+    let role = db::global_role(&mut conn, caller_id).await?;
+    Ok(role == GlobalRole::Admin || role == GlobalRole::Member)
+}
+
+/// Store an upload, keyed on the hash of its bytes
 pub async fn store<R>(
     pool: &SqlitePool,
     filename: &str,
@@ -103,17 +99,7 @@ where
     Ok(stored)
 }
 
-/// Reads a file's row and opens a handle to its bytes on disk.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `file_id` - File to look up.
-///
-/// # Errors
-///
-/// Returns `AppError::NotFound` if no such row exists, and `AppError::Io` if
-/// the bytes cannot be opened.
+// Read a file's row and open a handle to its bytes on disk
 pub async fn fetch(
     pool: &SqlitePool,
     file_id: Uuid,
@@ -155,7 +141,7 @@ pub async fn fetch(
     }
 }
 
-/// Deletes rows nothing references, returning the deleted rows
+// Deletes rows nothing references, returning the deleted rows
 pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
     let files = sqlx::query_as::<_, File>(
         "
@@ -173,7 +159,7 @@ pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
     Ok(files)
 }
 
-/// Deletes each file's bytes from disk
+// Deletes each file's bytes from disk
 pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<()> {
     let files_path = &config::get().storage.files;
 
@@ -202,39 +188,36 @@ pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<()> {
 
 // Helper Methods //
 
-/// Creates the shard directory and renames the temp file into it.
-///
-/// # Arguments
-///
-/// * `tmp_path` - Temp file holding the uploaded bytes.
-/// * `shard_dir` - Directory the hex file is placed in.
-/// * `hex` - Hex representation of the file's hash, used as its name.
-///
-/// # Errors
-///
-/// Returns `AppError::Io` if the directory or the rename fails.
+/// Reports whether a chunk of bytes reads as UTF-8 text
+fn is_utf8_text(chunk: &[u8]) -> bool {
+
+    // Check for NULs
+    if chunk.contains(&0) {
+        return false;
+    }
+
+    match std::str::from_utf8(chunk) {
+        Ok(_) => true,
+        Err(e) => e.error_len().is_none()
+    }
+}
+
+
+// Maps a hash to the directory holding it, such as `files/ab/cd`
+fn create_shard_path(files_path: &str, hex: &str) -> PathBuf {
+    Path::new(files_path)
+        .join(&hex[0..2]) // Top Level first 2 hex chars
+        .join(&hex[2..4]) // Second Level second 2 hex chars
+}
+
+// Create shard directory and rename the temp file into it
 async fn move_to_shard(tmp_path: &Path, shard_dir: &Path, hex: &str) -> Result<()> {
     tokio::fs::create_dir_all(shard_dir).await?;
     tokio::fs::rename(tmp_path, shard_dir.join(hex)).await?;
     Ok(())
 }
 
-/// Reads a stream into a temp file, returning the metadata it gathered.
-///
-/// The MIME type is inferred from the leading bytes, falling back to
-/// `text/plain` for valid UTF-8 and `application/octet-stream` otherwise.
-///
-/// # Arguments
-///
-/// * `reader` - Byte stream of the uploaded file.
-/// * `tmp_path` - Path the local copy is written to.
-/// * `max_bytes` - Size the file is rejected at, checked while streaming.
-///
-/// # Errors
-///
-/// Returns `AppError::TooLarge` if the stream passes `max_bytes`,
-/// `AppError::Validation` if it holds no bytes, and `AppError::Io` if a read or
-/// write fails.
+// Reads a stream into a temp file, returning the metadata it gathered
 async fn read_stream<R>(
     mut reader: R,
     tmp_path: &Path,
@@ -299,30 +282,7 @@ where
     })
 }
 
-/// Maps a hash to the directory holding it, such as `files/ab/cd`.
-///
-/// # Arguments
-///
-/// * `files_path` - Path to the permanent file location.
-/// * `hex` - Hex representation of the file's hash.
-fn create_shard_path(files_path: &str, hex: &str) -> PathBuf {
-    Path::new(files_path)
-        .join(&hex[0..2]) // Top Level first 2 hex chars
-        .join(&hex[2..4]) // Second Level second 2 hex chars
-}
-
-/// Writes a row to the `files` table, keyed on the hash of its bytes.
-///
-/// Bytes already stored return the existing row, so the `id` and `filename` are
-/// the ones from the first upload rather than the ones passed here.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `filename` - Name the file is stored under.
-/// * `sha256` - Hash of the bytes, used as the dedupe key.
-/// * `byte_size` - Size of the file in bytes.
-/// * `mime` - MIME type for clients to handle.
+// Writes a row to the `files` table, keyed on the hash of its bytes
 async fn insert(
     conn: &mut sqlx::SqliteConnection,
     filename: &str,
@@ -334,6 +294,7 @@ async fn insert(
     let id = Uuid::now_v7();
     let now = utils::now_ms();
 
+    // Attempt to insert file, if already exists do nothing
     let affected = sqlx::query(
         "
         INSERT INTO files (id, sha256, filename, mime, byte_size, created_at)
@@ -378,22 +339,4 @@ async fn insert(
             byte_size
         }
     ))
-}
-
-/// Reports whether a chunk of bytes reads as UTF-8 text.
-///
-/// # Arguments
-///
-/// * `chunk` - Leading bytes of the file.
-fn is_utf8_text(chunk: &[u8]) -> bool {
-
-    // Check for NULs
-    if chunk.contains(&0) {
-        return false;
-    }
-
-    match std::str::from_utf8(chunk) {
-        Ok(_) => true,
-        Err(e) => e.error_len().is_none()
-    }
 }

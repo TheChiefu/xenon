@@ -1,14 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
+use serde::Serialize;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
+
 use crate::config;
-use crate::db;
-use crate::error::Result;
-use crate::sockets::events::call::{ActiveCall, CallServerEvent};
-use crate::state::AppState;
+use crate::sockets::call::events::CallServerEvent;
 use crate::utils::{read_lock, write_lock};
 
 // Data Structs //
@@ -41,15 +42,22 @@ pub struct ActiveCalls {
     routes: Arc<RwLock<SignalRoutes>>
 }
 
+#[derive(Serialize, Clone)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/call/registry.ts"))]
+pub struct RoomCall {
+    pub room_id: Uuid,
+    pub participants: HashSet<Uuid>
+}
+
 // Call Methods //
 
 /// Adds a user to a room's call
 pub fn join(
-    state: &AppState,
+    calls: &ActiveCalls,
     room_id: Uuid,
     user_id: Uuid,
 ) -> std::result::Result<mpsc::Receiver<String>, JoinRefused> {
-    let mut guard = write_lock(&state.calls.routes);
+    let mut guard = write_lock(&calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -73,10 +81,10 @@ pub fn join(
 
 /// Removes a user from their call, returning its room
 pub fn leave(
-    state: &AppState,
+    calls: &ActiveCalls,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    let mut guard = write_lock(&state.calls.routes);
+    let mut guard = write_lock(&calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -99,10 +107,10 @@ pub fn leave(
 
 /// Removes everyone from a room's call
 pub fn end(
-    state: &AppState,
+    calls: &ActiveCalls,
     room_id: Uuid,
 ) {
-    let mut guard = write_lock(&state.calls.routes);
+    let mut guard = write_lock(&calls.routes);
 
     // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
@@ -118,10 +126,10 @@ pub fn end(
 
 /// Reads who is in a room's call
 pub fn participants(
-    state: &AppState,
+    calls: &ActiveCalls,
     room_id: Uuid,
 ) -> Vec<Uuid> {
-    let routes = read_lock(&state.calls.routes);
+    let routes = read_lock(&calls.routes);
 
     let mut found = Vec::new();
     if let Some(participants) = routes.by_room.get(&room_id) {
@@ -133,41 +141,38 @@ pub fn participants(
     found
 }
 
-/// Builds the list of active calls in every room a user is a member of
-pub async fn snapshot(
-    state: &AppState,
-    user_id: Uuid,
-) -> Result<Vec<ActiveCall>> {
-    let mut conn = state.pool.acquire().await?;
-    let room_ids = db::member_room_ids(&mut conn, user_id).await?;
-
-    let routes = read_lock(&state.calls.routes);
+// Build list of active calls in all given rooms
+pub fn snapshot(
+    calls: &ActiveCalls,
+    room_ids: &[Uuid],
+) -> Vec<RoomCall> {
+    let routes = read_lock(&calls.routes);
 
     let mut calls = Vec::new();
     for room_id in room_ids {
 
         // Skip rooms with no call
-        let Some(participants) = routes.by_room.get(&room_id) else {
+        let Some(participants) = routes.by_room.get(room_id) else {
             continue;
         };
 
-        let mut user_ids = Vec::new();
+        let mut user_ids = HashSet::new();
         for participant_id in participants.keys() {
-            user_ids.push(*participant_id);
+            user_ids.insert(*participant_id);
         }
 
-        calls.push(ActiveCall { room_id, participants: user_ids });
+        calls.push(RoomCall { room_id: *room_id, participants: user_ids });
     }
 
-    Ok(calls)
+    calls
 }
 
-/// Reads the room id of the call a participant is in
+// Read the room id of the call a participant is in
 pub fn participant_call(
-    state: &AppState,
+    calls: &ActiveCalls,
     user_id: Uuid,
 ) -> Option<Uuid> {
-    let routes = read_lock(&state.calls.routes);
+    let routes = read_lock(&calls.routes);
 
     match routes.by_user.get(&user_id) {
         Some(room_id) => Some(*room_id),
@@ -175,9 +180,9 @@ pub fn participant_call(
     }
 }
 
-/// Passes a signal to its target when both are in the same call, and drops it otherwise
+// Pass a signal to a target when both are in the same call, and drops it otherwise
 pub fn forward(
-    state: &AppState,
+    calls: &ActiveCalls,
     from: Uuid,
     to: Uuid,
     payload: String,
@@ -191,7 +196,7 @@ pub fn forward(
         }
     };
 
-    let routes = read_lock(&state.calls.routes);
+    let routes = read_lock(&calls.routes);
 
     // The sender must be in a call
     let Some(room_id) = routes.by_user.get(&from) else {

@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::api::messages::Message;
 use crate::config;
 use crate::error::Result;
-use crate::shared::SearchRequest;
+use crate::types::messages::SearchRequest;
 use crate::validate;
 
 // Data Structs //

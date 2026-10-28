@@ -6,7 +6,9 @@ use sqlx::{SqlitePool};
 use uuid::Uuid;
 
 use crate::{config, error::{AppError, Result}, routes::AuthUser};
+use crate::services::steam;
 use crate::services::steam::{accounts, api, REDIRECT_PATH};
+use crate::state::AppState;
 use crate::utils::{generate_code, write_lock};
 
 #[cfg(feature = "ts_bindings")]
@@ -110,15 +112,10 @@ pub async fn redirect(
 
 pub async fn unlink(
     AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
+    State(state): State<AppState>,
 ) -> Result<StatusCode> {
-    remove(&pool, user_id).await?;
+    steam::unlink(&state, user_id).await?;
     Ok(StatusCode::NO_CONTENT)
-}
-
-pub async fn remove(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
-    write_lock(&LINK_TOKENS).remove(&user_id);
-    accounts::delete(pool, user_id).await
 }
 
 // Helper Methods //
@@ -155,13 +152,13 @@ async fn link(pool: &SqlitePool, query: RedirectQuery) -> Result<()> {
 
     verify(&query.params).await?;
     let steam_id = parse_steam_id(&query.params)?;
-    let mut summaries = api::player_summaries(&[steam_id]).await?;
+    let mut summaries = api::player_summaries(&[steam_id.as_str()]).await?;
 
     let Some(summary) = summaries.pop() else {
         return Err(AppError::NotFound);
     };
 
-    accounts::save(pool, query.user_id, steam_id, &summary.personaname).await?;
+    accounts::save(pool, query.user_id, &steam_id, &summary.personaname).await?;
 
     Ok(())
 }
@@ -196,18 +193,18 @@ async fn verify(params: &HashMap<String, String>) -> Result<()> {
 }
 
 // Given query parameters, extract Steam ID (64)
-fn parse_steam_id(params: &HashMap<String, String>) -> Result<u64> {
-    let claimed_id = params
-        .get(OPENID_CLAIMED_ID)
-        .ok_or_else(|| AppError::Validation(
-            format!("Missing {OPENID_CLAIMED_ID}")
-        ))?;
+fn parse_steam_id(params: &HashMap<String, String>) -> Result<String> {
+    let Some(claimed_id) = params.get(OPENID_CLAIMED_ID) else {
+        return Err(AppError::Validation(format!("Missing {OPENID_CLAIMED_ID}")));
+    };
 
-    claimed_id
-        .rsplit('/')
-        .next()
-        .and_then(|id| id.parse::<u64>().ok())
-        .ok_or_else(|| AppError::Validation(
-            format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")
-        ))
+    let Some(steam_id) = claimed_id.rsplit('/').next() else {
+        return Err(AppError::Validation(format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
+    };
+
+    if steam_id.is_empty() {
+        return Err(AppError::Validation(format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
+    }
+
+    Ok(steam_id.to_string())
 }

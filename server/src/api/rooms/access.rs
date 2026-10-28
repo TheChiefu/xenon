@@ -6,28 +6,24 @@ use uuid::Uuid;
 use crate::api::rooms::{bans, invites};
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::{Notify, Permission};
+use crate::types::rooms::{Notify, Permission};
 
 // Data Structs //
 
-/// One member of a room, with their resolved permissions.
 #[derive(sqlx::FromRow)]
 pub struct Entry {
     pub user_id: Uuid,
     pub permissions: Json<Vec<Permission>>,
     pub granted_at: i64,
-    /// Present on a caller's own row, members never sees another's
     pub notify: Option<Notify>
 }
 
-/// Pairing of a user and their room notification preference
 #[derive(sqlx::FromRow)]
 pub struct NotifyUserPair {
     pub user_id: Uuid,
     pub notify: Notify,
 }
 
-/// A user's access to a room
 pub struct Access {
     pub permissions: Option<Vec<Permission>>,
     pub invited: bool,
@@ -36,7 +32,7 @@ pub struct Access {
 
 // API Methods //
 
-/// Gets a user's access to a room
+// Get a user's access state to a room
 pub async fn get(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -57,17 +53,7 @@ pub async fn get(
     Ok(Access { permissions, invited, banned })
 }
 
-/// Lists the members of a room.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to look in.
-/// * `caller_id` - Who is requesting the list.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller is not a member of the room.
+// List the members' access entries in a room
 pub async fn list(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -106,21 +92,7 @@ pub async fn list(
     Ok(result)
 }
 
-/// Replaces a member's permissions in a room.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the permissions apply to.
-/// * `caller_id` - Who is making the change.
-/// * `target_id` - Whose permissions are being set.
-/// * `permissions` - New permissions to store.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller lacks `Permission::Grant`,
-/// `AppError::Validation` if the caller grants themselves a permission they do
-/// not hold, and `AppError::NotFound` if the target is not in the room.
+// Replace a member's permissions in a room
 pub async fn update(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -179,18 +151,7 @@ pub async fn update(
     Ok(())
 }
 
-/// Sets how much of a room the caller is told about.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the preference applies to.
-/// * `caller_id` - Whose membership is written.
-/// * `notify` - New level to store.
-///
-/// # Errors
-///
-/// Returns `AppError::NotFound` if the caller is not in the room.
+// Sets a user's notify level
 pub async fn set_notify(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -220,21 +181,7 @@ pub async fn set_notify(
     Ok(())
 }
 
-/// Removes one member from one room, culling it if they were the last.
-///
-/// The single lifecycle path: voluntary leave, removal, and account deletion
-/// all land here. Takes a connection rather than a pool so the caller owns the
-/// transaction, since account deletion removes a user from every room at once.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room to remove them from.
-/// * `user_id` - User being removed.
-///
-/// # Errors
-///
-/// Returns `AppError::NotFound` if the user is not in the room.
+// Remove a member from a room
 pub async fn remove(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
@@ -270,7 +217,7 @@ pub async fn remove(
     .fetch_one(&mut *conn)
     .await?;
 
-    // If no members, delete the room. Cascades take the messages and the rest
+    // If no members, delete the room
     if !has_members {
         sqlx::query(
             "
@@ -289,15 +236,9 @@ pub async fn remove(
     Ok(())
 }
 
-/// List the notify and user ID pair in a given room
-/// 
-/// # Arguments
-///
-/// * `conn` - An SQL connections
-/// * `room_id` - Room to look in
-/// * `caller_id` - Who is requesting the list
+// List all notify and user ID pairs in a given room
 pub async fn list_notify_pairs(
-    conn: &mut sqlx::SqliteConnection,
+    pool: &sqlx::SqlitePool,
     room_id: Uuid,
 ) -> Result<Vec<NotifyUserPair>> {
 
@@ -310,7 +251,7 @@ pub async fn list_notify_pairs(
         "
     )
     .bind(room_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(result)

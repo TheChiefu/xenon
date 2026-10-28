@@ -6,7 +6,7 @@ use crate::error::Result;
 #[derive(sqlx::FromRow)]
 pub struct Account {
     pub user_id: Uuid,
-    pub steam_id: i64,
+    pub steam_id: String,
     pub persona_name: String
 }
 
@@ -25,6 +25,19 @@ pub async fn get(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>> {
     Ok(row)
 }
 
+pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
+    let rows = sqlx::query_as(
+        "
+        SELECT user_id, steam_id, persona_name
+        FROM steam_accounts
+        "
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows)
+}
+
 pub async fn delete(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
     sqlx::query("DELETE FROM steam_accounts WHERE user_id = ?1")
         .bind(user_id)
@@ -37,7 +50,7 @@ pub async fn delete(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
 pub async fn save(
     pool: &SqlitePool,
     user_id: Uuid,
-    steam_id: u64,
+    steam_id: &str,
     persona_name: &str,
 ) -> Result<()> {
     sqlx::query(
@@ -50,7 +63,7 @@ pub async fn save(
         "
     )
     .bind(user_id)
-    .bind(steam_id as i64)
+    .bind(steam_id)
     .bind(persona_name)
     .execute(pool)
     .await?;

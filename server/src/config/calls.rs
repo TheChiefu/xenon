@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::bytesize::{ByteSize, KIBIBYTE};
+use crate::types::bytesize::{ByteSize, KIBIBYTE};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]

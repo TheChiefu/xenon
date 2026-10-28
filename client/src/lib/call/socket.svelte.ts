@@ -1,4 +1,4 @@
-import type { CallClientEvent, CallServerEvent } from "@/bindings/sockets/events";
+import type { CallClientEvent, CallServerEvent } from "@/bindings/sockets/call/events";
 import { CallEventType } from "@/lib/events";
 import * as session from "@/lib/connection/session.svelte";
 

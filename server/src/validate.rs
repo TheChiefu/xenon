@@ -1,15 +1,16 @@
 //! Format checks run before a value reaches the database.
 
 use crate::config;
-use crate::db;
 use crate::error::{AppError, Result};
-use crate::shared::{RoomListItem, SearchRequest};
+use crate::types::messages::SearchRequest;
+use crate::types::preferences::RoomListItem;
+use crate::types::time::DAY;
 
 /// How many registrations a code covers when the request names no count.
 pub const REGISTRATION_CODE_DEFAULT_MAX_USES: i64 = 1;
 
 /// How long a registration code lasts when the request names no lifetime.
-pub const REGISTRATION_CODE_LIFETIME_MS: i64 = db::DAY * 7;
+pub const REGISTRATION_CODE_LIFETIME_MS: i64 = DAY * 7;
 
 pub const REGISTRATION_CODE_DEFAULT_LENGTH: usize = 12;
 const REGISTRATION_CODE_LENGTH_MIN: usize = 4;

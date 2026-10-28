@@ -10,13 +10,14 @@ use uuid::Uuid;
 
 use crate::db::{self, effective_permissions};
 use crate::error::{AppError, Result};
-use crate::shared::{GlobalRole, Permission, Visibility};
+use crate::types::rooms::{Permission, RoomInfo, Visibility};
+use crate::types::users::GlobalRole;
 use crate::utils;
 use crate::validate;
 
 // Data Structs //
 
-/// A `rooms` row
+// A `rooms` row
 #[derive(sqlx::FromRow)]
 pub struct Room {
     pub id: Uuid,
@@ -26,15 +27,20 @@ pub struct Room {
     pub created_at: i64,
 }
 
+impl From<Room> for RoomInfo {
+    fn from(room: Room) -> Self {
+        Self {
+            id: room.id,
+            name: room.name,
+            visibility: room.visibility,
+            default_permissions: room.default_permissions.0,
+        }
+    }
+}
+
 // API Methods //
 
-/// Gets a room's information by ID (hidden rooms only show to users in them)
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to query
-/// * `caller_id` - Who is requesting room information
+// Get a room's information by ID (hidden rooms only show to users in them)
 pub async fn get(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -61,16 +67,7 @@ pub async fn get(
     Ok(room)
 }
 
-/// Updates a given room's properties given patch.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL Connections
-/// * `room_id` - Room to be patched
-/// * `caller_id` - Who is patching the room
-/// * `name` - New name, if renaming
-/// * `visibility` - New visibility, if changing
-/// * `default_permissions` - New default permissions, if changing
+// Update a given room's properties
 pub async fn update(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -133,21 +130,7 @@ pub async fn update(
     Ok(())
 }
 
-/// Creates a room and grants its creator access, returning the new room id.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `caller_id` - User creating the room.
-/// * `name` - Room name. (NULL/None not allowed)
-/// * `caller_permissions` - Permissions the creator takes.
-/// * `default_permissions` - Permissions a user takes on joining the room.
-/// * `visibility` - Whether the room is discoverable and self-service.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the name is over the length limit, and
-/// `AppError::Forbidden` if the caller's global role cannot create rooms.
+// Create a room and return the new room id
 pub async fn create(
     pool: &sqlx::SqlitePool,
     caller_id: Uuid,
@@ -214,20 +197,7 @@ pub async fn create(
     Ok(room_id)
 }
 
-/// Deletes a room, returning the members who were in it so the caller can tell
-/// them it is gone.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to be deleted.
-/// * `caller_id` - Who is attempting to delete the room.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` unless the caller holds `Permission::DeleteRoom`
-/// or is server staff in a Public room. A room that does not exist is also
-/// `Forbidden`, since a non-member cannot tell the two cases apart.
+// Delete a room, return member list to be used on notify
 pub async fn delete(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -260,18 +230,7 @@ pub async fn delete(
 }
 
 
-/// Grants a user access to a room, spending any invite they hold on it.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room being joined.
-/// * `user_id` - User joining.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the room does not exist, the room needs an
-/// invite the user does not hold, or the user is banned from it.
+// Grant a user access to a room, spending an invite
 pub async fn join(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -339,17 +298,7 @@ pub async fn join(
     Ok(())
 }
 
-/// Removes a user from a room at their own request.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to leave.
-/// * `user_id` - User leaving.
-///
-/// # Errors
-///
-/// Returns `AppError::NotFound` if the user is not in the room.
+// Remove user from room
 pub async fn leave(
     pool: &sqlx::SqlitePool,
     room_id: Uuid,
@@ -363,12 +312,24 @@ pub async fn leave(
     Ok(())
 }
 
-/// Lists the rooms a user is a member of.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User to filter on.
+// Check whether a user may join a room's voice chat
+pub async fn can_connect(
+    pool: &sqlx::SqlitePool,
+    room_id: Uuid,
+    user_id: Uuid,
+) -> Result<bool> {
+
+    let mut conn = pool.acquire().await?;
+    let permissions = db::effective_permissions(&mut conn, room_id, user_id).await?;
+
+    // A user with no access to the room has no permissions
+    match permissions {
+        Some(permissions) => Ok(permissions.contains(&Permission::Connect)),
+        None => Ok(false)
+    }
+}
+
+// List rooms a user is a member of
 pub async fn list_mine(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
@@ -392,13 +353,7 @@ pub async fn list_mine(
     Ok(rooms)
 }
 
-/// Lists one page of the discoverable rooms, meaning Public
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `after` - Room id to page from, or `None` for the first page.
-/// * `limit` - How many rooms to return.
+// List one page of discoverable public rooms
 pub async fn list_discoverable(
     pool: &sqlx::SqlitePool,
     after: Option<Uuid>,

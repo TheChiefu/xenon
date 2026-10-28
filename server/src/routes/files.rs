@@ -14,26 +14,24 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::api::files::Stored;
-use crate::bytesize;
+use crate::types::bytesize::MEBIBYTE;
 use crate::error::{AppError, Result};
 use crate::api::files::File;
-use crate::shared::GlobalRole;
 use crate::routes::AuthUser;
-use crate::{api, config, db, validate};
+use crate::{api, config, validate};
 
 // Data Structs //
 
-/// A stored file, as sent to clients.
 #[derive(Clone, Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/files.ts"))]
-pub struct FileResponse {
+pub struct RespondFile {
     pub id: Uuid,
     pub filename: String,
     pub mime: String,
     pub byte_size: i64,
 }
 
-impl From<File> for FileResponse {
+impl From<File> for RespondFile {
     fn from(file: File) -> Self {
         Self {
             id: file.id,
@@ -44,24 +42,23 @@ impl From<File> for FileResponse {
     }
 }
 
-/// Header carrying a downloaded file's MIME type.
+// Header carrying a downloaded file's MIME type
 pub const FILE_MIME_HEADER: HeaderName = HeaderName::from_static("x-file-mime");
 
 // Routing Methods //
 
-/// Stores an uploaded file.
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is uploading.
-/// * `pool` - Pool of SQL connections.
-/// * `multipart` - Request body carrying the file.
+// Store an uploaded file
 pub async fn upload(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
     mut multipart: Multipart,
-) -> Result<(StatusCode, Json<FileResponse>)> {
+) -> Result<(StatusCode, Json<RespondFile>)> {
+
+    // Reject unallowed roles to upload
+    if !api::files::can_upload(&pool, caller_id).await? {
+        return Err(AppError::Forbidden);
+    }
 
     // Reject a request with no content length
     let Some(value) = headers.get(header::CONTENT_LENGTH) else {
@@ -82,12 +79,6 @@ pub async fn upload(
     if bytes > max_body_bytes() {
         return Err(AppError::TooLarge(config::get().uploads.file_size_max));
     }
-
-    // Reject unallowed roles to upload
-    let mut conn = pool.acquire().await?;
-    let allowed = [GlobalRole::Admin, GlobalRole::Member];
-    db::require_role(&mut conn, caller_id, &allowed).await?;
-    drop(conn);
 
     // Read POST body
     let field = match multipart.next_field().await {
@@ -115,12 +106,7 @@ pub async fn upload(
     }
 }
 
-/// Streams a stored file.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `file_id` - File to send.
+// Stream a stored file
 pub async fn download(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -145,11 +131,9 @@ pub async fn download(
     Ok((StatusCode::OK, headers, body).into_response())
 }
 
-/// Returns the largest upload body accepted.
-///
-/// Sits above `file_bytes_max` so the streaming read rejects the file first.
+// Return the largest upload body accepted
 pub fn max_body_bytes() -> usize {
-    let headroom_bytes = bytesize::MEBIBYTE;
+    let headroom_bytes = MEBIBYTE;
     let max_file_bytes = config::get().uploads.file_size_max.to_int();
     (headroom_bytes + max_file_bytes) as usize
 }

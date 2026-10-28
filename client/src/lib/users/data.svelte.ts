@@ -18,14 +18,14 @@ const REGEX_USERNAME: RegExp = new RegExp(
 );
 
 // A user's status and what they are connected from
-export interface Presence {
+export interface UserStatus {
   status: Status;
   device: Device | null;
 }
 
-// Maps containing a user ID per type (summary, their status/presence, game activity)
+// Maps containing a user ID per type (summary, their status, game activity)
 const summaries: SvelteMap<string, UserSummaryResponse> = new SvelteMap();
-const presences: SvelteMap<string, Presence> = new SvelteMap();
+const statuses: SvelteMap<string, UserStatus> = new SvelteMap();
 const activities: SvelteMap<string, GameActivity> = new SvelteMap();
 const avatars: SvelteMap<string, FetchedFile> = new SvelteMap();
 const banners: SvelteMap<string, FetchedFile> = new SvelteMap();
@@ -134,18 +134,18 @@ export function cache(user: UserSummaryResponse): void {
   summaries.set(user.id, user);
 }
 
-// PRESENCE //
+// STATUS //
 
-export function getPresence(id: string): Presence {
-  return presences.get(id) ?? { status: Status.offline, device: null };
+export function getStatus(id: string): UserStatus {
+  return statuses.get(id) ?? { status: Status.offline, device: null };
 }
 
-export function setPresence(id: string, status: Status, device: Device | null): void {
-  presences.set(id, { status, device });
+export function setStatus(id: string, status: Status, device: Device | null): void {
+  statuses.set(id, { status, device });
 }
 
-export function clearPresences(): void {
-  presences.clear();
+export function clearStatuses(): void {
+  statuses.clear();
 }
 
 // GAMES //
@@ -252,7 +252,7 @@ export function clear(): void {
   }
 
   summaries.clear();
-  presences.clear();
+  statuses.clear();
   activities.clear();
   avatars.clear();
   banners.clear();
@@ -261,17 +261,17 @@ export function clear(): void {
 // EVENTS //
 
 // Replace all user statuses from snapshot
-events.subscribe(ServerEventType.presence_snapshot, (event) => {
-  clearPresences();
+events.subscribe(ServerEventType.status_snapshot, (event) => {
+  clearStatuses();
 
   for (const user of event.users) {
-    setPresence(user.user_id, user.status, user.device);
+    setStatus(user.user_id, user.status, user.device);
   }
 });
 
 // Update a user's status
-events.subscribe(ServerEventType.presence_updated, (event) => {
-  setPresence(event.user_id, event.status, event.device);
+events.subscribe(ServerEventType.status_updated, (event) => {
+  setStatus(event.user_id, event.status, event.device);
 });
 
 // Replace all game activities from snapshot

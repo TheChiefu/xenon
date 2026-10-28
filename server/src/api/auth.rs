@@ -8,22 +8,135 @@ use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::ratelimit::LoginFailures;
-use crate::shared::{GlobalRole, RegistrationCode};
+use crate::state::AppState;
+use crate::types::auth::{Registration, RegistrationCode};
+use crate::types::time::DAY;
+use crate::types::users::GlobalRole;
 use crate::utils;
 use crate::validate;
 
 // API Methods //
 
-/// Lists every registration code, newest first
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections
+// Resolves a session to the user it belongs to, extending the session timer
+pub async fn authenticate(
+    pool: &sqlx::SqlitePool,
+    token_hash: &[u8],
+) -> Result<Uuid> {
+
+    let mut conn = pool.acquire().await?;
+
+    // Fetch user id and session expiry information
+    let now: i64 = utils::now_ms();
+    let row = sqlx::query_as::<_, (Uuid, i64)>(
+        "
+        SELECT user_id, expires_at FROM sessions
+        WHERE token_hash = ?1 AND revoked_at IS NULL AND expires_at > ?2
+        "
+    )
+    .bind(token_hash)
+    .bind(now)
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    let Some((user_id, expires_at)) = row else {
+        return Err(AppError::InvalidCredentials);
+    };
+
+    // Extend session timer
+    let lifetime = config::get().session.lifetime_days * DAY;
+    let renew = config::get().session.renew_after_days_elapsed * DAY;
+    if expires_at < now + lifetime - renew {
+        sqlx::query(
+            "
+            UPDATE sessions SET expires_at = ?1 + ?2
+            WHERE token_hash = ?3
+            "
+        )
+        .bind(utils::now_ms())
+        .bind(lifetime)
+        .bind(token_hash)
+        .execute(&mut *conn)
+        .await?;
+    }
+
+    Ok(user_id)
+}
+
+// Creates a code that lets someone register
+pub async fn create_registration_code(
+    pool: &sqlx::SqlitePool,
+    caller_id: Uuid,
+    max_uses: i64,
+    lifetime: i64,
+    length: usize,
+) -> Result<String> {
+
+    let mut conn = pool.acquire().await?;
+
+    // Check if user has permission to create a registration code
+    let allowed = [GlobalRole::Admin];
+    db::require_role(&mut conn, caller_id, &allowed).await?;
+
+    validate::registration_code_params(max_uses, lifetime, length)?;
+
+    let code = utils::generate_code(length);
+    let now = utils::now_ms();
+
+    sqlx::query(
+        "
+        INSERT INTO registration_codes (code, created_at, expires_at, max_uses)
+        VALUES (?1, ?2, ?3, ?4)
+        ",
+    )
+    .bind(&code)
+    .bind(now)
+    .bind(now.saturating_add(lifetime))
+    .bind(max_uses)
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(code)
+}
+
+// Revokes a registration code, deleting it outright
+pub async fn revoke_registration_code(
+    pool: &sqlx::SqlitePool,
+    caller_id: Uuid,
+    code: &str,
+) -> Result<()> {
+
+    let mut conn = pool.acquire().await?;
+
+    let allowed = [GlobalRole::Admin];
+    db::require_role(&mut conn, caller_id, &allowed).await?;
+
+    let deleted = sqlx::query(
+        "
+        DELETE FROM registration_codes
+        WHERE code = ?1
+        "
+    )
+    .bind(code.trim().to_ascii_uppercase())
+    .execute(&mut *conn)
+    .await?;
+
+    if deleted.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+
+    Ok(())
+}
+
+// Lists every registration code, newest first
 pub async fn list_registration_codes(
     pool: &sqlx::SqlitePool,
+    caller_id: Uuid,
 ) -> Result<Vec<RegistrationCode>> {
 
     let mut conn = pool.acquire().await?;
+
+    let allowed = [GlobalRole::Admin];
+    db::require_role(&mut conn, caller_id, &allowed).await?;
 
     let codes: Vec<RegistrationCode> = sqlx::query_as(
         "
@@ -38,18 +151,40 @@ pub async fn list_registration_codes(
     Ok(codes)
 }
 
-/// Creates an account, returning its id and session token.
+// Creates an account, returning its id and session token
 pub async fn register(
+    state: &AppState,
+    ip: IpAddr,
+    registration: &Registration,
+) -> Result<(Uuid, String)> {
+
+    let result = create_account(&state.pool, registration).await;
+
+    // Count a failure caused by the client against its IP
+    let failed = matches!(
+        result,
+        Err(AppError::Validation(_) | AppError::UsernameTaken | AppError::InvalidRegistrationCode)
+    );
+
+    if failed && config::get().rate_limit.block_on_register_limit {
+        if state.address_limits.register_limit_reached(ip) {
+            block_address(state, ip, "registration").await?;
+        }
+    }
+
+    result
+}
+
+// Creates an account, returning its id and session token
+async fn create_account(
     pool: &sqlx::SqlitePool,
-    code: Option<&str>,
-    username: &str,
-    display_name: &str,
-    password: &str,
+    registration: &Registration,
 ) -> Result<(Uuid, String)> {
 
     // Format Validation
-    let username = username.trim();
-    let display_name = display_name.trim();
+    let username = registration.username.trim();
+    let display_name = registration.display_name.trim();
+    let password = registration.password.as_str();
     validate::username(username)?;
     validate::display_name(display_name)?;
     validate::password(password)?;
@@ -70,7 +205,7 @@ pub async fn register(
 
     // Claim registration code
     if config::get().session.registration_code_required {
-        let code = code.ok_or(AppError::InvalidRegistrationCode)?;
+        let code = registration.registration_code.as_deref().ok_or(AppError::InvalidRegistrationCode)?;
 
         let claimed = sqlx::query(
             "
@@ -116,30 +251,12 @@ pub async fn register(
     Ok((id, token))
 }
 
-/// Replaces a user's password, optionally revoking the sessions they hold
-/// elsewhere.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User whose password is being replaced.
-/// * `current_password` - Password being replaced, re-verified before the write.
-/// * `new_password` - Password to hash and store.
-/// * `revoke_others` - Whether the user's other sessions are revoked.
-/// * `session_hash` - `sessions.token_hash` of the caller, kept when revoking.
-///
-/// # Errors
-///
-/// Returns `AppError::Validation` if the new password is outside its length
-/// limits, and `AppError::InvalidCredentials` if the current password does not
-/// verify.
+// Replaces a user's password
 pub async fn change_password(
     pool: &sqlx::SqlitePool,
     user_id: Uuid,
     current_password: &str,
     new_password: &str,
-    revoke_others: bool,
-    session_hash: &[u8],
 ) -> Result<()> {
 
     validate::password(new_password)?;
@@ -180,28 +297,13 @@ pub async fn change_password(
     .execute(&mut *tx)
     .await?;
 
-    // If revocation is set, clear all other sessions except current one
-    if revoke_others {
-        sqlx::query(
-            "
-            UPDATE sessions SET revoked_at = ?1
-            WHERE user_id = ?2 AND token_hash <> ?3 AND revoked_at IS NULL
-            "
-        )
-        .bind(utils::now_ms())
-        .bind(user_id)
-        .bind(session_hash)
-        .execute(&mut *tx)
-        .await?;
-    }
-
     // Commit transacation
     tx.commit().await?;
 
     Ok(())
 }
 
-/// Revokes a single session
+// Revokes a single session
 pub async fn revoke_session(
     pool: &sqlx::SqlitePool,
     session_hash: &[u8],
@@ -221,8 +323,32 @@ pub async fn revoke_session(
     Ok(())
 }
 
-/// Verifies credentials and returns a new session token, locking the account after repeated failures
-pub async fn login(
+// Log a user in
+pub async fn sign_in(
+    state: &AppState,
+    ip: IpAddr,
+    username: &str,
+    password: &str,
+) -> Result<String> {
+
+    let result = login(&state.pool, &state.login_failures, ip, username, password).await;
+
+    // Count a failed login against the IP
+    let failed = matches!(result, Err(AppError::InvalidCredentials));
+
+    // Too many failures, block IP
+    if failed && config::get().rate_limit.block_on_login_limit {
+        if state.address_limits.login_limit_reached(ip) {
+            block_address(state, ip, "login").await?;
+        }
+    }
+
+    result
+}
+
+// Verify credentials abd return new session token.
+// Lock account after repeated failures
+async fn login(
     pool: &sqlx::SqlitePool,
     failures: &LoginFailures,
     ip: IpAddr,
@@ -292,4 +418,18 @@ pub async fn login(
     let token = db::create_session(&mut conn, user.id).await?;
 
     Ok(token)
+}
+
+async fn block_address(
+    state: &AppState,
+    ip: IpAddr,
+    reason: &str,
+) -> Result<()> {
+
+    state.address_limits.block(ip);
+
+    let mut conn = state.pool.acquire().await?;
+    db::save_blocked_address(&mut conn, ip, reason).await?;
+
+    Ok(())
 }

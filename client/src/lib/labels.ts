@@ -1,7 +1,8 @@
 // Text the client shows for each value
 
 import { GlobalRole, Notify, Permission, Platform, Status, Visibility } from "@/bindings/shared";
-import { CallCloseCode, Device, GamePresence } from "@/bindings/sockets/events";
+import { CallCloseCode } from "@/bindings/sockets/call/events";
+import { Device } from "@/bindings/sockets/session/presence";
 import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";
@@ -96,12 +97,6 @@ export const LABELS_STATUS: Record<Status, string> = {
   [Status.busy]: "Do Not Disturb",
   [Status.away]: "Away",
   [Status.offline]: "Offline",
-};
-
-export const LABELS_GAME_PRESENCE: Record<GamePresence, string> = {
-  [GamePresence.Online]: "Online",
-  [GamePresence.Away]: "Away",
-  [GamePresence.Offline]: "Offline",
 };
 
 export const LABELS_VISIBILITY: Record<Visibility, string> = {

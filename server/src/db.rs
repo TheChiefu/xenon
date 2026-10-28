@@ -10,55 +10,10 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::{self, AppError, Result};
-use crate::shared::{GlobalRole, Permission, Visibility};
+use crate::types::rooms::{Permission, Visibility};
+use crate::types::time::DAY;
+use crate::types::users::GlobalRole;
 use crate::utils;
-
-/// One day in milliseconds
-pub const DAY: i64 = 86400000;
-
-/// Resolves a session token to the user it belongs to.
-/// Extending the session timer.
-pub async fn authenticate(
-    conn: &mut sqlx::SqliteConnection,
-    token_hash: &[u8],
-) -> Result<Option<Uuid>> {
-
-    // Fetch user id and session expiry information
-    let now: i64 = utils::now_ms();
-    let row = sqlx::query_as::<_, (Uuid, i64)>(
-        "
-        SELECT user_id, expires_at FROM sessions
-        WHERE token_hash = ?1 AND revoked_at IS NULL AND expires_at > ?2
-        "
-    )
-    .bind(token_hash)
-    .bind(now)
-    .fetch_optional(&mut *conn)
-    .await?;
-
-    let Some((user_id, expires_at)) = row else {
-        return Ok(None);
-    };
-
-    // Extend session timer
-    let lifetime = config::get().session.lifetime_days * DAY;
-    let renew = config::get().session.renew_after_days_elapsed * DAY;
-    if expires_at < now + lifetime - renew {
-        sqlx::query(
-            "
-            UPDATE sessions SET expires_at = ?1 + ?2
-            WHERE token_hash = ?3
-            "
-        )
-        .bind(utils::now_ms())
-        .bind(lifetime)
-        .bind(token_hash)
-        .execute(&mut *conn)
-        .await?;
-    }
-
-    Ok(Some(user_id))
-}
 
 /// Creates a new user
 pub async fn create_user(
@@ -116,51 +71,6 @@ pub async fn create_session(
     .await?;
 
     Ok(token.secret)
-}
-
-/// Creates a registration code
-pub async fn create_registration_code(
-    conn: &mut sqlx::SqliteConnection,
-    max_uses: Option<i64>,
-    lifetime: Option<i64>,
-    length: usize,
-) -> Result<String> {
-
-    let code = utils::generate_code(length);
-    let now = utils::now_ms();
-    let expires_at = lifetime.map(|ms| now.saturating_add(ms));
-
-    sqlx::query(
-        "
-        INSERT INTO registration_codes (code, created_at, expires_at, max_uses)
-        VALUES (?1, ?2, ?3, ?4)
-        ",
-    )
-    .bind(&code)
-    .bind(now)
-    .bind(expires_at)
-    .bind(max_uses)
-    .execute(&mut *conn)
-    .await?;
-
-    Ok(code)
-}
-
-/// Revokes a registration code
-pub async fn revoke_registration_code(
-    conn: &mut sqlx::SqliteConnection,
-    code: &str,
-) -> Result<bool> {
-
-    let deleted = sqlx::query("
-        DELETE FROM registration_codes
-        WHERE code = ?1"
-    )
-    .bind(code)
-    .execute(&mut *conn)
-    .await?;
-
-    Ok(deleted.rows_affected() > 0)
 }
 
 /// Resolves what a user is allowed to do in a room
@@ -282,47 +192,6 @@ pub async fn member_room_ids(
     .await?;
 
     Ok(rooms)
-}
-
-/// Reads a user's preferences
-pub async fn get_preferences(
-    conn: &mut sqlx::SqliteConnection,
-    user_id: Uuid,
-) -> Result<String> {
-
-    let row: String = sqlx::query_scalar(
-        "
-        SELECT room_layout
-        FROM user_preferences
-        WHERE user_id = ?1
-        "
-    )
-    .bind(user_id)
-    .fetch_one(&mut *conn)
-    .await?;
-
-    Ok(row)
-}
-
-/// Writes a user's room list layout
-pub async fn set_room_layout(
-    conn: &mut sqlx::SqliteConnection,
-    user_id: Uuid,
-    room_layout: &str,
-) -> Result<()> {
-
-    sqlx::query(
-        "
-        UPDATE user_preferences SET room_layout = ?1
-        WHERE user_id = ?2
-        "
-    )
-    .bind(room_layout)
-    .bind(user_id)
-    .execute(&mut *conn)
-    .await?;
-
-    Ok(())
 }
 
 /// Lists the ids of everyone sharing a room with a user, the user included

@@ -11,137 +11,23 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::api::users::UserSummary;
-use crate::db;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::services::{steam, xbox};
-use crate::shared::{GlobalRole, Platform};
-use crate::sockets::events::ServerEvent;
-use crate::sockets::chat::registry;
-use crate::state::AppState;
-use crate::validate;
+use crate::state::{self, AppState};
+use crate::types::users::{GlobalRole, UserProfile};
 use crate::{api, config};
 
-// Data Structs //
+// REQUESTS //
 
-
-/// A user's profile
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct UserProfileResponse {
-    pub id: Uuid,
-    pub username: String,
-    pub display_name: String,
-    pub description: String,
-    pub avatar_file_id: Option<Uuid>,
-    pub banner_file_id: Option<Uuid>,
-    pub global_role: GlobalRole,
-    pub created_at: i64,
-    pub banned: bool,
-    pub linked_accounts: Vec<LinkedAccountResponse>,
-}
-
-/// A user's linked account
-/// - Platform: Service the account belongs to
-/// - Handle: Name shown for the account
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct LinkedAccountResponse {
-    pub platform: Platform,
-    pub handle: String,
-}
-
-/// What a member row or search result shows of a user
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct UserSummaryResponse {
-    pub id: Uuid,
-    pub username: String,
-    pub display_name: String,
-    pub avatar_file_id: Option<Uuid>,
-    pub banner_file_id: Option<Uuid>,
-    pub global_role: GlobalRole,
-}
-
-impl From<UserSummary> for UserSummaryResponse {
-    fn from(user: UserSummary) -> Self {
-        Self {
-            id: user.id,
-            username: user.username,
-            display_name: user.display_name,
-            avatar_file_id: user.avatar_file_id,
-            banner_file_id: user.banner_file_id,
-            global_role: user.global_role,
-        }
-    }
-}
-
-/// PATCH body for a user's own profile. An absent field is left as it stands.
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct ProfilePatch {
-    #[serde(default)]
-    pub display_name: Option<String>,
-
-    /// Empty string clears the text
-    #[serde(default)]
-    pub description: Option<String>,
-
-    /// Nil UUID clears the avatar
-    #[serde(default)]
-    pub avatar_file_id: Option<Uuid>,
-
-    /// Nil UUID clears the banner
-    #[serde(default)]
-    pub banner_file_id: Option<Uuid>,
-}
-
-/// PATCH body for changing a user's global role.
-#[derive(Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct SetRoleRequest {
+pub struct RequestRoleSet {
     pub role: GlobalRole,
 }
 
-/// PATCH body for replacing a password.
-#[derive(Deserialize)]
-pub struct PasswordRequest {
-    pub current_password: String,
-    pub new_password: String,
-
-    /// Revokes every session but the one making the request
-    #[serde(default)]
-    pub revoke_others: bool,
-}
-
-/// DELETE body for closing your own account.
-#[derive(Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct DeleteAccountRequest {
-    /// Deletes every message the account wrote
-    #[serde(default)]
-    pub delete_history: bool,
-}
-
-/// The caller's own preferences
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct PreferencesResponse {
-    pub room_layout: String,
-}
-
-/// PATCH body for the caller's own preferences. An absent field is left as it stands
-#[derive(Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
-pub struct PreferencesPatch {
-    #[serde(default)]
-    pub room_layout: Option<String>,
-}
-
-/// POST body for looking up users.
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts", optional_fields))]
-pub struct UsersLookup {
+pub struct RequestUsers {
     #[serde(default)]
     pub ids: Option<Vec<Uuid>>,
 
@@ -156,19 +42,41 @@ pub struct UsersLookup {
     pub limit: Option<i64>,
 }
 
+// RESPONSES //
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/users.ts"))]
+pub struct RespondSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_file_id: Option<Uuid>,
+    pub banner_file_id: Option<Uuid>,
+    pub global_role: GlobalRole,
+}
+
+impl From<UserSummary> for RespondSummary {
+    fn from(user: UserSummary) -> Self {
+        Self {
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
+            avatar_file_id: user.avatar_file_id,
+            banner_file_id: user.banner_file_id,
+            global_role: user.global_role,
+        }
+    }
+}
+
+
 // Routing Methods //
 
-/// Gets the summaries of a set of users.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `body` - Ids to fetch, or a username prefix to page through.
-pub async fn get_users(
+/// Get summaries of multiple users
+pub async fn query(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
-    Json(body): Json<UsersLookup>,
-) -> Result<Json<Vec<UserSummaryResponse>>> {
+    Json(body): Json<RequestUsers>,
+) -> Result<Json<Vec<RespondSummary>>> {
 
     let users = match body.ids {
 
@@ -199,250 +107,63 @@ pub async fn get_users(
         }
     };
 
-    Ok(Json(users.into_iter().map(UserSummaryResponse::from).collect()))
+    Ok(Json(users.into_iter().map(RespondSummary::from).collect()))
 }
 
-/// Gets a user's public profile.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User to look up.
-pub async fn get_user(
+/// Get a user's public profile
+pub async fn get(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(user_id): Path<Uuid>,
-) -> Result<Json<UserProfileResponse>> {
-    Ok(Json(build_profile(&pool, user_id).await?))
+) -> Result<Json<UserProfile>> {
+    let profile = api::users::profile(&pool, user_id).await?;
+    Ok(Json(profile))
 }
 
-/// Gets the caller's own profile.
-///
-/// # Arguments
-///
-/// * `user_id` - Whose profile to return.
-/// * `pool` - Pool of SQL connections.
-pub async fn get_me(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<Json<UserProfileResponse>> {
-    Ok(Json(build_profile(&pool, user_id).await?))
-}
-
-/// Build a public profile based on user related components
-///
-/// Returns `AppError::NotFound` if no such user exists.
-async fn build_profile(pool: &SqlitePool, user_id: Uuid) -> Result<UserProfileResponse> {
-    let row = api::users::get(pool, user_id).await?;
-
-    let mut linked_accounts = Vec::new();
-
-    if let Some(xbox) = xbox::accounts::get(pool, user_id).await? {
-        linked_accounts.push(LinkedAccountResponse {
-            platform: Platform::Xbox,
-            handle: xbox.gamertag
-        });
-    }
-
-    if let Some(steam) = steam::accounts::get(pool, user_id).await? {
-        linked_accounts.push(LinkedAccountResponse {
-            platform: Platform::Steam,
-            handle: steam.persona_name
-        });
-    }
-
-    Ok(UserProfileResponse {
-        id: row.id,
-        username: row.username,
-        display_name: row.display_name,
-        description: row.description,
-        avatar_file_id: row.avatar_file_id,
-        banner_file_id: row.banner_file_id,
-        global_role: row.global_role,
-        created_at: row.created_at,
-        banned: row.banned,
-        linked_accounts,
-    })
-}
-
-/// Writes the caller's own profile.
-///
-/// # Arguments
-///
-/// * `user_id` - Whose profile is being written.
-/// * `app_state` - Pool and socket registry.
-/// * `body` - Fields to change.
-pub async fn update_me(
-    AuthUser(user_id, ..): AuthUser,
-    State(app_state): State<AppState>,
-    Json(body): Json<ProfilePatch>,
-) -> Result<StatusCode> {
-    // Profile as stored, or None if no such user
-    let updated = api::users::update(
-        &app_state.pool,
-        user_id,
-        body.display_name,
-        body.description,
-        body.avatar_file_id,
-        body.banner_file_id,
-    ).await?;
-
-    // Notify everyone sharing a room of the new name and pictures
-    if let Some(profile) = updated {
-        let mut conn = app_state.pool.acquire().await?;
-        let members = db::shared_room_member_ids(&mut conn, user_id).await?;
-
-        let event = ServerEvent::ProfileUpdated {
-            user_id,
-            display_name: profile.display_name,
-            description: profile.description,
-            avatar_file_id: profile.avatar_file_id,
-            banner_file_id: profile.banner_file_id,
-        };
-        registry::inform_users(&app_state, &members, event);
-    }
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Gets the caller's own preferences
-pub async fn get_preferences(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<Json<PreferencesResponse>> {
-
-    let mut conn = pool.acquire().await?;
-    let room_layout = db::get_preferences(&mut conn, user_id).await?;
-
-    Ok(Json(PreferencesResponse { room_layout }))
-}
-
-/// Writes the caller's own preferences
-pub async fn update_preferences(
-    AuthUser(user_id, ..): AuthUser,
-    State(app_state): State<AppState>,
-    Json(body): Json<PreferencesPatch>,
-) -> Result<StatusCode> {
-
-    // Saves the caller's room list layout
-    if let Some(room_layout) = body.room_layout {
-        validate::room_layout(&room_layout)?;
-
-        let mut conn = app_state.pool.acquire().await?;
-        db::set_room_layout(&mut conn, user_id, &room_layout).await?;
-    }
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Replaces the caller's password.
-///
-/// # Arguments
-///
-/// * `user_id` - Whose password is being replaced.
-/// * `session_hash` - The caller's own session, kept when revoking the rest.
-/// * `pool` - Pool of SQL connections.
-/// * `body` - Current password, replacement, and whether to revoke elsewhere.
-pub async fn update_my_password(
-    AuthUser(user_id, session_hash): AuthUser,
-    State(pool): State<SqlitePool>,
-    Json(body): Json<PasswordRequest>,
-) -> Result<StatusCode> {
-    api::auth::change_password(
-        &pool,
-        user_id,
-        &body.current_password,
-        &body.new_password,
-        body.revoke_others,
-        &session_hash,
-    )
-    .await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Revokes the session the request authenticated with
-pub async fn sign_out(
-    AuthUser(_, session_hash): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<StatusCode> {
-    api::auth::revoke_session(&pool, &session_hash).await?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Closes the caller's own account.
-///
-/// # Arguments
-///
-/// * `user_id` - Account being closed.
-/// * `app_state` - Pool and socket registry.
-/// * `body` - Whether to drop the history.
-pub async fn delete_me(
-    AuthUser(user_id, ..): AuthUser,
-    State(app_state): State<AppState>,
-    Json(body): Json<DeleteAccountRequest>,
-) -> Result<StatusCode> {
-    api::users::delete(&app_state, user_id, body.delete_history).await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Closes someone else's account.
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is closing the account.
-/// * `app_state` - Pool and socket registry.
-/// * `target_id` - Account being closed.
-/// * `body` - Whether to drop the history.
-pub async fn delete_user(
-    AuthUser(caller_id, ..): AuthUser,
-    State(app_state): State<AppState>,
-    Path(target_id): Path<Uuid>,
-    Json(body): Json<DeleteAccountRequest>,
-) -> Result<StatusCode> {
-    api::users::delete_other(&app_state, caller_id, target_id, body.delete_history).await?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Promotes or demotes a user.
-///
-/// # Arguments
-///
-/// * `caller_id` - Who is making the change.
-/// * `pool` - Pool of SQL connections.
-/// * `target_id` - User whose role changes.
-/// * `body` - The role to set.
+/// Promote or demotes a user's global role
 pub async fn set_role(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(target_id): Path<Uuid>,
-    Json(body): Json<SetRoleRequest>,
+    Json(body): Json<RequestRoleSet>,
 ) -> Result<StatusCode> {
-    api::users::set_role(&pool, caller_id, target_id, body.role).await?;
+    if !api::users::can_moderate(&pool, caller_id, target_id).await? {
+        return Err(AppError::Forbidden);
+    }
+
+    api::users::set_global_role(&pool, target_id, body.role).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Bans a user
-pub async fn ban_user(
+/// Ban a user
+pub async fn ban(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(target_id): Path<Uuid>,
 ) -> Result<StatusCode> {
-    api::users::ban_other(&app_state, caller_id, target_id).await?;
+    if !api::users::can_moderate(&app_state.pool, caller_id, target_id).await? {
+        return Err(AppError::Forbidden);
+    }
+
+    api::users::ban(&app_state, target_id).await?;
+
+    state::disconnect(&app_state, target_id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Unbans a user
-pub async fn unban_user(
+/// Unban a user
+pub async fn unban(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(target_id): Path<Uuid>,
 ) -> Result<StatusCode> {
-    api::users::unban_other(&pool, caller_id, target_id).await?;
+    if !api::users::can_moderate(&pool, caller_id, target_id).await? {
+        return Err(AppError::Forbidden);
+    }
+
+    api::users::unban(&pool, target_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::bytesize::{ByteSize, MEBIBYTE};
+use crate::types::bytesize::{ByteSize, MEBIBYTE};
 
 /// Size of uploaded files and attachments
 #[derive(Debug, Deserialize, Serialize)]

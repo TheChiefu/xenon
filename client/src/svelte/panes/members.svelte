@@ -222,9 +222,9 @@
   {#each ordered_ids as id (id)}
     {@const avatar = users.getAvatar(id)}
     {@const banner = users.getBanner(id)}
-    {@const presence = users.getPresence(id)}
+    {@const status = users.getStatus(id)}
     {@const activity = users.getActivity(id)}
-    {@const offline = presence.status === Status.offline}
+    {@const offline = status.status === Status.offline}
     <button
       class="member"
       class:offline
@@ -260,13 +260,13 @@
         {/if}
       </span>
 
-      {#if presence.device !== null}
-        <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[presence.device]}>
-          {@html ICONS_DEVICE[presence.device]}
+      {#if status.device !== null}
+        <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[status.device]}>
+          {@html ICONS_DEVICE[status.device]}
         </span>
       {/if}
 
-      <span class="status {presence.status}"></span>
+      <span class="status {status.status}"></span>
     </button>
   {/each}
 </div>

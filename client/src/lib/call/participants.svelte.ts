@@ -1,5 +1,5 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import type { ActiveCall } from "@/bindings/sockets/events";
+import type { RoomCall } from "@/bindings/sockets/call/registry";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 
@@ -25,7 +25,7 @@ export function get(room_id: string): string[] {
 events.subscribe(ServerEventType.call_snapshot, (event) => {
   calls.clear();
 
-  const active: ActiveCall[] = event.calls;
+  const active: RoomCall[] = event.calls;
 
   for (const call of active) {
     calls.set(call.room_id, new SvelteSet(call.participants));

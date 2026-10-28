@@ -23,9 +23,6 @@ use crate::services::xbox::accounts;
 use crate::services::xbox::auth;
 use crate::services::xbox::auth::microsoft;
 use crate::services::xbox::auth::xsts;
-use crate::services::xbox::auth::Failure;
-use crate::services::xbox::friends;
-use crate::services::xbox::presence::PresenceState;
 use crate::state::AppState;
 use crate::utils::{generate_code, write_lock};
 
@@ -101,24 +98,6 @@ pub struct XboxResponse {
     pub honor_cloaked: bool
 }
 
-/// A friend on Xbox
-/// - Gamertag: Name shown for the account
-/// - Picture URL: Gamerpic
-/// - Online: Whether presence state is online
-/// - Presence text: Xbox status line
-/// - In party: Number of people in the party
-/// - Party locked: Whether the party is invite only
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/xbox.ts"))]
-pub struct FriendResponse {
-    pub gamertag: String,
-    pub picture_url: Option<String>,
-    pub online: bool,
-    pub presence_text: String,
-    pub in_party: u32,
-    pub party_locked: bool
-}
-
 /// Settings for caller's linked account
 /// - Honor cloaked: Whether activity is hidden while appearing offline on Xbox
 #[derive(Deserialize)]
@@ -179,40 +158,6 @@ pub async fn get_account(
     };
 
     Ok(Json(response))
-}
-
-/// Returns caller's Xbox friends
-pub async fn get_friends(
-    AuthUser(user_id, ..): AuthUser,
-    State(pool): State<SqlitePool>,
-) -> Result<Json<Vec<FriendResponse>>> {
-    let xbox = config::get().xbox();
-
-    // Returns empty list if caller has no linked account
-    let Some(account) = accounts::get(&pool, user_id).await? else {
-        return Ok(Json(Vec::new()));
-    };
-
-    // Rejects request if Authorization header could not be built
-    let Some(authorization) = auth::get_header(&pool, &account, xbox).await else {
-        return Err(AppError::Xbox(Failure::Retry("Xbox authorization unavailable".into())));
-    };
-
-    // Requests friends list and converts each person to a friend response
-    let friends = friends::fetch(&account, &authorization)
-        .await?
-        .into_iter()
-        .map(|person| FriendResponse {
-            gamertag: person.gamertag,
-            picture_url: person.display_pic_raw,
-            online: person.presence_state == PresenceState::Online,
-            presence_text: person.presence_text,
-            in_party: person.multiplayer_summary.in_party,
-            party_locked: person.multiplayer_summary.invite_only()
-        })
-        .collect();
-
-    Ok(Json(friends))
 }
 
 /// Changes caller's linked account settings

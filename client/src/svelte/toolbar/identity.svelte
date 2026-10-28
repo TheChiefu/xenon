@@ -17,7 +17,7 @@
 
   let menuOpen = $state(false);
 
-  const presence = $derived(users.getPresence(profile.get()?.id ?? ""));
+  const status = $derived(users.getStatus(profile.get()?.id ?? ""));
 
   // Messages
   const msg_sign_out = "Are you sure you want to sign out?";
@@ -173,7 +173,7 @@
 <svelte:window onpointerdown={pressAway}/>
 
 <div class="identity">
-  <div class="frame status-{presence.status}">
+  <div class="frame status-{status.status}">
     <div class="card">
       <button
         class="user"

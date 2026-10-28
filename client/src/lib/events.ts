@@ -1,7 +1,8 @@
 // Listeners are registered under an event name,
 // publishing the name calls each of its listeners, passing them the published data
 
-import type { CallServerEvent, ServerEvent } from "@/bindings/sockets/events";
+import type { CallServerEvent } from "@/bindings/sockets/call/events";
+import type { ServerEvent } from "@/bindings/sockets/session/events";
 import { CHOICE_NO, CHOICE_YES } from "@/lib/labels";
 
 // TYPES //
@@ -18,10 +19,10 @@ export enum ServerEventType {
   member_left = "member_left",
   room_deleted = "room_deleted",
   room_updated = "room_updated",
-  presence_updated = "presence_updated",
-  presence_snapshot = "presence_snapshot",
-  game_presence_snapshot = "game_presence_snapshot",
-  game_presence_updated = "game_presence_updated",
+  status_updated = "status_updated",
+  status_snapshot = "status_snapshot",
+  platform_snapshot = "platform_snapshot",
+  platform_updated = "platform_updated",
   profile_updated = "profile_updated",
   resync = "resync",
   notification = "notification",

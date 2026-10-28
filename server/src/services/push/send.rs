@@ -14,6 +14,7 @@ use crate::error::Result;
 use crate::services::CLIENT;
 use crate::services::push::store;
 use crate::services::push::store::Subscription;
+use crate::sockets::session::registry;
 use crate::state::AppState;
 
 /// Notification contents as JSON, read by a service worker
@@ -52,9 +53,10 @@ pub fn shorten(body: &str) -> String {
     }
 }
 
-/// Spawns a task notifying users with no socket
-pub fn notify_offline(app_state: &AppState, payload: Payload, user_ids: Vec<Uuid>) {
-    if user_ids.is_empty() {
+/// Spawns a task notifying the given users who hold no socket
+pub fn notify_offline(app_state: &AppState, payload: Payload, user_ids: &[Uuid]) {
+    let offline = registry::offline_users(&app_state.registry, user_ids);
+    if offline.is_empty() {
         return;
     }
 
@@ -66,7 +68,7 @@ pub fn notify_offline(app_state: &AppState, payload: Payload, user_ids: Vec<Uuid
     let pool = app_state.pool.clone();
 
     tokio::spawn(async move {
-        if let Err(e) = notify(&pool, push, &payload, &user_ids).await {
+        if let Err(e) = notify(&pool, push, &payload, &offline).await {
             tracing::error!("could not send notifications: {e}");
         }
     });

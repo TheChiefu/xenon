@@ -10,9 +10,7 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use sha2::{Digest, Sha256};
 
 use crate::error::{AppError, Result};
-
-/// One minute in milliseconds.
-pub const MINUTE: i64 = 60000;
+use crate::types::time::{DAY, HOUR, MINUTE, SECOND};
 
 /// How many bytes a session token carries.
 const SESSION_TOKEN_BYTES: usize = 32;
@@ -174,7 +172,7 @@ pub fn ms_rfc3339(timestamp: &str) -> Option<i64> {
         days += 1;
     }
 
-    Some((days * 86400 + hour * 3600 + minute * 60 + second) * 1000)
+    Some(days * DAY + hour * HOUR + minute * MINUTE + second * SECOND)
 }
 
 // Locks

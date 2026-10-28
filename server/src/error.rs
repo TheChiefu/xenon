@@ -12,8 +12,7 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::bytesize::ByteSize;
-use crate::services::xbox::auth::Failure;
+use crate::types::bytesize::ByteSize;
 const SQLITE_BUSY: &str = "5"; // https://sqlite.org/rescode.html#busy
 
 /// Body of every error response
@@ -40,7 +39,6 @@ pub enum AppError {
     Io(std::io::Error),
     Http(reqwest::Error),
     Url(url::ParseError),
-    Xbox(Failure),
 }
 
 impl fmt::Display for AppError {
@@ -60,7 +58,6 @@ impl fmt::Display for AppError {
             AppError::Url(e) => write!(f, "url error: {e}"),
             AppError::NotFound => write!(f, "not found"),
             AppError::AddressBlocked => write!(f, "this address is blocked"),
-            AppError::Xbox(failure) => write!(f, "{failure}"),
         }
     }
 }
@@ -114,12 +111,6 @@ impl From<url::ParseError> for AppError {
     }
 }
 
-impl From<Failure> for AppError {
-    fn from(failure: Failure) -> Self {
-        AppError::Xbox(failure)
-    }
-}
-
 impl AppError {
     /// Logs the error and answers with a generic 500, carrying the same id in
     /// both so the response can be matched to its log line.
@@ -142,10 +133,6 @@ impl IntoResponse for AppError {
             AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::AddressBlocked => (StatusCode::FORBIDDEN, self.to_string()),
-
-            // Microsoft or Xbox rejected request, or could not be reached
-            AppError::Xbox(Failure::Dead(_)) => (StatusCode::BAD_REQUEST, self.to_string()),
-            AppError::Xbox(Failure::Retry(_)) => (StatusCode::BAD_GATEWAY, self.to_string()),
 
             // A rejected request body reaches server as an io error
             AppError::Io(e) => match multipart_rejection(e) {
