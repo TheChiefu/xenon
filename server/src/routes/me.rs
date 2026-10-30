@@ -21,6 +21,7 @@ use crate::types::users::UserProfile;
 // REQUESTS //
 
 #[derive(Deserialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/me.ts"))]
 pub struct RequestPasswordSet {
     pub current_password: String,
     pub new_password: String,
@@ -85,8 +86,7 @@ pub struct PatchRoomPreferences {
     pub room_layout: Option<String>,
 }
 
-
-// Routing Methods //
+// ROUTING METHODS //
 
 /// Get the caller's profile
 pub async fn get(
@@ -141,13 +141,13 @@ pub async fn get_preferences(
 /// Write the caller's preferences
 pub async fn update_preferences(
     AuthUser(user_id, ..): AuthUser,
-    State(app_state): State<AppState>,
+    State(pool): State<SqlitePool>,
     Json(body): Json<PatchRoomPreferences>,
 ) -> Result<StatusCode> {
 
     // Save the caller's room list layout
     if let Some(room_layout) = body.room_layout {
-        api::users::set_room_layout(&app_state.pool, user_id, &room_layout).await?;
+        api::users::set_room_layout(&pool, user_id, &room_layout).await?;
     }
 
     Ok(StatusCode::NO_CONTENT)

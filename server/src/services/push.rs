@@ -1,3 +1,5 @@
+//! Web push notifications for users without an open socket
+
 pub mod routes;
 pub mod send;
 pub mod store;

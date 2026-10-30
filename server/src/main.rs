@@ -1,3 +1,5 @@
+//! Starts the server: config, database, services, then the HTTP router
+
 mod api;
 mod cli;
 mod config;
@@ -16,8 +18,8 @@ mod validate;
 use std::path::Path;
 use std::time::Duration;
 
-use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 use crate::error::Result;

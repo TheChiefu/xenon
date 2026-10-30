@@ -1,3 +1,5 @@
+//! Steam Web API requests for player summaries
+
 use serde::Deserialize;
 
 use crate::config;

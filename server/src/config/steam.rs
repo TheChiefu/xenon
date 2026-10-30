@@ -1,12 +1,12 @@
-//! The '[steam]' section of the config file
+//! The `[steam]` section of the config file
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Steam {
-    pub web_api_key: String,
-    pub poll_interval_seconds: u64,
+    pub web_api_key: String, // Steam Web API key used to read player summaries
+    pub poll_interval_seconds: u64, // Seconds between presence polls
 }
 
 impl Steam {

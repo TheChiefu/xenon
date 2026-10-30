@@ -2,12 +2,12 @@
 //!
 //! Bypasses layers (ie not bound to API or DB) since it's expected
 //! direct access to machine is given, which is elevated privlidge over server
-//! 
+//!
 //! Run the server inside `screen` to deatch from user console:
 //! - Start server:         `screen -S xenon ./xenon`
 //! - Detach from screen:   Ctrl+A then D
 //! - Reattach to screen:   `screen -r xenon`
-//! 
+//!
 
 mod files;
 mod ip;
@@ -26,7 +26,6 @@ pub static EXIT: LazyLock<Notify> = LazyLock::new(Notify::new);
 
 /// Signal that the server is listening
 pub static READY: LazyLock<Notify> = LazyLock::new(Notify::new);
-
 
 pub const COMMANDS: &[&str] = &[
     "user <command>",
@@ -83,11 +82,11 @@ async fn run(state: &AppState, args: &[&str]) -> Result<()> {
         ["user", args_s @ ..] => user::run(state, args_s).await,
         ["files", args_s @ ..] => files::run(state, args_s).await,
         ["ip", args_s @ ..] => ip::run(state, args_s).await,
-        _ => Err(usage(&[COMMANDS].concat())),
+        _ => Err(usage(COMMANDS)),
     }
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Lists the given commands as a usage error
 fn usage(commands: &[&str]) -> AppError {

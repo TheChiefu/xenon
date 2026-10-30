@@ -1,27 +1,17 @@
 //! The `room_bans` table: who is barred from a room.
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::types::rooms::Permission;
 
-// API Methods //
+// PUBLIC METHODS //
 
-/// Lists the users banned from a room.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the bans are within.
-/// * `caller_id` - Who is requesting the list.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` unless the caller holds `Permission::Ban`, or
-/// is server staff in a Public room.
+/// List the users banned from a room
 pub async fn list(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
 ) -> Result<Vec<Uuid>> {
@@ -46,21 +36,9 @@ pub async fn list(
     Ok(user_ids)
 }
 
-/// Bans a user from a room and removes any membership they hold.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the user is being banned from.
-/// * `caller_id` - Who is performing the ban.
-/// * `target_id` - Who is being banned.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` unless the caller holds `Permission::Ban`, or
-/// is server staff in a Public room.
+/// Ban a user from a room and removes any membership they hold
 pub async fn create(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
@@ -107,22 +85,9 @@ pub async fn create(
     Ok(())
 }
 
-/// Lifts a user's ban on a room.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to lift the ban from.
-/// * `caller_id` - Who is lifting the ban.
-/// * `target_id` - Who is being removed from the ban list.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` unless the caller holds `Permission::Ban` or is
-/// server staff in a Public room, and `AppError::NotFound` if the user holds no
-/// ban on the room.
+/// Lift a user's ban on a room
 pub async fn revoke(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
@@ -147,20 +112,9 @@ pub async fn revoke(
     Ok(())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-/// Rejects the caller if they cannot issue bans for the room.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room the permission applies to.
-/// * `caller_id` - User being checked.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` unless the caller holds `Permission::Ban`, or
-/// is server staff in a Public room.
+/// Reject the caller if they cannot issue bans for the room
 async fn require_permission(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,

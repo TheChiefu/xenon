@@ -1,7 +1,7 @@
-// Xbox Live half of Xbox linking
-// - Requests a user token, then an XSTS token, starting from a Microsoft access token
-// https://minecraft.wiki/w/Microsoft_authentication
-// https://github.com/OpenXbox/xbox-webapi-python/blob/master/xbox/webapi/authentication/manager.py
+//! Xbox Live half of Xbox linking
+//! - Requests a user token, then an XSTS token, starting from a Microsoft access token
+//! https://minecraft.wiki/w/Microsoft_authentication
+//! https://github.com/OpenXbox/xbox-webapi-python/blob/master/xbox/webapi/authentication/manager.py
 
 use serde::Deserialize;
 
@@ -11,7 +11,7 @@ use crate::services::xbox::auth::Failure;
 const USER_AUTH_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
 const XSTS_AUTH_URL: &str = "https://xsts.auth.xboxlive.com/xsts/authorize";
 
-// Data Types //
+// DATA STRUCTS //
 
 /// Xbox account ID, gamertag, and user hash
 #[derive(Deserialize)]
@@ -61,7 +61,7 @@ struct ErrorBody {
     xerr: u64
 }
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Requests a user token with a Microsoft access token
 pub async fn request_user_token(access_token: &str) -> Result<String, Failure> {
@@ -132,7 +132,7 @@ pub async fn request_xsts_token(user_token: &str) -> Result<XstsBody, Failure> {
     }
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Reads XErr code from rejected XSTS response
 async fn failure(response: reqwest::Response) -> Failure {

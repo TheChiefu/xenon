@@ -8,7 +8,6 @@
   // User Credentials
   let creds_password_curr = $state("");
   let creds_password_new = $state("");
-  let creds_revoke_sessions = $state(false);
   let creds_notify = $state("");
 
   // Account Deletion
@@ -19,10 +18,9 @@
     creds_notify = "";
 
     try {
-      await usersAPI.changePassword(creds_password_curr, creds_password_new, creds_revoke_sessions);
+      await usersAPI.changePassword(creds_password_curr, creds_password_new);
       creds_password_curr = "";
       creds_password_new = "";
-      creds_revoke_sessions = false;
       creds_notify = MSG_SAVED;
     } catch (failure) {
       creds_notify = `${MSG_ERROR}: ${failureText(failure)}`;
@@ -57,8 +55,6 @@
     <label for="new-password">New Password</label>
     <input id="new-password" name="new-password" type="password" autocomplete="new-password" bind:value={creds_password_new}/>
 
-    <label for="revoke-sessions">Sign Out Other Sessions</label>
-    <input id="revoke-sessions" type="checkbox" bind:checked={creds_revoke_sessions}/>
     <button class="full-row" onclick={savePassword}>Save Changes</button>
 </div>
 

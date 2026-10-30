@@ -1,3 +1,5 @@
+//! The `[calls]` section of the config file
+
 use serde::{Deserialize, Serialize};
 
 use crate::types::bytesize::{ByteSize, KIBIBYTE};
@@ -32,7 +34,7 @@ impl Calls {
             return Err("calls.participants_max must be at least 2".to_string());
         }
 
-        if ByteSize::to_int(self.signal_size_max) < 8 * KIBIBYTE {
+        if self.signal_size_max.to_int() < 8 * KIBIBYTE {
             return Err("calls.signal_size_max must be at least 8KiB".to_string());
         }
 

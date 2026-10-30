@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SearchResult } from "@/bindings/routes/search";
+  import type { RespondSearchResult } from "@/bindings/routes/search";
   import type { SearchRequest } from "@/bindings/types/messages";
   import * as searchAPI from "@/lib/api/search";
   import { dialogFly } from "@/lib/display/transitions";
@@ -26,7 +26,7 @@
   let toDay: string = $state("");
 
   let active: SearchRequest | null = $state(null);
-  let results: SearchResult[] = $state([]);
+  let results: RespondSearchResult[] = $state([]);
   let total: number = $state(0);
   let current: number = $state(1);
   let searched: boolean = $state(false);

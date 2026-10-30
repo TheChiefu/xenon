@@ -1,3 +1,5 @@
+//! One participant's call WebSocket, from the handshake until it closes
+
 use axum::extract::ws::{CloseFrame, Message, WebSocket};
 use axum::extract::{Path, State, WebSocketUpgrade};
 use axum::response::Response;
@@ -6,7 +8,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::api::rooms;
+use crate::api;
 use crate::config;
 use crate::routes::AuthUser;
 use crate::sockets;
@@ -15,33 +17,33 @@ use crate::sockets::call::registry::{self, JoinRefused};
 use crate::sockets::session::events::ServerEvent;
 use crate::state::{self, AppState};
 
-// Socketing Methods //
+// ROUTING METHODS //
 
-// Upgrade an HTTP request into a call socket for a room
+/// Upgrade an HTTP request into a call socket for a room
 pub async fn ws_handler(
     AuthUser(user_id, ..): AuthUser,
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     Path(room_id): Path<Uuid>,
     ws: WebSocketUpgrade,
 ) -> Response {
 
     let handshake = ws.protocols(["Bearer"]);
     let start_socket = move |socket| {
-        handle_socket(socket, user_id, room_id, state)
+        handle_socket(socket, user_id, room_id, app_state)
     };
     handshake.on_upgrade(start_socket)
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Socket information of a user in a room's call
+/// Socket information of a user in a room's call
 async fn handle_socket(
     mut socket: WebSocket,
     user_id: Uuid,
     room_id: Uuid,
-    state: AppState,
+    app_state: AppState,
 ) {
-    match rooms::can_connect(&state.pool, room_id, user_id).await {
+    match api::rooms::can_connect(&app_state.pool, room_id, user_id).await {
         Ok(true) => {}
         Ok(false) => {
             close(&mut socket, CallCloseCode::NoConnect).await;
@@ -54,7 +56,7 @@ async fn handle_socket(
         }
     }
 
-    let receiver = match registry::join(&state.calls, room_id, user_id) {
+    let receiver = match registry::join(&app_state.calls, room_id, user_id) {
         Ok(receiver) => receiver,
         Err(JoinRefused::AlreadyInCall) => {
             close(&mut socket, CallCloseCode::AlreadyInCall).await;
@@ -67,22 +69,22 @@ async fn handle_socket(
     };
 
     let event = ServerEvent::ParticipantJoined { room_id, user_id };
-    state::broadcast(&state, room_id, event).await;
+    state::broadcast(&app_state, room_id, event).await;
 
     let (mut outgoing, mut incoming) = socket.split();
 
-    send_joined(&state, room_id, &mut outgoing).await;
+    send_joined(&app_state, room_id, &mut outgoing).await;
 
     // Either one finishing means the user has left the call
     tokio::select! {
         _ = send_signals(&mut outgoing, receiver) => {}
-        _ = read_events(&mut incoming, user_id, &state) => {}
+        _ = read_events(&mut incoming, user_id, &app_state) => {}
     }
 
-    state::leave_call(&state, user_id).await;
+    state::leave_call(&app_state, user_id).await;
 }
 
-// Close socket with the code for why
+/// Close socket with the code for why
 async fn close(
     socket: &mut WebSocket,
     code: CallCloseCode,
@@ -91,9 +93,9 @@ async fn close(
     let _ = socket.send(Message::Close(Some(frame))).await;
 }
 
-// Write who is already in the call, and the ICE servers the browser uses
+/// Write who is already in the call, and the ICE servers the browser uses
 async fn send_joined(
-    state: &AppState,
+    app_state: &AppState,
     room_id: Uuid,
     socket: &mut SplitSink<WebSocket, Message>,
 ) {
@@ -103,14 +105,14 @@ async fn send_joined(
     }
 
     let event = CallServerEvent::CallJoined {
-        participants: registry::participants(&state.calls, room_id),
+        participants: registry::participants(&app_state.calls, room_id),
         ice_servers
     };
 
     sockets::send(socket, &event).await;
 }
 
-// Write queued signals through the socket
+/// Write queued signals through the socket
 async fn send_signals(
     socket: &mut SplitSink<WebSocket, Message>,
     mut receiver: mpsc::Receiver<String>,
@@ -122,16 +124,16 @@ async fn send_signals(
     }
 }
 
-// Apply what a client sends
+/// Apply what a client sends
 async fn read_events(
     socket: &mut SplitStream<WebSocket>,
     user_id: Uuid,
-    state: &AppState,
+    app_state: &AppState,
 ) {
     while let Some(event) = sockets::read::<CallClientEvent>(socket, user_id).await {
         match event {
             CallClientEvent::Signal { to, payload } => {
-                registry::forward(&state.calls, user_id, to, payload);
+                registry::forward(&app_state.calls, user_id, to, payload);
             }
         }
     }

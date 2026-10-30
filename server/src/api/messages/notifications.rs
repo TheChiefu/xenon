@@ -2,21 +2,21 @@
 
 use std::collections::HashMap;
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::api::rooms;
-use crate::api::rooms::access;
-use crate::api::rooms::access::NotifyUserPair;
+use crate::api::rooms::access::{self, NotifyUserPair};
 use crate::api::users;
 use crate::error::Result;
 use crate::types::messages::Notification;
 use crate::types::rooms::Notify;
 
-// API Methods //
+// PUBLIC METHODS //
 
-// Notify a room's members
+/// Notify a room's members
 pub async fn notify(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     author_id: Uuid,
     body: Option<&str>,
@@ -52,9 +52,9 @@ pub async fn notify(
     })
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Get list of IDs elgible for notification
+/// Get list of IDs elgible for notification
 fn recipients(
     pairs: &[NotifyUserPair],
     author_id: Uuid,
@@ -89,7 +89,7 @@ fn recipients(
     found
 }
 
-// Collect accounts a message body mentions
+/// Collect accounts a message body mentions
 fn mentioned_ids(body: &str) -> Vec<Uuid> {
     let mut found: Vec<Uuid> = Vec::new();
     let mut text = body;
@@ -113,7 +113,7 @@ fn mentioned_ids(body: &str) -> Vec<Uuid> {
     found
 }
 
-// Replace each mention "@UUID" with account's display name
+/// Replace each mention "@UUID" with account's display name
 fn name_mentions(body: &str, names: &HashMap<Uuid, String>) -> String {
     let mut output = String::with_capacity(body.len());
     let mut text = body;
@@ -144,7 +144,7 @@ fn name_mentions(body: &str, names: &HashMap<Uuid, String>) -> String {
     output
 }
 
-// Extract UUID from mention
+/// Extract UUID from mention
 fn mention_id(text: &str, after_at: usize) -> Option<Uuid> {
     text.get(after_at..after_at + uuid::fmt::Hyphenated::LENGTH)
         .and_then(|uuid| Uuid::try_parse(uuid).ok())

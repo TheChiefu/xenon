@@ -22,8 +22,6 @@ const FILE_NAME_MAX: usize = 255;
 /// Shortest text the trigram search index can match
 const SEARCH_TEXT_MIN: usize = 3;
 
-
-
 /// Check a login name's length and character set
 pub fn username(name: &str) -> Result<()> {
     let len = name.chars().count();

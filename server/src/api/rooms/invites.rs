@@ -1,32 +1,26 @@
 //! The `room_invites` table: who has been offered access to a room.
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::types::rooms::Permission;
 
-// Data Structs //
+// DATA STRUCTS //
 
-/// One invite a user has received, with the room's name joined in.
+/// One invite a user has received, with the room's name joined in
 #[derive(sqlx::FromRow)]
 pub struct Received {
     pub room_id: Uuid,
     pub room_name: Option<String>,
 }
 
-// API Methods //
+// PUBLIC METHODS //
 
-/// Invites a user to a room.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room being invited to.
-/// * `caller_id` - Who is issuing the invite.
-/// * `target_id` - Who is being invited.
+/// Invite a user to a room
 pub async fn create(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
@@ -68,18 +62,12 @@ pub async fn create(
     Ok(())
 }
 
-/// Lists the invites addressed to a user, across every room.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `user_id` - User receiving the invites.
+/// List the invites addressed to a user, across every room
 pub async fn list_for_user(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
 ) -> Result<Vec<Received>> {
 
-    let mut conn = pool.acquire().await?;
     let invites: Vec<Received> = sqlx::query_as(
         "
         SELECT i.room_id, r.name AS room_name
@@ -89,26 +77,15 @@ pub async fn list_for_user(
         "
     )
     .bind(user_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(invites)
 }
 
-
-/// Lists the users a room has invited.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room to query.
-/// * `caller_id` - Who is requesting the list.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller lacks `Permission::Invite`.
+/// List the users a room has invited
 pub async fn list(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
 ) -> Result<Vec<Uuid>> {
@@ -132,19 +109,9 @@ pub async fn list(
     Ok(user_ids)
 }
 
-/// Declines an invite the caller received.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the invite is to.
-/// * `caller_id` - Recipient of the invite.
-///
-/// # Errors
-///
-/// Returns `AppError::NotFound` if the caller holds no invite to the room.
+/// Decline an invite the caller received
 pub async fn decline(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
 ) -> Result<()> {
@@ -157,21 +124,9 @@ pub async fn decline(
     Ok(())
 }
 
-/// Withdraws an invite the caller's room issued.
-///
-/// # Arguments
-///
-/// * `pool` - Pool of SQL connections.
-/// * `room_id` - Room the invite is to.
-/// * `caller_id` - Who is withdrawing the invite.
-/// * `target_id` - User the invite was addressed to.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller lacks `Permission::Invite`, and
-/// `AppError::NotFound` if the target holds no invite to the room.
+/// Withdraw an invite the caller's room issued
 pub async fn revoke(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
     target_id: Uuid,
@@ -187,13 +142,7 @@ pub async fn revoke(
     Ok(())
 }
 
-/// Deletes a user's invite to a room, returning false when there was none.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room the invite is to.
-/// * `user_id` - Recipient of the invite.
+/// Delete a user's invite to a room, returning false when there was none
 pub async fn delete(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
@@ -209,19 +158,9 @@ pub async fn delete(
     Ok(result.rows_affected() > 0)
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-/// Rejects the caller if they cannot issue invites for the room.
-///
-/// # Arguments
-///
-/// * `conn` - Connection to SQL DB.
-/// * `room_id` - Room the permission applies to.
-/// * `caller_id` - User being checked.
-///
-/// # Errors
-///
-/// Returns `AppError::Forbidden` if the caller lacks `Permission::Invite`.
+/// Reject the caller if they cannot issue invites for the room
 async fn require_permission(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,

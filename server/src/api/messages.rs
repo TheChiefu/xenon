@@ -4,6 +4,7 @@ pub mod attachments;
 pub mod notifications;
 pub mod search;
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::api::messages::attachments::Attachment;
@@ -15,7 +16,7 @@ use crate::types::rooms::Permission;
 use crate::utils;
 use crate::validate;
 
-// Data Structs //
+// DATA STRUCTS //
 
 /// A `messages` row
 #[derive(sqlx::FromRow)]
@@ -31,7 +32,7 @@ pub struct Message {
 
 impl MessageInfo {
 
-    // Join a stored message to the files attached to it
+    /// Join a stored message to the files attached to it
     pub fn new(message: Message, attachments: Vec<AttachmentInfo>) -> Self {
         Self {
             seq: message.seq,
@@ -46,7 +47,7 @@ impl MessageInfo {
     }
 }
 
-// Which page of a room's history to read
+/// Which page of a room's history to read
 pub enum Cursor {
     Latest, // Newest page
     After(i64), // Everything newer than the given seq
@@ -63,17 +64,17 @@ pub struct Edited {
     pub edited_at: i64,
 }
 
-// API Methods //
+// PUBLIC METHODS //
 
-// Post a message to a room
+/// Post a message to a room, returning it with its attachments
 pub async fn post(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     author_id: Uuid,
     body: Option<&str>,
     client_nonce: [u8; 16],
     attachments: &[AttachmentRequest],
-) -> Result<Posted> {
+) -> Result<(Posted, Vec<Attachment>)> {
 
     // Format checks, before the transaction opens
     validate_post(body, attachments)?;
@@ -129,15 +130,20 @@ pub async fn post(
         })
     };
 
+    let message_id = match &posted {
+        Posted::Created(message) | Posted::Duplicate(message) => message.id,
+    };
+    let files = attachments::in_message(&mut tx, message_id).await?;
+
     // Complete transaction
     tx.commit().await?;
 
-    Ok(posted)
+    Ok((posted, files))
 }
 
-// Read one page of a room's messages (including attachments)
+/// Read one page of a room's messages (including attachments)
 pub async fn fetch(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     user_id: Uuid,
     cursor: Cursor,
@@ -208,9 +214,9 @@ pub async fn fetch(
     Ok(result)
 }
 
-// Read one message (with its attachments)
+/// Read one message (with its attachments)
 pub async fn get(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     message_id: Uuid,
     user_id: Uuid,
 ) -> Result<(Message, Vec<Attachment>)> {
@@ -224,14 +230,14 @@ pub async fn get(
         return Err(AppError::Forbidden);
     }
 
-    let files = attachments::in_message(pool, message.id).await?;
+    let files = attachments::in_message(&mut conn, message.id).await?;
 
     Ok((message, files))
 }
 
-// Delete a message, returning the room it was in
+/// Delete a message, returning the room it was in
 pub async fn delete(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     message_id: Uuid,
     caller_id: Uuid,
 ) -> Result<Uuid> {
@@ -261,9 +267,9 @@ pub async fn delete(
     Ok(room_id)
 }
 
-// Replace a message body, returning the room it is in and when it was edited
+/// Replace a message body, returning the room it is in and when it was edited
 pub async fn edit(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     message_id: Uuid,
     caller_id: Uuid,
     body: Option<&str>,
@@ -322,14 +328,14 @@ pub async fn edit(
     Ok(Edited { room_id, edited_at: now })
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Check a post's body and attachment count (against limits)
+/// Check a post's body and attachment count (against limits)
 fn validate_post(body: Option<&str>, attachments: &[AttachmentRequest]) -> Result<()> {
 
     // No body or attachments
     if body.is_none() && attachments.is_empty() {
-        return Err(AppError::Validation("No message body or attachments provided".to_string()));
+        return Err(AppError::Validation("no message body or attachments provided".to_string()));
     }
 
     // Over allowed attachment limit
@@ -356,7 +362,7 @@ fn validate_post(body: Option<&str>, attachments: &[AttachmentRequest]) -> Resul
     Ok(())
 }
 
-// Read back the message a nonce already stored
+/// Read back the message a nonce already stored
 async fn fetch_by_nonce(
     conn: &mut sqlx::SqliteConnection,
     author_id: Uuid,
@@ -378,7 +384,7 @@ async fn fetch_by_nonce(
     Ok(message)
 }
 
-// Reads a message by id
+/// Reads a message by id
 async fn fetch_by_id(
     conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
@@ -402,7 +408,7 @@ async fn fetch_by_id(
     Ok(message)
 }
 
-// Report whether a user may post the message they sent
+/// Report whether a user may post the message they sent
 fn can_post(perms: Option<Vec<Permission>>, has_attachments: bool) -> bool {
 
     // Not a member, so the room cannot be read either
@@ -423,7 +429,7 @@ fn can_post(perms: Option<Vec<Permission>>, has_attachments: bool) -> bool {
     true
 }
 
-// Reports whether a user may delete a message
+/// Reports whether a user may delete a message
 fn can_delete(perms: Option<Vec<Permission>>, caller_id: Uuid, author_id: Option<Uuid>) -> bool {
 
     // Not a member, so the room cannot be read

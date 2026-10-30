@@ -15,10 +15,9 @@ use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
 use axum::extract::{ConnectInfo, DefaultBodyLimit, FromRef, FromRequestParts, Request, State};
-use axum::http;
+use axum::http::{self, Method};
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::request::Parts;
-use axum::http::Method;
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use axum::routing::{delete, get, patch, post, put};
@@ -35,7 +34,7 @@ use crate::services;
 use crate::state::AppState;
 use crate::utils;
 
-// DATA TYPES //
+// DATA STRUCTS //
 pub struct AuthUser(
     pub Uuid, // Who the session belongs to
     pub [u8; 32], // `sessions.token_hash` the request authenticated with
@@ -64,7 +63,7 @@ where
     }
 }
 
-// IP Address of the client who sent a request
+/// IP Address of the client who sent a request
 pub struct ClientIp(pub IpAddr);
 
 impl<S> FromRequestParts<S> for ClientIp
@@ -99,9 +98,9 @@ where
     }
 }
 
-// Main Router //
+// MAIN ROUTER //
 
-// Build the router carrying every route on the server
+/// Build the router carrying every route on the server
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/login", post(auth::login))
@@ -213,9 +212,9 @@ pub fn router(state: AppState) -> Router {
         .layer(cors_layer())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Refuse a request from a blocked IP before any route runs
+/// Refuse a request from a blocked IP before any route runs
 async fn refuse_blocked(
     ClientIp(ip): ClientIp,
     State(address_limits): State<AddressLimits>,
@@ -226,7 +225,7 @@ async fn refuse_blocked(
     Ok(next.run(request).await)
 }
 
-// Report whether an origin may read the server's responses
+/// Report whether an origin may read the server's responses
 fn origin_allowed(origin: &http::HeaderValue, _: &Parts) -> bool {
     let config = config::get();
     let Ok(origin) = origin.to_str() else { return false };
@@ -260,10 +259,10 @@ fn cors_layer() -> CorsLayer {
         .max_age(Duration::from_secs(max_age))
 }
 
-// Read session token a request gives
+/// Read session token a request gives
 fn bearer_token(parts: &Parts) -> Result<String> {
 
-    let mut values = parts.headers.get_all(http::header::AUTHORIZATION).iter();
+    let mut values = parts.headers.get_all(AUTHORIZATION).iter();
     let first = values.next();
     let second = values.next();
 
@@ -287,8 +286,8 @@ fn bearer_token(parts: &Parts) -> Result<String> {
     }
 }
 
-// Read session token from a websocket handshake's offered subprotocols, which the
-// client sends as `Bearer, <token>` to mirror the Authorization header
+/// Read session token from a websocket handshake's offered subprotocols, which the
+/// client sends as `Bearer, <token>` to mirror the Authorization header
 fn token_from_protocol(header: &http::HeaderValue) -> Option<String> {
     let mut offered = header.to_str().ok()?.split(',').map(str::trim);
     if offered.next()? != "Bearer" {

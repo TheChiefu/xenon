@@ -1,8 +1,8 @@
-// Xbox Live presence polling for linked accounts
-// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-presencerecord
-// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-devicerecord
-// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-titlerecord
-// https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-activityrecord
+//! Xbox Live presence polling for linked accounts
+//! https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-presencerecord
+//! https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-devicerecord
+//! https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-titlerecord
+//! https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/live/rest/json/json-activityrecord
 
 pub mod mappings;
 
@@ -11,8 +11,7 @@ use serde::Deserialize;
 
 use crate::config;
 use crate::services::CLIENT;
-use crate::services::xbox::accounts;
-use crate::services::xbox::accounts::Account;
+use crate::services::xbox::accounts::{self, Account};
 use crate::services::xbox::auth;
 use crate::services::xbox::presence::mappings::{Mapping, Mappings};
 use crate::state::platforms;
@@ -22,7 +21,7 @@ use crate::types::platforms::{Availability, Metadata, Platform};
 const PRESENCE_URL: &str = "https://userpresence.xboxlive.com/users";
 const HOME_TITLE_ID: &str = "750323071";
 
-// Data Types //
+// DATA STRUCTS //
 
 /// Fields read from title activity
 #[derive(Deserialize)]
@@ -85,7 +84,7 @@ struct Record {
     cloaked: bool
 }
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Polls and reports presence for every linked account
 pub async fn poll(
@@ -117,7 +116,7 @@ pub async fn poll(
     }
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Requests presence record for one linked account
 async fn fetch(account: &Account, authorization: &str) -> Option<Record> {

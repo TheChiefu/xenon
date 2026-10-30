@@ -22,6 +22,8 @@ export type RequestDeleteAccount = {
  */
 delete_history: boolean, };
 
+export type RequestPasswordSet = { current_password: string, new_password: string, };
+
 export type RespondRoomInvite = { room_id: string, room_name: string | null, };
 
 export type RespondRoomPreferences = { room_layout: string, };

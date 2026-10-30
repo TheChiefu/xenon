@@ -1,3 +1,5 @@
+//! The `push_subscriptions` table and the VAPID keypair
+
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use uuid::Uuid;

@@ -20,7 +20,7 @@ impl Uploads {
     /// Errors on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
-        if ByteSize::to_int(self.file_size_max) <= 0 {
+        if self.file_size_max.to_int() <= 0 {
             return Err("uploads.file_size_max must be at least 1 byte".to_string());
         }
 

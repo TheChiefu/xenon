@@ -1,18 +1,17 @@
+//! Who is in each room's call, and the queues carrying their signaling messages
+
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
-use serde::Serialize;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-#[cfg(feature = "ts_bindings")]
-use ts_rs::TS;
-
 use crate::config;
 use crate::sockets::call::events::CallServerEvent;
+use crate::types::calls::RoomCall;
 use crate::utils;
 
-// Data Structs //
+// DATA STRUCTS //
 
 /// Carries WebRTC signaling messages (SDP offers and answers, ICE candidates)
 /// from other participants to this participant's call socket
@@ -42,14 +41,7 @@ pub struct ActiveCalls {
     routes: Arc<RwLock<SignalRoutes>>
 }
 
-#[derive(Serialize, Clone)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/call/registry.ts"))]
-pub struct RoomCall {
-    pub room_id: Uuid,
-    pub participants: HashSet<Uuid>
-}
-
-// Call Methods //
+// PUBLIC METHODS //
 
 /// Adds a user to a room's call
 pub fn join(
@@ -141,7 +133,7 @@ pub fn participants(
     found
 }
 
-// Build list of active calls in all given rooms
+/// Build list of active calls in all given rooms
 pub fn snapshot(
     calls: &ActiveCalls,
     room_ids: &[Uuid],
@@ -167,7 +159,7 @@ pub fn snapshot(
     calls
 }
 
-// Read the room id of the call a participant is in
+/// Read the room id of the call a participant is in
 pub fn participant_call(
     calls: &ActiveCalls,
     user_id: Uuid,
@@ -180,7 +172,7 @@ pub fn participant_call(
     }
 }
 
-// Pass a signal to a target when both are in the same call, and drops it otherwise
+/// Pass a signal to a target when both are in the same call, and drops it otherwise
 pub fn forward(
     calls: &ActiveCalls,
     from: Uuid,

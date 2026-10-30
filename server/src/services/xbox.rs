@@ -1,4 +1,4 @@
-// Xbox Live account linking and presence polling
+//! Xbox Live account linking and presence polling
 
 pub mod accounts;
 pub mod auth;
@@ -13,8 +13,7 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::Result;
-use crate::services::xbox::presence::mappings;
-use crate::services::xbox::presence::mappings::Mappings;
+use crate::services::xbox::presence::mappings::{self, Mappings};
 use crate::state::platforms;
 use crate::state::AppState;
 use crate::types::platforms::Platform;
@@ -22,7 +21,7 @@ use crate::types::users::LinkedAccount;
 
 pub const REDIRECT_PATH: &str = "/xbox/redirect";
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Start presence polling, doing nothing when the config has no xbox section
 pub fn start(state: AppState) {
@@ -65,7 +64,7 @@ pub async fn unlink(state: &AppState, user_id: Uuid) -> Result<()> {
     Ok(())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Polls presence for every linked account, every interval
 async fn poll_presence(

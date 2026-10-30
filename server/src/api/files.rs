@@ -8,16 +8,16 @@ use sqlx::SqlitePool;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::types::bytesize::ByteSize;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::types::bytesize::ByteSize;
 use crate::types::users::GlobalRole;
 use crate::utils;
 
-// Data Structs //
+// DATA STRUCTS //
 
-// A `files` row
+/// A `files` row
 #[derive(sqlx::FromRow)]
 pub struct File {
     pub id: Uuid,
@@ -27,22 +27,22 @@ pub struct File {
     pub byte_size: i64,
 }
 
-// Outcome of an upload
+/// Outcome of an upload
 pub enum Stored {
     Created(File), // New file
     Duplicate(File) // File already exists
 }
 
-// Metadata produced by reading an upload
+/// Metadata produced by reading an upload
 struct Stream {
     sha256: Vec<u8>,
     byte_size: i64,
     mime: &'static str
 }
 
-// API Methods //
+// PUBLIC METHODS //
 
-// Rejects a user whose role may not upload files
+/// Rejects a user whose role may not upload files
 pub async fn require_upload(
     pool: &SqlitePool,
     caller_id: Uuid,
@@ -100,14 +100,13 @@ where
     Ok(stored)
 }
 
-// Read a file's row and open a handle to its bytes on disk
+/// Read a file's row and open a handle to its bytes on disk
 pub async fn fetch(
     pool: &SqlitePool,
     file_id: Uuid,
 ) -> Result<(File, tokio::fs::File)> {
 
     // Select file from table by id
-    let mut conn = pool.acquire().await?;
     let f = sqlx::query_as::<_, File>(
         "
         SELECT id, sha256, filename, mime, byte_size
@@ -116,7 +115,7 @@ pub async fn fetch(
         "
     )
     .bind(file_id)
-    .fetch_optional(&mut *conn)
+    .fetch_optional(pool)
     .await?;
 
     // No file found, report as not found error
@@ -141,7 +140,7 @@ pub async fn fetch(
     }
 }
 
-// Deletes rows nothing references, returning the deleted rows
+/// Deletes rows nothing references, returning the deleted rows
 pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
     let files = sqlx::query_as::<_, File>(
         "
@@ -159,7 +158,7 @@ pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
     Ok(files)
 }
 
-// Deletes each file's bytes from disk, returning the bytes freed
+/// Deletes each file's bytes from disk, returning the bytes freed
 pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<i64> {
     let files_path = &config::get().storage.files;
 
@@ -180,7 +179,7 @@ pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<i64> 
     Ok(bytes_deleted)
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Reports whether a chunk of bytes reads as UTF-8 text
 fn is_utf8_text(chunk: &[u8]) -> bool {
@@ -196,20 +195,19 @@ fn is_utf8_text(chunk: &[u8]) -> bool {
     }
 }
 
-
-// Maps a hash to the directory holding it, such as `files/ab/cd`
+/// Maps a hash to the directory holding it, such as `files/ab/cd`
 fn create_shard_path(files_path: &str, hex: &str) -> PathBuf {
     Path::new(files_path)
         .join(&hex[0..2]) // Top Level first 2 hex chars
         .join(&hex[2..4]) // Second Level second 2 hex chars
 }
 
-// Maps a hash to the file holding its bytes, such as `files/ab/cd/abcd...`
+/// Maps a hash to the file holding its bytes, such as `files/ab/cd/abcd...`
 fn blob_path(files_path: &str, hex: &str) -> PathBuf {
     create_shard_path(files_path, hex).join(hex)
 }
 
-// Create shard directory and rename the temp file into it
+/// Create shard directory and rename the temp file into it
 async fn move_to_shard(tmp_path: &Path, blob_path: &Path) -> Result<()> {
     if let Some(shard_dir) = blob_path.parent() {
         tokio::fs::create_dir_all(shard_dir).await?;
@@ -218,7 +216,7 @@ async fn move_to_shard(tmp_path: &Path, blob_path: &Path) -> Result<()> {
     Ok(())
 }
 
-// Reads a stream into a temp file, returning the metadata it gathered
+/// Reads a stream into a temp file, returning the metadata it gathered
 async fn read_stream<R>(
     mut reader: R,
     tmp_path: &Path,
@@ -283,7 +281,7 @@ where
     })
 }
 
-// Writes a row to the `files` table, keyed on the hash of its bytes
+/// Writes a row to the `files` table, keyed on the hash of its bytes
 async fn insert(
     conn: &mut sqlx::SqliteConnection,
     filename: &str,

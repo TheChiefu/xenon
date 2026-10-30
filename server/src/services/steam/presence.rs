@@ -1,3 +1,5 @@
+//! Steam presence polling for linked accounts
+
 use crate::services::steam::accounts;
 use crate::services::steam::api::{self, PersonaState, PlayerSummary};
 use crate::state::platforms;
@@ -24,7 +26,7 @@ pub async fn poll(state: &AppState) {
         let summaries = match api::player_summaries(&steam_ids).await {
             Ok(summaries) => summaries,
             Err(e) => {
-                tracing::warn!("Steam presence request failed: {e}");
+                tracing::warn!("presence request to Steam failed: {e}");
                 continue;
             }
         };

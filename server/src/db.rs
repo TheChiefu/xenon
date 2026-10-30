@@ -327,7 +327,7 @@ pub async fn set_global_role(
     Ok(())
 }
 
-// Get count of all users on server
+/// Get count of all users on server
 pub async fn get_user_count(
     conn: &mut sqlx::SqliteConnection,
 ) -> Result<i64> {

@@ -1,3 +1,5 @@
+//! What the server sends over a call socket, and what a client may send back
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

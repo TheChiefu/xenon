@@ -5,7 +5,7 @@ use std::sync::{LazyLock, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWrit
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use argon2::password_hash::rand_core::{OsRng, RngCore};
-use argon2::password_hash::{Error as PhcError, PasswordHasher, SaltString};
+use argon2::password_hash::{self, PasswordHasher, SaltString};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use sha2::{Digest, Sha256};
 
@@ -19,7 +19,6 @@ pub struct SessionToken {
     pub secret: String, // Goes to client (never stored on server)
     pub hash: [u8; 32] // Goes in sessions.token_hash (never leaves server)
 }
-
 
 /// Return the current time in milliseconds since the Unix epoch
 pub fn now_ms() -> i64 {
@@ -43,7 +42,7 @@ pub fn generate_code(length: usize) -> String {
     code
 }
 
-// Password Management //
+// PASSWORD MANAGEMENT //
 
 /// Hash a password with Argon2id, returning a PHC string
 pub fn hash_password(password: &str) -> Result<String> {
@@ -58,12 +57,12 @@ pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool> {
 
     match Argon2::default().verify_password(password.as_bytes(), &parsed) {
         Ok(()) => Ok(true),
-        Err(PhcError::Password) => Ok(false),
+        Err(password_hash::Error::Password) => Ok(false),
         Err(e) => Err(AppError::Hash(e)),
     }
 }
 
-// Session Management //
+// SESSION MANAGEMENT //
 
 /// Generate a session token and its stored hash
 pub fn generate_session_token() -> SessionToken {
@@ -85,7 +84,7 @@ pub fn hash_session_token(secret: &str) -> Option<[u8; 32]> {
     Some(Sha256::digest(&bytes).into())
 }
 
-// Security Management //
+// SECURITY MANAGEMENT //
 
 static DECOY_HASH: LazyLock<String> = LazyLock::new(|| {
     hash_password("decoy password, never matches a real login (hopefully)")
@@ -132,7 +131,7 @@ pub fn ms_rfc3339(timestamp: &str) -> Option<i64> {
             days += 1;
         }
     }
-    
+
     // Add this year's leap day once February has passed
     if month > 2 && is_leap(year) {
         days += 1;

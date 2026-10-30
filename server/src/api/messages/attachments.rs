@@ -4,11 +4,11 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
 use crate::api::files::File;
+use crate::error::{AppError, Result};
 use crate::types::messages::{AttachmentInfo, AttachmentRequest};
 
-// Data Structs //
+// DATA STRUCTS //
 
 #[derive(sqlx::FromRow)]
 pub struct Attachment {
@@ -36,9 +36,9 @@ struct AttachmentRow {
     attachment: Attachment,
 }
 
-// API Methods //
+// PUBLIC METHODS //
 
-// Link file(s) to a message
+/// Link file(s) to a message
 pub async fn link(
     conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
@@ -77,9 +77,9 @@ pub async fn link(
     Ok(())
 }
 
-// Read every file attached to a message
+/// Read every file attached to a message
 pub async fn in_message(
-    pool: &sqlx::SqlitePool,
+    conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
 ) -> Result<Vec<Attachment>> {
 
@@ -93,13 +93,13 @@ pub async fn in_message(
         "
     )
     .bind(message_id)
-    .fetch_all(pool)
+    .fetch_all(&mut *conn)
     .await?;
 
     Ok(result)
 }
 
-// Read all attachments of a page of messages
+/// Read all attachments of a page of messages
 pub async fn in_room_range(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,

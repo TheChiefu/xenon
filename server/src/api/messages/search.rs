@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::api::messages::Message;
@@ -10,7 +11,7 @@ use crate::error::Result;
 use crate::types::messages::SearchRequest;
 use crate::validate;
 
-// Data Structs //
+// DATA STRUCTS //
 
 /// A matched message with the names of its matching files
 pub struct Found {
@@ -24,11 +25,11 @@ pub struct Page {
     pub total: i64,
 }
 
-// API Methods //
+// PUBLIC METHODS //
 
 /// Searches messages in every room the user is a member of
 pub async fn search(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
     request: &SearchRequest,
 ) -> Result<Page> {
@@ -76,7 +77,7 @@ pub async fn search(
     Ok(Page { found, total })
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Builds the FROM clause from the request
 fn push_source(builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>, user_id: Uuid, request: &SearchRequest) {

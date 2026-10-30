@@ -17,8 +17,8 @@ export async function updateProfile(body: PatchUserProfile): Promise<void> {
     await request("/me", "PATCH", body);
 }
 
-export async function changePassword(current_password: string, new_password: string, revoke_others: boolean): Promise<void> {
-    await request("/me/password", "PATCH", { current_password, new_password, revoke_others });
+export async function changePassword(current_password: string, new_password: string): Promise<void> {
+    await request("/me/password", "PATCH", { current_password, new_password });
 }
 
 export async function deleteMe(delete_history: boolean): Promise<void> {

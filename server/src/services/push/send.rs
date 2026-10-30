@@ -1,3 +1,5 @@
+//! Building and sending web push notifications
+
 use std::time::Duration;
 
 use reqwest::StatusCode;
@@ -12,8 +14,7 @@ use web_push_native::{Auth, WebPushBuilder};
 use crate::config;
 use crate::error::Result;
 use crate::services::CLIENT;
-use crate::services::push::store;
-use crate::services::push::store::Subscription;
+use crate::services::push::store::{self, Subscription};
 use crate::sockets::session::registry;
 use crate::state::AppState;
 
@@ -111,7 +112,7 @@ pub async fn notify(
         let response = match CLIENT.execute(request).await {
             Ok(response) => response,
             Err(e) => {
-                tracing::trace!("Could not POST to service: {e}");
+                tracing::trace!("could not POST to service: {e}");
                 continue;
             }
         };

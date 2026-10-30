@@ -1,5 +1,5 @@
-// SQL DB manager for Xbox accounts
-// Sets/Gets accounts derived from Microsoft and Xbox service tokens
+//! SQL DB manager for Xbox accounts
+//! Sets/Gets accounts derived from Microsoft and Xbox service tokens
 
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -22,8 +22,6 @@ pub struct Account {
 
 /// Reads one user's linked account
 pub async fn get(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>> {
-    let mut conn = pool.acquire().await?;
-
     let row = sqlx::query_as(
         "
         SELECT user_id, xuid, gamertag, refresh_token, honor_cloaked
@@ -32,7 +30,7 @@ pub async fn get(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>> {
         "
     )
     .bind(user_id)
-    .fetch_optional(&mut *conn)
+    .fetch_optional(pool)
     .await?;
 
     Ok(row)
@@ -40,15 +38,13 @@ pub async fn get(pool: &SqlitePool, user_id: Uuid) -> Result<Option<Account>> {
 
 /// Reads every linked account
 pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
-    let mut conn = pool.acquire().await?;
-
     let rows = sqlx::query_as(
         "
         SELECT user_id, xuid, gamertag, refresh_token, honor_cloaked
         FROM xbox_accounts
         "
     )
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(rows)
@@ -62,8 +58,6 @@ pub async fn save(
     gamertag: &str,
     refresh_token: &str,
 ) -> Result<()> {
-    let mut conn = pool.acquire().await?;
-
     sqlx::query(
         "
         INSERT INTO xbox_accounts (user_id, xuid, gamertag, refresh_token)
@@ -78,7 +72,7 @@ pub async fn save(
     .bind(xuid)
     .bind(gamertag)
     .bind(refresh_token)
-    .execute(&mut *conn)
+    .execute(pool)
     .await?;
 
     Ok(())
@@ -90,8 +84,6 @@ pub async fn set_refresh_token(
     user_id: Uuid,
     refresh_token: &str,
 ) -> Result<()> {
-    let mut conn = pool.acquire().await?;
-
     sqlx::query(
         "
         UPDATE xbox_accounts
@@ -101,7 +93,7 @@ pub async fn set_refresh_token(
     )
     .bind(user_id)
     .bind(refresh_token)
-    .execute(&mut *conn)
+    .execute(pool)
     .await?;
 
     Ok(())
@@ -113,8 +105,6 @@ pub async fn set_honor_cloaked(
     user_id: Uuid,
     honor_cloaked: bool,
 ) -> Result<()> {
-    let mut conn = pool.acquire().await?;
-
     sqlx::query(
         "
         UPDATE xbox_accounts
@@ -124,7 +114,7 @@ pub async fn set_honor_cloaked(
     )
     .bind(user_id)
     .bind(honor_cloaked)
-    .execute(&mut *conn)
+    .execute(pool)
     .await?;
 
     Ok(())
@@ -132,8 +122,6 @@ pub async fn set_honor_cloaked(
 
 /// Removes a user's linked account from Database
 pub async fn remove(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
-    let mut conn = pool.acquire().await?;
-
     sqlx::query(
         "
         DELETE FROM xbox_accounts
@@ -141,7 +129,7 @@ pub async fn remove(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
         "
     )
     .bind(user_id)
-    .execute(&mut *conn)
+    .execute(pool)
     .await?;
 
     Ok(())

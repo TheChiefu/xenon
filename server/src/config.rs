@@ -92,13 +92,8 @@ impl Default for Config {
     }
 }
 
-/// Reads the config file into the global static, writing defaults if it is absent.
-///
-/// Exits the process if the file cannot be parsed or fails validation.
-///
-/// # Arguments
-///
-/// * `path` - Path to the config toml file.
+/// Read the config file into the global static, writing defaults if it is absent.
+/// Exit if the file cannot be parsed or fails validation
 pub fn init(path: &str) {
 
     let config: Config = match std::fs::read_to_string(path) {
@@ -125,11 +120,7 @@ pub fn init(path: &str) {
     CONFIG.set(config).expect("config already initialized");
 }
 
-/// Writes the defaults to disk and returns them.
-///
-/// # Arguments
-///
-/// * `path` - Path the config toml file is written to.
+/// Write the defaults to disk and returns them
 fn write_default(path: &str) -> Config {
     let config = Config::default();
 
@@ -231,10 +222,7 @@ impl Config {
 }
 
 /// Public accessor for static global config
-///
-/// # Panics
-///
-/// Panics if called before `init`.
+/// Panics if called before `init`
 pub fn get() -> &'static Config {
     CONFIG.get().expect("config not initialized")
 }

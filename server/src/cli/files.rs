@@ -33,7 +33,7 @@ async fn clean(pool: &SqlitePool, threads: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Thread count typed with `-t`, or every available thread when none is given
 fn thread_count(threads: Option<&str>) -> Result<usize> {

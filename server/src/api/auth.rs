@@ -2,6 +2,7 @@
 
 use std::net::IpAddr;
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::config;
@@ -14,11 +15,11 @@ use crate::types::users::GlobalRole;
 use crate::utils;
 use crate::validate;
 
-// API Methods //
+// PUBLIC METHODS //
 
-// Resolves a session to the user it belongs to, extending the session timer
+/// Resolves a session to the user it belongs to, extending the session timer
 pub async fn authenticate(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     token_hash: &[u8],
 ) -> Result<Uuid> {
 
@@ -61,9 +62,9 @@ pub async fn authenticate(
     Ok(user_id)
 }
 
-// Creates a code that lets someone register
+/// Creates a code that lets someone register
 pub async fn create_registration_code(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     caller_id: Uuid,
     max_uses: i64,
     lifetime: i64,
@@ -97,9 +98,9 @@ pub async fn create_registration_code(
     Ok(code)
 }
 
-// Revokes a registration code, deleting it outright
+/// Revokes a registration code, deleting it outright
 pub async fn revoke_registration_code(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     caller_id: Uuid,
     code: &str,
 ) -> Result<()> {
@@ -126,9 +127,9 @@ pub async fn revoke_registration_code(
     Ok(())
 }
 
-// Lists every registration code, newest first
+/// Lists every registration code, newest first
 pub async fn list_registration_codes(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     caller_id: Uuid,
 ) -> Result<Vec<RegistrationCode>> {
 
@@ -150,9 +151,9 @@ pub async fn list_registration_codes(
     Ok(codes)
 }
 
-// Creates an account, returning its id and session token
+/// Creates an account, returning its id and session token
 pub async fn register(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     address_limits: &AddressLimits,
     ip: IpAddr,
     registration: &Registration,
@@ -175,9 +176,9 @@ pub async fn register(
     result
 }
 
-// Creates an account, returning its id and session token
+/// Creates an account, returning its id and session token
 async fn create_account(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     registration: &Registration,
 ) -> Result<(Uuid, String)> {
 
@@ -251,9 +252,9 @@ async fn create_account(
     Ok((id, token))
 }
 
-// Replaces a user's password
+/// Replaces a user's password
 pub async fn change_password(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
     current_password: &str,
     new_password: &str,
@@ -303,9 +304,9 @@ pub async fn change_password(
     Ok(())
 }
 
-// Revokes a single session
+/// Revokes a single session
 pub async fn revoke_session(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     session_hash: &[u8],
 ) -> Result<()> {
 
@@ -323,9 +324,9 @@ pub async fn revoke_session(
     Ok(())
 }
 
-// Log a user in
+/// Log a user in
 pub async fn sign_in(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     address_limits: &AddressLimits,
     login_failures: &LoginFailures,
     ip: IpAddr,
@@ -348,10 +349,10 @@ pub async fn sign_in(
     result
 }
 
-// Verify credentials abd return new session token.
-// Lock account after repeated failures
+/// Verify credentials abd return new session token.
+/// Lock account after repeated failures
 async fn login(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     failures: &LoginFailures,
     ip: IpAddr,
     username: &str,
@@ -423,7 +424,7 @@ async fn login(
 }
 
 async fn block_address(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     address_limits: &AddressLimits,
     ip: IpAddr,
     reason: &str,

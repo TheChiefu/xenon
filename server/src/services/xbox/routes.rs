@@ -1,6 +1,8 @@
+//! HTTP handlers for Xbox account linking
+
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::Response;
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
@@ -13,52 +15,11 @@ use ts_rs::TS;
 use crate::config;
 use crate::error::Result;
 use crate::routes::AuthUser;
-use crate::services::xbox;
-use crate::services::xbox::{accounts, link, REDIRECT_PATH};
+use crate::services;
+use crate::services::xbox::{self, accounts, link, REDIRECT_PATH};
 use crate::state::AppState;
 
-/// Page shown after linking, in tab client opened
-const LINKED_PAGE: &str = r#"
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    p, button {
-    font-family: Noto Sans, sans-serif
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: rgba(0, 40, 100, 1);
-    }
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: sans-serif;
-    }
-    .box {
-      border: 1px solid rgba(85, 85, 85, 1);
-      border-radius: 8px;
-      background: rgba(200, 200, 200, 1);
-      padding: 24px;
-      max-width: 400px;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <p>Xbox account linked</p>
-    <p>Click refresh icon on profile to update</p>
-    <button onclick="window.close()">Return to  Client</button>
-  </div>
-</body>
-</html>
-"#;
-
-// Data Types //
+// DATA STRUCTS //
 
 /// Authorization request URL sent to client
 #[derive(Serialize)]
@@ -94,7 +55,7 @@ pub struct XboxPatch {
     pub honor_cloaked: bool
 }
 
-// Public Methods //
+// ROUTING METHODS //
 
 /// Routes this service serves, none when config has no xbox section
 pub fn router() -> Router<AppState> {
@@ -125,16 +86,8 @@ pub async fn redirect(
     State(pool): State<SqlitePool>,
     Query(query): Query<RedirectQuery>,
 ) -> Response {
-    let user_id = query.state;
-
-    match link::complete(&pool, user_id, query.code).await {
-        Ok(()) => Html(LINKED_PAGE).into_response(),
-        Err(e) => {
-            tracing::warn!("{user_id}: Xbox linking failed: {e}");
-            let (status, message) = e.status_and_message();
-            (status, format!("linking failed: {message}")).into_response()
-        }
-    }
+    let result = link::complete(&pool, query.state, query.code).await;
+    services::linked_response("Xbox", query.state, result)
 }
 
 /// Returns caller's linked account

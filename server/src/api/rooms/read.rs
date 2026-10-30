@@ -1,9 +1,12 @@
 //! How far each member has read in a room
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::config;
 use crate::error::{AppError, Result};
+
+// DATA STRUCTS //
 
 /// A user's stored read position in one room
 #[derive(sqlx::FromRow)]
@@ -19,9 +22,11 @@ pub struct Entry {
     pub unread: i64,
 }
 
-/// Lists the user's read position in each room they have one for
+// PUBLIC METHODS //
+
+/// List the user's read position in each room they have one for
 pub async fn list(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
 ) -> Result<Vec<Entry>> {
 
@@ -79,13 +84,11 @@ pub async fn start(
 
 /// Stores a member's read position in a room
 pub async fn mark(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     user_id: Uuid,
     last_read_seq: i64,
 ) -> Result<()> {
-
-    let mut conn = pool.acquire().await?;
 
     // Inserts only for a member of the room
     // Keeps the newer position when another device sends an older one
@@ -102,7 +105,7 @@ pub async fn mark(
     .bind(user_id)
     .bind(room_id)
     .bind(last_read_seq)
-    .execute(&mut *conn)
+    .execute(pool)
     .await?
     .rows_affected();
 
@@ -112,6 +115,8 @@ pub async fn mark(
 
     Ok(())
 }
+
+// HELPER METHODS //
 
 /// Counts messages past a read position that are not the user's own, up to max
 async fn count_unread(

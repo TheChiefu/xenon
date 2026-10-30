@@ -1,7 +1,7 @@
-// Authorization headers for Xbox Live requests
-// - Caches one Authorization header per user until XSTS token expires
-// - Requests a new header with stored refresh token when none is cached
-// - Removes linked account on invalid_grant from Microsoft or an XErr code from Xbox
+//! Authorization headers for Xbox Live requests
+//! - Caches one Authorization header per user until XSTS token expires
+//! - Requests a new header with stored refresh token when none is cached
+//! - Removes linked account on invalid_grant from Microsoft or an XErr code from Xbox
 
 pub mod microsoft;
 pub mod xsts;
@@ -15,11 +15,10 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::AppError;
-use crate::services::xbox::accounts;
-use crate::services::xbox::accounts::Account;
+use crate::services::xbox::accounts::{self, Account};
 use crate::utils;
 
-// Data Types //
+// DATA STRUCTS //
 
 /// How to handle failures on Microsoft calls:
 /// - Dead (No calls for this account will succeed)
@@ -58,7 +57,7 @@ struct Authorization {
 type Authorizations = BTreeMap<Uuid, Authorization>;
 static AUTHORIZATIONS: RwLock<Authorizations> = RwLock::new(BTreeMap::new());
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Returns Authorization header for Xbox Live requests
 pub async fn get_header(
@@ -105,7 +104,7 @@ pub fn remove_header(user_id: Uuid) {
     utils::write_lock(&AUTHORIZATIONS).remove(&user_id);
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Requests and caches a new Authorization header using stored refresh token
 async fn request_header(

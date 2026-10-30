@@ -1,3 +1,5 @@
+//! The `steam_accounts` table
+
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -38,7 +40,7 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
     Ok(rows)
 }
 
-pub async fn delete(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
+pub async fn remove(pool: &SqlitePool, user_id: Uuid) -> Result<()> {
     sqlx::query("DELETE FROM steam_accounts WHERE user_id = ?1")
         .bind(user_id)
         .execute(pool)

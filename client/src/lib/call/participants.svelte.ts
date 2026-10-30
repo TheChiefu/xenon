@@ -1,5 +1,5 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import type { RoomCall } from "@/bindings/sockets/call/registry";
+import type { RoomCall } from "@/bindings/types/calls";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 

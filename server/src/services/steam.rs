@@ -1,4 +1,5 @@
-// Steam account linking and presence polling
+//! Steam account linking and presence polling
+
 pub mod accounts;
 pub mod api;
 pub mod link;
@@ -34,7 +35,7 @@ pub async fn get_linked_account(pool: &SqlitePool, user_id: Uuid) -> Result<Opti
 }
 
 pub async fn unlink(state: &AppState, user_id: Uuid) -> Result<()> {
-    accounts::delete(&state.pool, user_id).await?;
+    accounts::remove(&state.pool, user_id).await?;
     platforms::clear_metadata(state, user_id, Platform::Steam).await;
 
     Ok(())

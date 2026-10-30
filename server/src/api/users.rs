@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::db;
@@ -11,9 +12,9 @@ use crate::types::users::{GlobalRole, UserProfile};
 use crate::utils;
 use crate::validate;
 
-// Data Structs //
+// DATA STRUCTS //
 
-// The `users` column
+/// The `users` column
 #[derive(sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
@@ -28,7 +29,7 @@ pub struct User {
     pub banned: bool,
 }
 
-// The `users` columns a member row or search result shows
+/// The `users` columns a member row or search result shows
 #[derive(sqlx::FromRow)]
 pub struct UserSummary {
     pub id: Uuid,
@@ -39,18 +40,15 @@ pub struct UserSummary {
     pub global_role: GlobalRole,
 }
 
+// PUBLIC METHODS //
 
-// API Methods //
-
-// List one page of user summaries
+/// List one page of user summaries
 pub async fn by_username_prefix(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     prefix: Option<String>,
     after: Option<Uuid>,
     limit: i64,
 ) -> Result<Vec<UserSummary>> {
-
-    let mut conn = pool.acquire().await?;
 
     // Escape patterns for SQL string (optional user prefix)
     let pattern = prefix.map(|name| {
@@ -74,19 +72,17 @@ pub async fn by_username_prefix(
     .bind(after)
     .bind(pattern)
     .bind(limit)
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(users)
 }
 
-// Read a user's public profile by id
+/// Read a user's public profile by id
 pub async fn get(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
 ) -> Result<User> {
-
-    let mut conn = pool.acquire().await?;
 
     let row: Option<User> = sqlx::query_as(
         "
@@ -97,15 +93,15 @@ pub async fn get(
         "
     )
     .bind(user_id)
-    .fetch_optional(&mut *conn)
+    .fetch_optional(pool)
     .await?;
 
     row.ok_or(AppError::NotFound)
 }
 
-// Read a user's public profile with their linked accounts
+/// Read a user's public profile with their linked accounts
 pub async fn profile(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
 ) -> Result<UserProfile> {
 
@@ -126,17 +122,15 @@ pub async fn profile(
     })
 }
 
-// Read the summaries of a set of accounts
+/// Read the summaries of a set of accounts
 pub async fn by_ids(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     ids: &[Uuid],
 ) -> Result<Vec<UserSummary>> {
 
     if ids.is_empty() {
         return Ok(Vec::new());
     }
-
-    let mut conn = pool.acquire().await?;
 
     // Build SQL statement
     let mut builder = sqlx::QueryBuilder::new(
@@ -154,14 +148,14 @@ pub async fn by_ids(
 
     // Get list of summaries by given IDs
     let rows: Vec<UserSummary> = builder.build_query_as()
-        .fetch_all(&mut *conn).await?;
+        .fetch_all(pool).await?;
 
     Ok(rows)
 }
 
-// Read the display names for a set of account IDs
+/// Read the display names for a set of account IDs
 pub async fn display_names(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     ids: &[Uuid],
 ) -> Result<HashMap<Uuid, String>> {
 
@@ -169,8 +163,6 @@ pub async fn display_names(
         return Ok(HashMap::new());
     }
 
-    let mut conn = pool.acquire().await?;
-    
     // Build SQL statement
     let mut builder = sqlx::QueryBuilder::new("SELECT id, display_name FROM users WHERE id IN (");
     let mut list = builder.separated(", ");
@@ -180,14 +172,14 @@ pub async fn display_names(
     list.push_unseparated(")");
 
     // Get list of display names matching IDs
-    let rows: Vec<(Uuid, String)> = builder.build_query_as().fetch_all(&mut *conn).await?;
+    let rows: Vec<(Uuid, String)> = builder.build_query_as().fetch_all(pool).await?;
     Ok(rows.into_iter().collect())
 }
 
-// Write a user's own profile, returning it as stored
-// or `None` if no changes were made
+/// Write a user's own profile, returning it as stored
+/// or `None` if no changes were made
 pub async fn update(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
     display_name: Option<String>,
     description: Option<String>,
@@ -213,8 +205,6 @@ pub async fn update(
         validate::profile_description(text)?;
     }
 
-    let mut conn = pool.acquire().await?;
-
     // - COALESCE takes the sent value, or the column's own when none is sent
     // - nullif returns NULL when both arguments match, so the nil id clears
     // - RETURNING hands back what the row ends up holding, which is neither the
@@ -237,15 +227,15 @@ pub async fn update(
     .bind(banner_file_id)
     .bind(Uuid::nil())
     .bind(user_id)
-    .fetch_one(&mut *conn)
+    .fetch_one(pool)
     .await?;
 
     Ok(Some(stored))
 }
 
-// Read a user's room list layout
+/// Read a user's room list layout
 pub async fn get_preferences(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
 ) -> Result<String> {
 
@@ -263,9 +253,9 @@ pub async fn get_preferences(
     Ok(room_layout)
 }
 
-// Write a user's room list layout
+/// Write a user's room list layout
 pub async fn set_room_layout(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
     room_layout: &str,
 ) -> Result<()> {
@@ -286,9 +276,9 @@ pub async fn set_room_layout(
     Ok(())
 }
 
-// Delete an account, returning the rooms it left
+/// Delete an account, returning the rooms it left
 pub async fn delete(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
     delete_history: bool,
 ) -> Result<Vec<Uuid>> {
@@ -319,9 +309,9 @@ pub async fn delete(
     Ok(rooms)
 }
 
-// Change a user's global role
+/// Change a user's global role
 pub async fn set_global_role(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     target_id: Uuid,
     role: GlobalRole,
 ) -> Result<()> {
@@ -332,9 +322,9 @@ pub async fn set_global_role(
     Ok(())
 }
 
-// Ban a user
+/// Ban a user
 pub async fn ban(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     target_id: Uuid,
 ) -> Result<()> {
 
@@ -362,9 +352,9 @@ pub async fn ban(
     Ok(())
 }
 
-// Unban a user
+/// Unban a user
 pub async fn unban(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     target_id: Uuid,
 ) -> Result<()> {
 
@@ -376,9 +366,9 @@ pub async fn unban(
     Ok(())
 }
 
-// Check whether a caller may moderate another user's account
+/// Check whether a caller may moderate another user's account
 pub async fn can_moderate(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     caller_id: Uuid,
     target_id: Uuid,
 ) -> Result<bool> {
@@ -396,9 +386,9 @@ pub async fn can_moderate(
     Ok(target_role != GlobalRole::Admin)
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Delete every message an account wrote
+/// Delete every message an account wrote
 async fn delete_all_messages(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,
@@ -412,7 +402,7 @@ async fn delete_all_messages(
     Ok(())
 }
 
-// Remove an account from every room it belongs to
+/// Remove an account from every room it belongs to
 async fn leave_every_room(
     conn: &mut sqlx::SqliteConnection,
     user_id: Uuid,

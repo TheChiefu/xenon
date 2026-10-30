@@ -13,7 +13,7 @@ use crate::sockets::session::events::ServerEvent;
 use crate::types::status::Device;
 use crate::utils;
 
-// Data Structs //
+// DATA STRUCTS //
 
 pub struct Connected {
     pub events: broadcast::Sender<String>,
@@ -34,7 +34,7 @@ pub struct Registry {
 /// Next id handed to a socket
 static NEXT_SOCKET_ID: AtomicU64 = AtomicU64::new(0);
 
-// Registry Methods //
+// REGISTRY METHODS //
 
 /// Take the next socket id
 pub fn next_socket_id() -> u64 {
@@ -134,16 +134,7 @@ pub fn remove(
     reg.remove(&user_id);
 }
 
-// Sending Methods //
-
-/// Send an event to one user
-pub fn inform_user(
-    registry: &Registry,
-    user_id: Uuid,
-    event: ServerEvent,
-) {
-    inform_users(registry, &[user_id], event);
-}
+// SENDING METHODS //
 
 /// Send an event to a list of users
 pub fn inform_users(

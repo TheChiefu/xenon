@@ -6,7 +6,7 @@ export type RequestRegistrationCreate = { max_uses: number | null, lifetime: num
 
 export type RequestRegistrationRevoke = { code: string, };
 
-export type RespondLogin = { token: string, };
+export type RespondLogin = { session_token: string, };
 
 export type RespondRegistration = { id: string, session_token: string, };
 

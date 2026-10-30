@@ -10,10 +10,8 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::api::messages;
+use crate::api;
 use crate::api::messages::{Cursor, Posted};
-use crate::api::messages::notifications;
-use crate::api::messages::attachments;
 use crate::api::messages::attachments::Attachment;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
@@ -48,7 +46,7 @@ pub struct RespondMessageEdit {
     pub edited_at: i64
 }
 
-// DATA TYPES //
+// DATA STRUCTS //
 
 #[derive(Deserialize)]
 pub struct FetchQuery {
@@ -56,11 +54,9 @@ pub struct FetchQuery {
     pub before: Option<i64>,
 }
 
+// ROUTING METHODS //
 
-
-// Routing Methods //
-
-// Post a message to a room
+/// Post a message to a room
 pub async fn post(
     AuthUser(author_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -81,7 +77,7 @@ pub async fn post(
     };
 
     // Attempt to post a message
-    let result = messages::post(
+    let (result, files) = api::messages::post(
         &app_state.pool,
         room_id,
         author_id,
@@ -95,11 +91,7 @@ pub async fn post(
         Posted::Duplicate(msg) => (StatusCode::OK, msg),
     };
 
-    // Get all attachments in message and attach to response
-    let files = attachments::in_message(&app_state.pool, message.id).await?;
-
     let attachments = attachment_infos(files);
-
     let response = MessageInfo::new(message, attachments);
 
     // If message is posted, broadcast to all subscribed users in room
@@ -117,7 +109,7 @@ pub async fn post(
     Ok((status, Json(response)))
 }
 
-// Fetch one page of a room's messages
+/// Fetch one page of a room's messages
 pub async fn fetch(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -136,7 +128,7 @@ pub async fn fetch(
     };
 
     // Attempt to fetch messages
-    let result = messages::fetch(&pool, room_id, user_id, cursor).await?;
+    let result = api::messages::fetch(&pool, room_id, user_id, cursor).await?;
 
     // Convert returned vector of internal messages into vector of HTTP message responses
     let mut response = Vec::with_capacity(result.len());
@@ -149,28 +141,28 @@ pub async fn fetch(
     Ok(Json(response))
 }
 
-// Get a message
+/// Get a message
 pub async fn get(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path(message_id): Path<Uuid>,
 ) -> Result<Json<MessageInfo>> {
 
-    let (message, files) = messages::get(&pool, message_id, user_id).await?;
+    let (message, files) = api::messages::get(&pool, message_id, user_id).await?;
 
     let attachments = attachment_infos(files);
 
     Ok(Json(MessageInfo::new(message, attachments)))
 }
 
-// Delete a message
+/// Delete a message
 pub async fn delete(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
     Path(message_id): Path<Uuid>,
 ) -> Result<StatusCode> {
 
-    let room_id = messages::delete(&app_state.pool, message_id, caller_id).await?;
+    let room_id = api::messages::delete(&app_state.pool, message_id, caller_id).await?;
 
     let event = ServerEvent::MessageDeleted { room_id, message_id };
     state::broadcast(&app_state, room_id, event).await;
@@ -178,7 +170,7 @@ pub async fn delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// Edit a message
+/// Edit a message
 pub async fn update(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -186,7 +178,7 @@ pub async fn update(
     Json(request): Json<RequestMessageEdit>,
 ) -> Result<Json<RespondMessageEdit>> {
 
-    let result = messages::edit(
+    let result = api::messages::edit(
         &app_state.pool,
         message_id,
         caller_id,
@@ -204,9 +196,9 @@ pub async fn update(
     Ok(Json(RespondMessageEdit { edited_at: result.edited_at }))
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Convert stored attachments into response form
+/// Convert stored attachments into response form
 fn attachment_infos(files: Vec<Attachment>) -> Vec<AttachmentInfo> {
     let mut infos = Vec::with_capacity(files.len());
     for file in files {
@@ -215,7 +207,7 @@ fn attachment_infos(files: Vec<Attachment>) -> Vec<AttachmentInfo> {
     infos
 }
 
-// Send notification event to room members
+/// Send notification event to room members
 async fn notify_users(
     app_state: &AppState,
     room_id: Uuid,
@@ -227,7 +219,7 @@ async fn notify_users(
         return Ok(());
     };
 
-    let notification = notifications::notify(
+    let notification = api::messages::notifications::notify(
         &app_state.pool,
         room_id,
         author_id,
@@ -250,4 +242,3 @@ async fn notify_users(
 
     Ok(())
 }
-

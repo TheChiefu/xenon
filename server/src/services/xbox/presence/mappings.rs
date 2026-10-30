@@ -1,9 +1,9 @@
-// Maps game name and activities to user defined versions in mapped JSON file.
-// For example:
-// - "Halo: The Master Chief Collection" can be mapped to "Halo MCC"
-// - "Halo R: Campaign" can be mapped to "Reach: Campaign"
-// To avoid repeated words in concat names like "Halo: Halo R: Campaign"
-// Automatically removes extra characters like trademarks to clean up names
+//! Maps game name and activities to user defined versions in mapped JSON file.
+//! For example:
+//! - "Halo: The Master Chief Collection" can be mapped to "Halo MCC"
+//! - "Halo R: Campaign" can be mapped to "Reach: Campaign"
+//! To avoid repeated words in concat names like "Halo: Halo R: Campaign"
+//! Automatically removes extra characters like trademarks to clean up names
 
 use std::collections::HashMap;
 
@@ -13,7 +13,7 @@ const TRADEMARK: char = '\u{2122}';
 const REGISTERED: char = '\u{00ae}';
 const COPYRIGHT: char = '\u{00a9}';
 
-// Data Types //
+// DATA STRUCTS //
 
 /// Game mapping loaded from mapping file
 /// - display name for title
@@ -29,7 +29,7 @@ pub struct Mapping {
 /// Mappings by lookup key
 pub type Mappings = HashMap<String, Mapping>;
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Loads mapping file, empty if file can't be read or parsed
 pub fn load(path: &str) -> Mappings {

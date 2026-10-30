@@ -89,7 +89,7 @@ pub struct PatchAccess {
     pub notify: Option<Notify>
 }
 
-// Data Structs //
+// DATA STRUCTS //
 
 /// Query string for a paged room listing
 #[derive(Deserialize)]
@@ -98,9 +98,9 @@ pub struct DirectoryQuery {
     pub limit: Option<i64>
 }
 
-// Routing Methods //
+// ROUTING METHODS //
 
-// List the members of a room
+/// List the members of a room
 pub async fn list_members(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -122,7 +122,7 @@ pub async fn list_members(
     Ok(Json(response))
 }
 
-// Get a user's access to a room
+/// Get a user's access to a room
 pub async fn get_member(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -138,7 +138,7 @@ pub async fn get_member(
     }))
 }
 
-// Patch a member's information in a room
+/// Patch a member's information in a room
 pub async fn patch_user(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -160,10 +160,10 @@ pub async fn patch_user(
         api::rooms::access::set_notify(&pool, room_id, caller_id, notify).await?;
     }
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
-// Invite a user to a room
+/// Invite a user to a room
 pub async fn invite_user(
     AuthUser(caller_id, ..): AuthUser,
     State(app_state): State<AppState>,
@@ -173,9 +173,9 @@ pub async fn invite_user(
     api::rooms::invites::create(&app_state.pool, room_id, caller_id, target_id).await?;
 
     let event = ServerEvent::Invited { room_id };
-    registry::inform_user(&app_state.registry, target_id, event);
+    registry::inform_users(&app_state.registry, &[target_id], event);
 
-    Ok(StatusCode::CREATED)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Get the users a room has invited
@@ -201,7 +201,7 @@ pub async fn revoke_invite(
 
     // Notify user invite was revoked
     let event = ServerEvent::InviteRevoked { room_id };
-    registry::inform_user(&app_state.registry, target_id, event);
+    registry::inform_users(&app_state.registry, &[target_id], event);
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -228,7 +228,7 @@ pub async fn ban_user(
     api::rooms::bans::create(&app_state.pool, room_id, caller_id, target_id).await?;
 
     let event = ServerEvent::Banned { room_id };
-    registry::inform_user(&app_state.registry, target_id, event);
+    registry::inform_users(&app_state.registry, &[target_id], event);
 
     // Ban removes the membership, notify members user left
     let event = ServerEvent::MemberLeft { room_id, user_id: target_id };
@@ -338,7 +338,7 @@ pub async fn join(
 
     status::on_join(&app_state, user_id).await;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Leave a room
@@ -353,9 +353,9 @@ pub async fn leave(
     // The membership is already gone, so this reaches the remaining members
     let event = ServerEvent::MemberLeft { room_id, user_id };
     state::broadcast(&app_state, room_id, event.clone()).await;
-    registry::inform_user(&app_state.registry, user_id, event);
+    registry::inform_users(&app_state.registry, &[user_id], event);
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Store the caller's read position in a room

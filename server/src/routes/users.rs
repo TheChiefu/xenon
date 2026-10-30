@@ -70,8 +70,7 @@ impl From<UserSummary> for RespondSummary {
     }
 }
 
-
-// Routing Methods //
+// ROUTING METHODS //
 
 /// Get summaries of multiple users
 pub async fn query(
@@ -109,7 +108,12 @@ pub async fn query(
         }
     };
 
-    Ok(Json(users.into_iter().map(RespondSummary::from).collect()))
+    let mut response = Vec::with_capacity(users.len());
+    for user in users {
+        response.push(RespondSummary::from(user));
+    }
+
+    Ok(Json(response))
 }
 
 /// Get a user's public profile

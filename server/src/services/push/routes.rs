@@ -1,3 +1,5 @@
+//! HTTP handlers for push subscriptions
+
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -11,8 +13,7 @@ use ts_rs::TS;
 use crate::config;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::services::push::store;
-use crate::services::push::store::Subscription;
+use crate::services::push::store::{self, Subscription};
 use crate::state::AppState;
 
 /// The key browsers subscribe against
@@ -29,7 +30,7 @@ pub struct UnsubscribeRequest {
     pub endpoint: String
 }
 
-// Public Methods //
+// ROUTING METHODS //
 
 /// Routes this service serves
 pub fn router() -> Router<AppState> {

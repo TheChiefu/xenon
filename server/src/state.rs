@@ -6,18 +6,19 @@ pub mod platforms;
 pub mod status;
 
 use axum::extract::FromRef;
+use sqlx::SqlitePool;
 use sqlx::pool::PoolConnection;
-use sqlx::{Sqlite, SqlitePool};
+use sqlx::Sqlite;
 use uuid::Uuid;
 
 use crate::config;
 use crate::db;
 use crate::error::Result;
 use crate::ratelimit::{AddressLimits, LoginFailures};
-use crate::sockets::call;
+use crate::sockets::{call, session};
 use crate::sockets::call::registry::ActiveCalls;
 use crate::sockets::session::events::ServerEvent;
-use crate::sockets::session::registry::{self, Registry};
+use crate::sockets::session::registry::Registry;
 use crate::state::platforms::ReportedPlatforms;
 use crate::state::status::Statuses;
 use crate::types::status::Appearance;
@@ -49,11 +50,7 @@ pub struct AppState {
 
 impl AppState {
 
-    /// Builds the state a router is handed.
-    ///
-    /// # Arguments
-    ///
-    /// * `pool` - Pool of SQL connections.
+    /// Build the state a router is handed
     pub fn new(pool: SqlitePool) -> Self {
         AppState {
             pool,
@@ -67,14 +64,14 @@ impl AppState {
     }
 }
 
-// Close every websocket a user has
+/// Close every websocket a user has
 pub async fn disconnect(
     state: &AppState,
     user_id: Uuid,
 ) {
     // Sign the user's clients out before their sockets close
-    registry::inform_user(&state.registry, user_id, ServerEvent::SessionRevoked);
-    registry::remove(&state.registry, user_id);
+    session::registry::inform_users(&state.registry, &[user_id], ServerEvent::SessionRevoked);
+    session::registry::remove(&state.registry, user_id);
 
     // Tell others the user is offline
     status::announce(state, user_id, Appearance::Offline).await;
@@ -82,7 +79,7 @@ pub async fn disconnect(
     leave_call(state, user_id).await;
 }
 
-// Remove a user from their call and tell its room
+/// Remove a user from their call and tell its room
 pub async fn leave_call(
     state: &AppState,
     user_id: Uuid,
@@ -93,7 +90,7 @@ pub async fn leave_call(
     }
 }
 
-// Build every snapshot a viewer is sent
+/// Build every snapshot a viewer is sent
 pub async fn snapshots(
     state: &AppState,
     viewer_id: Uuid,
@@ -109,7 +106,7 @@ pub async fn snapshots(
             );
             events.push(
                 ServerEvent::PlatformSnapshot {
-                    users: platforms::snapshot(state, &members)
+                    users: platforms::snapshot(&state.platforms, &members)
                 }
             );
         }
@@ -130,7 +127,7 @@ pub async fn snapshots(
     events
 }
 
-// Send an event to every member of a room
+/// Send an event to every member of a room
 pub async fn broadcast(
     state: &AppState,
     room_id: Uuid,
@@ -152,10 +149,10 @@ pub async fn broadcast(
         }
     };
 
-    registry::inform_users(&state.registry, &members, event);
+    session::registry::inform_users(&state.registry, &members, event);
 }
 
-// Notify several rooms that a member is no longer in it
+/// Notify several rooms that a member is no longer in it
 pub async fn broadcast_member_left(
     state: &AppState,
     user_id: Uuid,
@@ -167,7 +164,7 @@ pub async fn broadcast_member_left(
     }
 }
 
-// Send an event to everyone who shares a room with a user
+/// Send an event to everyone who shares a room with a user
 pub async fn inform_shared_members(
     state: &AppState,
     user_id: Uuid,
@@ -181,10 +178,10 @@ pub async fn inform_shared_members(
         }
     };
 
-    registry::inform_users(&state.registry, &members, event);
+    session::registry::inform_users(&state.registry, &members, event);
 }
 
-// Read everyone who shares a room with a user
+/// Read everyone who shares a room with a user
 pub async fn shared_members(
     state: &AppState,
     user_id: Uuid,
@@ -194,7 +191,7 @@ pub async fn shared_members(
     Ok(members)
 }
 
-// Read every room a user is a member of
+/// Read every room a user is a member of
 pub async fn member_rooms(
     state: &AppState,
     user_id: Uuid,
@@ -204,7 +201,7 @@ pub async fn member_rooms(
     Ok(room_ids)
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Acquires a connection, retrying on failure with a wait between attempts.
 async fn acquire_retrying(

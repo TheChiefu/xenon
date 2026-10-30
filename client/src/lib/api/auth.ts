@@ -32,7 +32,7 @@ export async function login(username: string, password: string, url: string): Pr
         throw new Error(data.error);
     }
 
-    return (data as RespondLogin).token;
+    return (data as RespondLogin).session_token;
 }
 
 // Revokes an account's session on its server

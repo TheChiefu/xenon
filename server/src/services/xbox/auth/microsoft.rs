@@ -1,7 +1,7 @@
-// Microsoft identity platform requests, against v2.0 consumers endpoint
-// - Builds authorization request URL with user ID as state
-// - Redeems an authorization code for tokens, and refreshes tokens with a stored refresh token
-// https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
+//! Microsoft identity platform requests, against v2.0 consumers endpoint
+//! - Builds authorization request URL with user ID as state
+//! - Redeems an authorization code for tokens, and refreshes tokens with a stored refresh token
+//! https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
 
 use serde::Deserialize;
 use url::form_urlencoded::Serializer;
@@ -15,7 +15,7 @@ const AUTHORIZE_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/
 const TOKEN_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
 const SCOPE: &str = "XboxLive.signin offline_access";
 
-// Data Types //
+// DATA STRUCTS //
 
 /// Fields read from Microsoft's token response
 /// - access token (short lived)
@@ -34,7 +34,7 @@ struct ErrorBody {
     error_description: Option<String>
 }
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Builds authorization request URL with state and code challenge
 pub fn authorize_url(xbox: &config::Xbox, state: &str, challenge: &str) -> String {
@@ -90,7 +90,7 @@ pub async fn refresh_tokens(
     post(&form).await
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 fn redirect_uri() -> String {
     format!("{}{}", config::get().public_url(), REDIRECT_PATH)

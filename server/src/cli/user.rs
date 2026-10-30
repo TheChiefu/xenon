@@ -1,7 +1,7 @@
 //! `user` commands
-//! 
+//!
 //! Separate from API calls to not mix responsiblities.
-//! 
+//!
 //! Commands issued from server maintainer(s) are assumed high trust level
 //! than HTTP calls over the internet.
 
@@ -166,7 +166,7 @@ async fn get(pool: &SqlitePool, username: &str) -> Result<()> {
     Ok(())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Check if the given username exists
 async fn get_user_id(pool: &SqlitePool, username: &str) -> Result<Uuid> {

@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ByteSize(i64); // DB is an i64, matching type here
 
-// Units for convenience
+/// Units for convenience
 pub const BYTE:     i64 = 1;
 pub const KILOBYTE: i64 = 1000;
 pub const KIBIBYTE: i64 = 1024;

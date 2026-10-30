@@ -6,11 +6,10 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use crate::sockets::call::registry::RoomCall;
+use crate::types::calls::RoomCall;
 use crate::types::messages::MessageInfo;
 use crate::types::platforms::{Metadata, Platform, UserActivity};
 use crate::types::status::{Appearance, Device, UserState};
-
 
 /// What a client sends over its socket
 #[derive(Deserialize)]

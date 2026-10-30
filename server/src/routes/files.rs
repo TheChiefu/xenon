@@ -13,16 +13,15 @@ use tokio_util::io::{ReaderStream, StreamReader};
 use ts_rs::TS;
 use uuid::Uuid;
 
-use crate::api::files::Stored;
+use crate::api::files::{File, Stored};
 use crate::types::bytesize::MEBIBYTE;
 use crate::error::{AppError, Result};
-use crate::api::files::File;
 use crate::routes::AuthUser;
 use crate::api;
 use crate::config;
 use crate::validate;
 
-// Data Structs //
+// DATA STRUCTS //
 
 #[derive(Clone, Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/files.ts"))]
@@ -44,12 +43,12 @@ impl From<File> for RespondFile {
     }
 }
 
-// Header carrying a downloaded file's MIME type
+/// Header carrying a downloaded file's MIME type
 pub const FILE_MIME_HEADER: HeaderName = HeaderName::from_static("x-file-mime");
 
-// Routing Methods //
+// ROUTING METHODS //
 
-// Store an uploaded file
+/// Store an uploaded file
 pub async fn upload(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -106,7 +105,7 @@ pub async fn upload(
     }
 }
 
-// Stream a stored file
+/// Stream a stored file
 pub async fn download(
     AuthUser(..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -131,7 +130,7 @@ pub async fn download(
     Ok((StatusCode::OK, headers, body).into_response())
 }
 
-// Return the largest upload body accepted
+/// Return the largest upload body accepted
 pub fn max_body_bytes() -> usize {
     let headroom_bytes = MEBIBYTE;
     let max_file_bytes = config::get().uploads.file_size_max.to_int();

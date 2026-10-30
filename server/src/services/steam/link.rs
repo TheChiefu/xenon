@@ -1,3 +1,5 @@
+//! Linking a Steam account through Steam's OpenID sign-in
+
 use std::collections::{BTreeMap, HashMap};
 use std::sync::RwLock;
 
@@ -11,7 +13,7 @@ use crate::services::CLIENT;
 use crate::services::steam::{accounts, api, REDIRECT_PATH};
 use crate::utils;
 
-// Constants //
+// CONSTANTS //
 macro_rules! steam_openid_url {
     ($suffix:literal) => { concat!("https://steamcommunity.com/openid/", $suffix) };
 }
@@ -25,14 +27,14 @@ const OPENID_IDENTIFIER_SELECT: &str = "http://specs.openid.net/auth/2.0/identif
 const XENON_USER_ID: &str = "user_id";
 const XENON_TOKEN: &str = "token";
 
-// State //
+// STATE //
 
-// Accounts related to steam login sessions
+/// Accounts related to steam login sessions
 static LINK_TOKENS: RwLock<BTreeMap<Uuid, String>> = RwLock::new(BTreeMap::new());
 
-// Public Methods //
+// PUBLIC METHODS //
 
-// Start linking, returning the Steam login url for user to sign in at
+/// Start linking, returning the Steam login url for user to sign in at
 pub fn begin(user_id: Uuid) -> String {
     let token = utils::generate_code(64);
     let login_url = login_url(user_id, &token);
@@ -40,7 +42,7 @@ pub fn begin(user_id: Uuid) -> String {
     login_url
 }
 
-// Attempt to link account to steam and parse steam ID
+/// Attempt to link account to steam and parse steam ID
 pub async fn complete(
     pool: &SqlitePool,
     user_id: Uuid,
@@ -66,9 +68,9 @@ pub async fn complete(
     Ok(())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
-// Construct Steam login url for user to sign in at
+/// Construct Steam login url for user to sign in at
 fn login_url(user_id: Uuid, token: &str) -> String {
     let public_url = config::get().public_url();
 
@@ -78,7 +80,7 @@ fn login_url(user_id: Uuid, token: &str) -> String {
             (XENON_TOKEN, token)
         ])
         .finish();
-    let return_to = format!("{public_url}{REDIRECT_PATH}?{return_query}");
+    let return_to = format!("{}{}?{}", public_url, REDIRECT_PATH, return_query);
 
     let login_query = Serializer::new(String::new())
         .extend_pairs([
@@ -94,7 +96,7 @@ fn login_url(user_id: Uuid, token: &str) -> String {
     format!("{STEAM_LOGIN_URL}?{login_query}")
 }
 
-// POST to steam to verify that credentials and OpenID parameters are valid
+/// POST to steam to verify that credentials and OpenID parameters are valid
 async fn verify(params: &HashMap<String, String>) -> Result<()> {
     let mut params = params.clone();
     params.insert(
@@ -123,18 +125,18 @@ async fn verify(params: &HashMap<String, String>) -> Result<()> {
     Err(AppError::Forbidden)
 }
 
-// Given query parameters, extract Steam ID (64)
+/// Given query parameters, extract Steam ID (64)
 fn parse_steam_id(params: &HashMap<String, String>) -> Result<String> {
     let Some(claimed_id) = params.get(OPENID_CLAIMED_ID) else {
-        return Err(AppError::Validation(format!("Missing {OPENID_CLAIMED_ID}")));
+        return Err(AppError::Validation(format!("missing {OPENID_CLAIMED_ID}")));
     };
 
     let Some(steam_id) = claimed_id.strip_prefix(STEAM_ID_URL) else {
-        return Err(AppError::Validation(format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
+        return Err(AppError::Validation(format!("invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
     };
 
     if steam_id.parse::<u64>().is_err() {
-        return Err(AppError::Validation(format!("Invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
+        return Err(AppError::Validation(format!("invalid {OPENID_CLAIMED_ID}: {claimed_id}")));
     }
 
     Ok(steam_id.to_string())

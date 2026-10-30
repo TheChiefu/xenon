@@ -1,3 +1,5 @@
+//! Linking an Xbox account through Microsoft's OAuth sign-in
+
 use std::collections::BTreeMap;
 use std::sync::RwLock;
 
@@ -10,17 +12,15 @@ use uuid::Uuid;
 use crate::config;
 use crate::error::{AppError, Result};
 use crate::services::xbox::accounts;
-use crate::services::xbox::auth;
-use crate::services::xbox::auth::microsoft;
-use crate::services::xbox::auth::xsts;
+use crate::services::xbox::auth::{self, microsoft, xsts};
 use crate::utils;
 
-// Data Types //
+// STATE //
 
 /// Code verifiers by user ID (PKCE code verifier for one sign-in)
 static VERIFIERS: RwLock<BTreeMap<Uuid, String>> = RwLock::new(BTreeMap::new());
 
-// Public Methods //
+// PUBLIC METHODS //
 
 /// Returns authorization request URL for a user
 pub fn begin(user_id: Uuid) -> String {

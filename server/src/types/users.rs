@@ -1,6 +1,6 @@
 //! Propeties of a user
 
-use core::fmt;
+use std::fmt;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};

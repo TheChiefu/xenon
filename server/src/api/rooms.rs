@@ -1,10 +1,11 @@
 //! The `rooms` table, and the tables scoped to a single room.
 
+pub mod access;
 pub mod bans;
 pub mod invites;
-pub mod access;
 pub mod read;
 
+use sqlx::SqlitePool;
 use sqlx::types::Json;
 use uuid::Uuid;
 
@@ -15,9 +16,9 @@ use crate::types::users::GlobalRole;
 use crate::utils;
 use crate::validate;
 
-// Data Structs //
+// DATA STRUCTS //
 
-// A `rooms` row
+/// A `rooms` row
 #[derive(sqlx::FromRow)]
 pub struct Room {
     pub id: Uuid,
@@ -38,16 +39,15 @@ impl From<Room> for RoomInfo {
     }
 }
 
-// API Methods //
+// PUBLIC METHODS //
 
-// Get a room's information by ID (hidden rooms only show to users in them)
+/// Get a room's information by ID (hidden rooms only show to users in them)
 pub async fn get(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
 ) -> Result<Room> {
 
-    let mut conn = pool.acquire().await?;
     let room: Room = sqlx::query_as(
         "
         SELECT r.id, r.name, r.visibility, r.default_permissions, r.created_at
@@ -60,16 +60,16 @@ pub async fn get(
     .bind(room_id)
     .bind(Visibility::Public)
     .bind(caller_id)
-    .fetch_optional(&mut *conn)
+    .fetch_optional(pool)
     .await?
     .ok_or(AppError::NotFound)?;
 
     Ok(room)
 }
 
-// Update a given room's properties
+/// Update a given room's properties
 pub async fn update(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
     name: Option<&str>,
@@ -123,9 +123,9 @@ pub async fn update(
     Ok(())
 }
 
-// Create a room and return the new room id
+/// Create a room and return the new room id
 pub async fn create(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     caller_id: Uuid,
     name: &str,
     caller_permissions: Vec<Permission>,
@@ -184,9 +184,9 @@ pub async fn create(
     Ok(room_id)
 }
 
-// Delete a room, return member list to be used on notify
+/// Delete a room, return member list to be used on notify
 pub async fn delete(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     caller_id: Uuid,
 ) -> Result<Vec<Uuid>> {
@@ -216,10 +216,9 @@ pub async fn delete(
     Ok(members)
 }
 
-
-// Grant a user access to a room, spending an invite
+/// Grant a user access to a room, spending an invite
 pub async fn join(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     user_id: Uuid,
 ) -> Result<()> {
@@ -285,9 +284,9 @@ pub async fn join(
     Ok(())
 }
 
-// Remove user from room
+/// Remove user from room
 pub async fn leave(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     user_id: Uuid,
 ) -> Result<()> {
@@ -299,9 +298,9 @@ pub async fn leave(
     Ok(())
 }
 
-// Check whether a user may join a room's voice chat
+/// Check whether a user may join a room's voice chat
 pub async fn can_connect(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     room_id: Uuid,
     user_id: Uuid,
 ) -> Result<bool> {
@@ -316,13 +315,11 @@ pub async fn can_connect(
     }
 }
 
-// List rooms a user is a member of
+/// List rooms a user is a member of
 pub async fn list_mine(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     user_id: Uuid,
 ) -> Result<Vec<Room>> {
-
-    let mut conn = pool.acquire().await?;
 
     // Get list based on user's room access
     let rooms: Vec<Room> = sqlx::query_as(
@@ -334,20 +331,18 @@ pub async fn list_mine(
         "
     )
     .bind(user_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(rooms)
 }
 
-// List one page of discoverable public rooms
+/// List one page of discoverable public rooms
 pub async fn list_discoverable(
-    pool: &sqlx::SqlitePool,
+    pool: &SqlitePool,
     after: Option<Uuid>,
     limit: i64,
 ) -> Result<Vec<Room>> {
-
-    let mut conn = pool.acquire().await?;
 
     let rooms: Vec<Room> = sqlx::query_as(
         "
@@ -362,7 +357,7 @@ pub async fn list_discoverable(
     .bind(Visibility::Public)
     .bind(after)
     .bind(limit)
-    .fetch_all(&mut *conn)
+    .fetch_all(pool)
     .await?;
 
     Ok(rooms)

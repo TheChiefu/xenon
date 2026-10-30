@@ -1,3 +1,5 @@
+//! Serving the router over TLS or plaintext, and shutting it down
+
 use std::net::SocketAddr;
 use std::time::Duration;
 
@@ -70,7 +72,7 @@ pub async fn plaintext(app: Router, bind_addr: SocketAddr) {
         .expect("failed to serve axum application");
 }
 
-// Shutdown //
+// SHUTDOWN //
 
 /// Resolve on SIGTERM
 #[cfg(unix)]
@@ -80,7 +82,7 @@ async fn terminate() {
         .expect("failed to install SIGTERM handler")
         .recv()
         .await;
-    tracing::info!("Received \"SIGTERM\", terminating program...");
+    tracing::info!("received \"SIGTERM\", terminating program...");
 }
 
 #[cfg(not(unix))]
@@ -96,5 +98,5 @@ async fn shutdown_signal() {
         _ = terminate() => {},
         _ = cli::EXIT.notified() => {},
     }
-    tracing::info!("Shutting down server");
+    tracing::info!("shutting down server");
 }

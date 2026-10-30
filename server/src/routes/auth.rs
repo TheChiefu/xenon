@@ -18,6 +18,7 @@ use crate::api;
 use crate::validate;
 
 // REQUESTS //
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct RequestRegistrationCreate {
@@ -50,7 +51,7 @@ pub struct RespondRegistration {
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/auth.ts"))]
 pub struct RespondLogin {
-    pub token: String,
+    pub session_token: String,
 }
 
 #[derive(Serialize)]
@@ -59,37 +60,36 @@ pub struct RespondRegistrationCode {
     pub code: String,
 }
 
+// ROUTING METHODS //
 
-// ROUTING //
-
-// Create an account
+/// Create an account
 pub async fn register(
     ClientIp(ip): ClientIp,
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     Json(body): Json<Registration>,
 ) -> Result<(StatusCode, Json<RespondRegistration>)> {
-    let (id, token) = api::auth::register(&state.pool, &state.address_limits, ip, &body).await?;
+    let (id, token) = api::auth::register(&app_state.pool, &app_state.address_limits, ip, &body).await?;
     Ok((StatusCode::CREATED, Json(RespondRegistration { id, session_token: token })))
 }
 
-// Start a new session
+/// Start a new session
 pub async fn login(
     ClientIp(ip): ClientIp,
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     Json(body): Json<RequestLogin>,
 ) -> Result<Json<RespondLogin>> {
     let token = api::auth::sign_in(
-        &state.pool,
-        &state.address_limits,
-        &state.login_failures,
+        &app_state.pool,
+        &app_state.address_limits,
+        &app_state.login_failures,
         ip,
         &body.username,
         &body.password
     ).await?;
-    Ok(Json(RespondLogin { token }))
+    Ok(Json(RespondLogin { session_token: token }))
 }
 
-// Create a code that lets someone register
+/// Create a code that lets someone register
 pub async fn create_registration_code(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -104,7 +104,7 @@ pub async fn create_registration_code(
     Ok((StatusCode::CREATED, Json(RespondRegistrationCode { code })))
 }
 
-// List every registration code
+/// List every registration code
 pub async fn list_registration_codes(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -113,7 +113,7 @@ pub async fn list_registration_codes(
     Ok(Json(codes))
 }
 
-// Revoke a registration code
+/// Revoke a registration code
 pub async fn revoke_registration_code(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,

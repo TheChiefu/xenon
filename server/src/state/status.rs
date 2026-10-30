@@ -7,9 +7,7 @@ use uuid::Uuid;
 
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
-use crate::state::platforms;
-use crate::state;
-use crate::state::AppState;
+use crate::state::{self, platforms, AppState};
 use crate::types::platforms::Platform;
 use crate::types::status::{Appearance, UserState};
 use crate::utils;
@@ -22,10 +20,10 @@ pub struct Statuses {
 
 /// Reads the status a user last declared
 pub fn get(
-    state: &AppState,
+    statuses: &Statuses,
     user_id: Uuid,
 ) -> Option<Appearance> {
-    let held = utils::read_lock(&state.statuses.by_user);
+    let held = utils::read_lock(&statuses.by_user);
 
     match held.get(&user_id) {
         Some(appearance) => Some(*appearance),
@@ -33,17 +31,17 @@ pub fn get(
     }
 }
 
-// Write the status a user declares
+/// Write the status a user declares
 pub fn set(
-    state: &AppState,
+    statuses: &Statuses,
     user_id: Uuid,
     appearance: Appearance,
 ) {
-    let mut held = utils::write_lock(&state.statuses.by_user);
+    let mut held = utils::write_lock(&statuses.by_user);
     held.insert(user_id, appearance);
 }
 
-// Build the status of every visible member
+/// Build the status of every visible member
 pub fn snapshot(
     state: &AppState,
     members: &[Uuid],
@@ -57,7 +55,7 @@ pub fn snapshot(
             continue;
         }
 
-        let Some(appearance) = get(state, member_id) else {
+        let Some(appearance) = get(&state.statuses,member_id) else {
             continue;
         };
 
@@ -76,7 +74,7 @@ pub fn snapshot(
     users
 }
 
-// Apply the status a new socket connects with, and announce the result
+/// Apply the status a new socket connects with, and announce the result
 pub async fn connected(
     state: &AppState,
     user_id: Uuid,
@@ -85,33 +83,33 @@ pub async fn connected(
 ) {
     let mut current_status = None;
     if already_connected {
-        current_status = get(state, user_id);
+        current_status = get(&state.statuses,user_id);
     }
 
     match current_status {
         None => {
-            set(state, user_id, status);
+            set(&state.statuses, user_id, status);
         },
         Some(Appearance::Online) => {},
         Some(Appearance::Busy) => {},
         Some(Appearance::Away) => {
             if status == Appearance::Online {
-                set(state, user_id, status);
+                set(&state.statuses, user_id, status);
             }
         },
         Some(Appearance::Offline) => {
             if status == Appearance::Online || status == Appearance::Away {
-                set(state, user_id, status);
+                set(&state.statuses, user_id, status);
             }
         }
     }
 
-    if let Some(current) = get(state, user_id) {
+    if let Some(current) = get(&state.statuses,user_id) {
         announce(state, user_id, current).await;
     }
 }
 
-// Announce a user as Offline once their last socket closes
+/// Announce a user as Offline once their last socket closes
 pub async fn disconnected(
     state: &AppState,
     user_id: Uuid,
@@ -132,7 +130,7 @@ pub async fn on_join(
         return;
     }
 
-    let Some(appearance) = get(state, user_id) else {
+    let Some(appearance) = get(&state.statuses,user_id) else {
         return;
     };
 
@@ -140,7 +138,7 @@ pub async fn on_join(
 
     // Send all snapshots
     for event in state::snapshots(state, user_id).await {
-        registry::inform_user(&state.registry, user_id, event);
+        registry::inform_users(&state.registry, &[user_id], event);
     }
 }
 

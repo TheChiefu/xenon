@@ -15,11 +15,11 @@ use crate::error::Result;
 use crate::routes::AuthUser;
 use crate::types::messages::SearchRequest;
 
-// Data Structs //
+// RESPONSES //
 
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/search.ts"))]
-pub struct SearchResult {
+pub struct RespondSearchResult {
     pub seq: i64,
     pub id: Uuid,
     pub room_id: Uuid,
@@ -30,7 +30,7 @@ pub struct SearchResult {
     pub files: Vec<String>, // Attached file names matching the file filter
 }
 
-impl From<Found> for SearchResult {
+impl From<Found> for RespondSearchResult {
     fn from(found: Found) -> Self {
         Self {
             seq: found.message.seq,
@@ -45,16 +45,14 @@ impl From<Found> for SearchResult {
     }
 }
 
-// RESPONSES //
-
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/search.ts"))]
 pub struct RespondSearch {
-    pub results: Vec<SearchResult>,
+    pub results: Vec<RespondSearchResult>,
     pub total: i64,
 }
 
-// Routing Methods //
+// ROUTING METHODS //
 
 /// Search for messages in every room the caller is a member of
 pub async fn messages(
@@ -67,7 +65,7 @@ pub async fn messages(
 
     let mut results = Vec::with_capacity(page.found.len());
     for entry in page.found {
-        results.push(SearchResult::from(entry));
+        results.push(RespondSearchResult::from(entry));
     }
 
     Ok(Json(RespondSearch { results, total: page.total }))

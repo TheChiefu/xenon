@@ -1,6 +1,5 @@
 //! HTTP handlers reporting what this server is.
 
-use axum::http::StatusCode;
 use axum::Json;
 use serde::Serialize;
 
@@ -8,9 +7,8 @@ use serde::Serialize;
 use ts_rs::TS;
 
 use crate::config;
-use crate::error::Result;
 
-// Data Structs //
+// DATA STRUCTS //
 
 /// General server information and limits clients need to know about
 #[derive(Serialize)]
@@ -31,41 +29,43 @@ pub struct ServerInfo {
     pub limit_attachments_per_message_max: usize,
 }
 
-// Routing Methods //
+// ROUTING METHODS //
 
 /// Get the server's information
-pub async fn info() -> Result<(StatusCode, Json<ServerInfo>)> {
+pub async fn info() -> Json<ServerInfo> {
+
+    let config = config::get();
 
     let info = ServerInfo {
-        name: config::get().info.name.clone(),
+        name: config.info.name.clone(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        kind: config::get().info.kind.clone(),
-        description: config::get().info.description.clone(),
-        limit_users_lookup: config::get().responses.users_per_lookup,
-        limit_message_page: config::get().responses.messages_per_page,
-        limit_search_page: config::get().responses.search_results_per_page,
-        limit_room_page: config::get().responses.rooms_per_page,
-        limit_users_page: config::get().responses.users_per_page,
-        limit_file_bytes_max: config::get().uploads.file_size_max.to_int(),
-        limit_attachments_per_message_max: config::get().uploads.attachments_per_message_max,
+        kind: config.info.kind.clone(),
+        description: config.info.description.clone(),
+        limit_users_lookup: config.responses.users_per_lookup,
+        limit_message_page: config.responses.messages_per_page,
+        limit_search_page: config.responses.search_results_per_page,
+        limit_room_page: config.responses.rooms_per_page,
+        limit_users_page: config.responses.users_per_page,
+        limit_file_bytes_max: config.uploads.file_size_max.to_int(),
+        limit_attachments_per_message_max: config.uploads.attachments_per_message_max,
     };
 
-    Ok((StatusCode::OK, Json(info)))
+    Json(info)
 }
 
 /// Get the server version
-pub async fn version() -> Result<Json<String>> {
+pub async fn version() -> Json<String> {
     let version = env!("CARGO_PKG_VERSION").to_string();
-    Ok(Json(version))
+    Json(version)
 }
 
 /// Get what kind of server is deployed, such as "Development" or "Release"
-pub async fn kind() -> Result<Json<String>> {
+pub async fn kind() -> Json<String> {
     let kind = config::get().info.kind.clone();
-    Ok(Json(kind))
+    Json(kind)
 }
 
 /// Respond that the server is up and healthy
-pub async fn health_check() -> Result<(StatusCode, Json<String>)> {
-    Ok((StatusCode::OK, Json("Up and running".to_string())))
+pub async fn health_check() -> Json<String> {
+    Json("Up and running".to_string())
 }

@@ -1,3 +1,5 @@
+//! Outside services the server links to, and the HTTP client they share
+
 pub mod push;
 pub mod steam;
 pub mod xbox;
@@ -6,6 +8,7 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use axum::Router;
+use axum::response::{Html, IntoResponse, Response};
 use reqwest::Client;
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -22,7 +25,21 @@ pub static CLIENT: LazyLock<Client> = LazyLock::new(build_client);
 
 pub const PLATFORMS: &[Platform] = &[Platform::Steam, Platform::Xbox];
 
-// Public Methods //
+const LINKED_PAGE: &str = include_str!("services/linked_page.html");
+
+// PUBLIC METHODS //
+
+/// Respond to a platform's redirect with the linked page, or the reason linking failed
+pub fn linked_response(platform: &str, user_id: Uuid, result: Result<()>) -> Response {
+    match result {
+        Ok(()) => Html(LINKED_PAGE).into_response(),
+        Err(e) => {
+            tracing::warn!("{user_id}: {platform} linking failed: {e}");
+            let (status, message) = e.status_and_message();
+            (status, format!("linking failed: {message}")).into_response()
+        }
+    }
+}
 
 /// Build outbound HTTP client at startup when config enables a service
 pub fn init() {
@@ -105,7 +122,7 @@ pub async fn remove_user(state: &AppState, user_id: Uuid) -> Result<()> {
     Ok(())
 }
 
-// Helper Methods //
+// HELPER METHODS //
 
 /// Build outbound HTTP client with request timeout, exits server if it cannot be built
 fn build_client() -> Client {
