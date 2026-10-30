@@ -130,6 +130,7 @@ export const MSG_REMOVE_PUSH = "Are you sure you want to disable push notificati
 export const MSG_DISABLE_NOTIFICATION = "Browser notifications must be revoked via browser settings.";
 export const MSG_DELETE_ACCOUNT = "Are you sure you want to delete your account? This cannot be undone.";
 export const MSG_UNLINK_XBOX = "Are you sure you want to unlink your Xbox account?";
+export const MSG_UNLINK_STEAM = "Are you sure you want to unlink your Steam account?";
 export const MSG_REVOKE_CODE = "Are you sure you want to revoke this invite code?";
 export const MSG_DELETE_MESSAGE = "Are you sure you want to delete this message? This cannot be undone.";
 export const MSG_DELETE_USER = "Are you sure you want to delete this user? This cannot be undone.";

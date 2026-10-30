@@ -23,11 +23,11 @@ use crate::utils;
 use ts_rs::TS;
 
 // Constants //
-macro_rules! steam_id_url {
-    () => {"https://steamcommunity.com/openid/id/"}
+macro_rules! steam_openid_url {
+    ($suffix:literal) => { concat!("https://steamcommunity.com/openid/", $suffix) };
 }
-const STEAM_ID_URL: &str = steam_id_url!();
-const STEAM_LOGIN_URL: &str = concat!(steam_id_url!(), "login");
+const STEAM_ID_URL: &str = steam_openid_url!("id/");
+const STEAM_LOGIN_URL: &str = steam_openid_url!("login");
 
 const OPENID_MODE: &str = "openid.mode";
 const OPENID_CLAIMED_ID: &str = "openid.claimed_id";
