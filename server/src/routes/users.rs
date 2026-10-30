@@ -13,6 +13,7 @@ use ts_rs::TS;
 use crate::api::users::UserSummary;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
+use crate::services;
 use crate::state::{self, AppState};
 use crate::types::users::{GlobalRole, UserProfile};
 use crate::api;
@@ -147,7 +148,8 @@ pub async fn ban(
         return Err(AppError::Forbidden);
     }
 
-    api::users::ban(&app_state, target_id).await?;
+    api::users::ban(&app_state.pool, target_id).await?;
+    services::remove_user(&app_state, target_id).await?;
 
     state::disconnect(&app_state, target_id).await;
 

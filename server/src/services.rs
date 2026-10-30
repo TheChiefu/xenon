@@ -5,12 +5,24 @@ pub mod xbox;
 use std::sync::LazyLock;
 use std::time::Duration;
 
+use axum::Router;
 use reqwest::Client;
+use sqlx::SqlitePool;
+use uuid::Uuid;
 
 use crate::config;
+use crate::error::Result;
+use crate::state::AppState;
+use crate::types::messages::Notification;
+use crate::types::platforms::Platform;
+use crate::types::users::LinkedAccount;
 
 /// Outbound HTTP client shared by every service
 pub static CLIENT: LazyLock<Client> = LazyLock::new(build_client);
+
+pub const PLATFORMS: &[Platform] = &[Platform::Steam, Platform::Xbox];
+
+// Public Methods //
 
 /// Build outbound HTTP client at startup when config enables a service
 pub fn init() {
@@ -24,6 +36,73 @@ pub fn init() {
     }
 
     LazyLock::force(&CLIENT);
+}
+
+/// Attempt to start each service (when applicable)
+pub async fn start(state: &AppState) -> Result<()> {
+    push::start(state).await?;
+
+    for platform in PLATFORMS {
+        match platform {
+            Platform::Steam => steam::start(state.clone()),
+            Platform::Xbox => xbox::start(state.clone()),
+        }
+    }
+
+    Ok(())
+}
+
+/// Build a router of each service's routes (when enabled)
+pub fn router() -> Router<AppState> {
+    let mut router = push::routes::router();
+
+    for platform in PLATFORMS {
+        let platform_router = match platform {
+            Platform::Steam => steam::routes::router(),
+            Platform::Xbox => xbox::routes::router(),
+        };
+
+        router = router.merge(platform_router);
+    }
+
+    router
+}
+
+/// Read the accounts a user has linked on each platform
+pub async fn list_linked_accounts(pool: &SqlitePool, user_id: Uuid) -> Result<Vec<LinkedAccount>> {
+    let mut linked_accounts = Vec::new();
+
+    for platform in PLATFORMS {
+        let linked = match platform {
+            Platform::Steam => steam::get_linked_account(pool, user_id).await?,
+            Platform::Xbox => xbox::get_linked_account(pool, user_id).await?,
+        };
+
+        if let Some(linked) = linked {
+            linked_accounts.push(linked);
+        }
+    }
+
+    Ok(linked_accounts)
+}
+
+/// Notify the offline users among a notification's recipients
+pub fn notify_offline(state: &AppState, notification: &Notification) {
+    push::notify_offline(state, notification);
+}
+
+/// Remove a user's data from every service, enabled or not
+pub async fn remove_user(state: &AppState, user_id: Uuid) -> Result<()> {
+    push::remove_subscriptions(state, user_id).await?;
+
+    for platform in PLATFORMS {
+        match platform {
+            Platform::Steam => steam::unlink(state, user_id).await?,
+            Platform::Xbox => xbox::unlink(state, user_id).await?,
+        }
+    }
+
+    Ok(())
 }
 
 // Helper Methods //

@@ -37,6 +37,15 @@ pub struct AttachmentInfo {
     pub spoiler: bool,
 }
 
+/// A posted message's notification and who receives it
+pub struct Notification {
+    pub room_id: Uuid,
+    pub room_name: String,
+    pub author: String,
+    pub body: String,
+    pub recipients: Vec<Uuid>,
+}
+
 #[derive(Clone, Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/messages.ts"))]
 pub struct MessageInfo {

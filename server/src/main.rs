@@ -48,11 +48,6 @@ async fn main() -> Result<()> {
     }
     drop(conn);
 
-    // Ensure VAPID keys exist for browsers to subscribe against
-    if config::get().push.is_some() {
-        services::push::send::ensure_keypair(&pool).await?;
-    }
-
     // Build outbound HTTP client if any service is enabled
     services::init();
 
@@ -65,8 +60,7 @@ async fn main() -> Result<()> {
     // Read commands typed into the terminal
     tokio::spawn(cli::console(app_state.clone()));
 
-    services::xbox::start(app_state.clone());
-    services::steam::start(app_state.clone());
+    services::start(&app_state).await?;
 
     let app: axum::Router = routes::router(app_state);
     let bind_addr = config::get().socket_addr();

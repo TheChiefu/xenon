@@ -12,6 +12,7 @@ use crate::api;
 use crate::cli;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::services;
 use crate::state::{self, AppState};
 use crate::types::users::GlobalRole;
 use crate::utils;
@@ -74,7 +75,8 @@ async fn set_role(pool: &SqlitePool, username: &str, role: &str) -> Result<()> {
 /// Bans an account
 async fn ban(state: &AppState, username: &str) -> Result<()> {
     let user_id = get_user_id(&state.pool, username).await?;
-    api::users::ban(state, user_id).await?;
+    api::users::ban(&state.pool, user_id).await?;
+    services::remove_user(state, user_id).await?;
     state::disconnect(state, user_id).await;
 
     println!("banned user account: \"{username}\"");
@@ -93,7 +95,7 @@ async fn unban(pool: &SqlitePool, username: &str) -> Result<()> {
 /// Deletes an account
 async fn delete(state: &AppState, username: &str, delete_history: bool) -> Result<()> {
     let user_id = get_user_id(&state.pool, username).await?;
-    let rooms = api::users::delete(state, user_id, delete_history).await?;
+    let rooms = api::users::delete(&state.pool, user_id, delete_history).await?;
     state::disconnect(state, user_id).await;
     state::broadcast_member_left(state, user_id, rooms).await;
 

@@ -153,7 +153,7 @@ pub async fn update_preferences(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Replace the caller's password
+/// Replace the caller's password (SHOULD WE MAKE GENERALIZE USER PATCH INSTEAD?)
 pub async fn update_password(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
@@ -185,7 +185,7 @@ pub async fn delete(
     State(app_state): State<AppState>,
     Json(body): Json<RequestDeleteAccount>,
 ) -> Result<StatusCode> {
-    let rooms = api::users::delete(&app_state, user_id, body.delete_history).await?;
+    let rooms = api::users::delete(&app_state.pool, user_id, body.delete_history).await?;
     state::disconnect(&app_state, user_id).await;
     state::broadcast_member_left(&app_state, user_id, rooms).await;
     Ok(StatusCode::NO_CONTENT)

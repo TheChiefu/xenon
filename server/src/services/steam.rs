@@ -1,13 +1,13 @@
 // Steam account linking and presence polling
 pub mod accounts;
 pub mod api;
+pub mod link;
 pub mod presence;
 pub mod routes;
 
 use std::time::Duration;
 
-use axum::Router;
-use axum::routing::{get, post};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::config;
@@ -15,20 +15,22 @@ use crate::error::Result;
 use crate::state::platforms;
 use crate::state::AppState;
 use crate::types::platforms::Platform;
+use crate::types::users::LinkedAccount;
 
 pub const REDIRECT_PATH: &str = "/steam/redirect";
 
-pub fn router() -> Router<AppState> {
-    if config::get().steam.is_none() {
-        return Router::new();
-    }
+/// Read a user's linked Steam account
+pub async fn get_linked_account(pool: &SqlitePool, user_id: Uuid) -> Result<Option<LinkedAccount>> {
+    let Some(account) = accounts::get(pool, user_id).await? else {
+        return Ok(None);
+    };
 
-    Router::new()
-        .route("/me/steam", 
-            post(routes::start)
-            .delete(routes::unlink)
-        )
-        .route(REDIRECT_PATH, get(routes::redirect))
+    let linked = LinkedAccount {
+        platform: Platform::Steam,
+        handle: account.persona_name
+    };
+
+    Ok(Some(linked))
 }
 
 pub async fn unlink(state: &AppState, user_id: Uuid) -> Result<()> {

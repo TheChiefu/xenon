@@ -17,6 +17,7 @@ use crate::api::messages::attachments;
 use crate::api::messages::attachments::Attachment;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
+use crate::services;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
 use crate::state::{self, AppState};
@@ -227,11 +228,14 @@ async fn notify_users(
     };
 
     let notification = notifications::notify(
-        app_state,
+        &app_state.pool,
         room_id,
         author_id,
         message.body.as_deref()
     ).await?;
+
+    // Notify offline users
+    services::notify_offline(app_state, &notification);
 
     // Create notification server event
     let event = ServerEvent::Notification {

@@ -7,8 +7,7 @@ use uuid::Uuid;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::ratelimit::LoginFailures;
-use crate::state::AppState;
+use crate::ratelimit::{AddressLimits, LoginFailures};
 use crate::types::auth::{Registration, RegistrationCode};
 use crate::types::time::DAY;
 use crate::types::users::GlobalRole;
@@ -153,12 +152,13 @@ pub async fn list_registration_codes(
 
 // Creates an account, returning its id and session token
 pub async fn register(
-    state: &AppState,
+    pool: &sqlx::SqlitePool,
+    address_limits: &AddressLimits,
     ip: IpAddr,
     registration: &Registration,
 ) -> Result<(Uuid, String)> {
 
-    let result = create_account(&state.pool, registration).await;
+    let result = create_account(pool, registration).await;
 
     // Count a failure caused by the client against its IP
     let failed = matches!(
@@ -167,8 +167,8 @@ pub async fn register(
     );
 
     if failed && config::get().rate_limit.block_on_register_limit {
-        if state.address_limits.register_limit_reached(ip) {
-            block_address(state, ip, "registration").await?;
+        if address_limits.register_limit_reached(ip) {
+            block_address(pool, address_limits, ip, "registration").await?;
         }
     }
 
@@ -325,21 +325,23 @@ pub async fn revoke_session(
 
 // Log a user in
 pub async fn sign_in(
-    state: &AppState,
+    pool: &sqlx::SqlitePool,
+    address_limits: &AddressLimits,
+    login_failures: &LoginFailures,
     ip: IpAddr,
     username: &str,
     password: &str,
 ) -> Result<String> {
 
-    let result = login(&state.pool, &state.login_failures, ip, username, password).await;
+    let result = login(pool, login_failures, ip, username, password).await;
 
     // Count a failed login against the IP
     let failed = matches!(result, Err(AppError::InvalidCredentials));
 
     // Too many failures, block IP
     if failed && config::get().rate_limit.block_on_login_limit {
-        if state.address_limits.login_limit_reached(ip) {
-            block_address(state, ip, "login").await?;
+        if address_limits.login_limit_reached(ip) {
+            block_address(pool, address_limits, ip, "login").await?;
         }
     }
 
@@ -421,14 +423,15 @@ async fn login(
 }
 
 async fn block_address(
-    state: &AppState,
+    pool: &sqlx::SqlitePool,
+    address_limits: &AddressLimits,
     ip: IpAddr,
     reason: &str,
 ) -> Result<()> {
 
-    state.address_limits.block(ip);
+    address_limits.block(ip);
 
-    let mut conn = state.pool.acquire().await?;
+    let mut conn = pool.acquire().await?;
     db::save_blocked_address(&mut conn, ip, reason).await?;
 
     Ok(())

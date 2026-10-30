@@ -68,7 +68,7 @@ pub async fn register(
     State(state): State<AppState>,
     Json(body): Json<Registration>,
 ) -> Result<(StatusCode, Json<RespondRegistration>)> {
-    let (id, token) = api::auth::register(&state, ip, &body).await?;
+    let (id, token) = api::auth::register(&state.pool, &state.address_limits, ip, &body).await?;
     Ok((StatusCode::CREATED, Json(RespondRegistration { id, session_token: token })))
 }
 
@@ -78,7 +78,14 @@ pub async fn login(
     State(state): State<AppState>,
     Json(body): Json<RequestLogin>,
 ) -> Result<Json<RespondLogin>> {
-    let token = api::auth::sign_in(&state, ip, &body.username, &body.password).await?;
+    let token = api::auth::sign_in(
+        &state.pool,
+        &state.address_limits,
+        &state.login_failures,
+        ip,
+        &body.username,
+        &body.password
+    ).await?;
     Ok(Json(RespondLogin { token }))
 }
 

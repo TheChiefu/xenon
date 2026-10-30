@@ -31,7 +31,7 @@ use crate::api;
 use crate::config;
 use crate::error::{AppError, Result};
 use crate::ratelimit::AddressLimits;
-use crate::services::{steam, push, xbox};
+use crate::services;
 use crate::state::AppState;
 use crate::utils;
 
@@ -207,9 +207,7 @@ pub fn router(state: AppState) -> Router {
         .route("/server/version", get(server::version))
         .route("/server/type", get(server::kind))
         .route("/health", get(server::health_check))
-        .merge(push::router())
-        .merge(xbox::router())
-        .merge(steam::router())
+        .merge(services::router())
         .layer(middleware::from_fn_with_state(state.clone(), refuse_blocked))
         .with_state(state)
         .layer(cors_layer())

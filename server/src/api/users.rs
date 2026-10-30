@@ -6,12 +6,8 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::services::push;
-use crate::services::steam;
-use crate::services::xbox;
-use crate::state::AppState;
-use crate::types::platforms::Platform;
-use crate::types::users::{GlobalRole, LinkedAccount, UserProfile};
+use crate::services;
+use crate::types::users::{GlobalRole, UserProfile};
 use crate::utils;
 use crate::validate;
 
@@ -114,22 +110,7 @@ pub async fn profile(
 ) -> Result<UserProfile> {
 
     let row = get(pool, user_id).await?;
-
-    let mut linked_accounts = Vec::new();
-
-    if let Some(xbox) = xbox::accounts::get(pool, user_id).await? {
-        linked_accounts.push(LinkedAccount {
-            platform: Platform::Xbox,
-            handle: xbox.gamertag
-        });
-    }
-
-    if let Some(steam) = steam::accounts::get(pool, user_id).await? {
-        linked_accounts.push(LinkedAccount {
-            platform: Platform::Steam,
-            handle: steam.persona_name
-        });
-    }
+    let linked_accounts = services::list_linked_accounts(pool, user_id).await?;
 
     Ok(UserProfile {
         id: row.id,
@@ -307,12 +288,11 @@ pub async fn set_room_layout(
 
 // Delete an account, returning the rooms it left
 pub async fn delete(
-    state: &AppState,
+    pool: &sqlx::SqlitePool,
     user_id: Uuid,
     delete_history: bool,
 ) -> Result<Vec<Uuid>> {
 
-    let pool = &state.pool;
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Optionally delete the accounts message history
@@ -336,9 +316,6 @@ pub async fn delete(
     .execute(pool)
     .await?;
 
-    // Remove the account's cached Xbox authorization header
-    xbox::auth::remove_header(user_id);
-
     Ok(rooms)
 }
 
@@ -357,11 +334,11 @@ pub async fn set_global_role(
 
 // Ban a user
 pub async fn ban(
-    state: &AppState,
+    pool: &sqlx::SqlitePool,
     target_id: Uuid,
 ) -> Result<()> {
 
-    let mut tx = state.pool.begin_with(db::BEGIN_IMMEDIATE).await?;
+    let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Update user's ban row
     sqlx::query("UPDATE users SET banned = 1 WHERE id = ?1")
@@ -381,11 +358,6 @@ pub async fn ban(
     .await?;
 
     tx.commit().await?;
-
-    // Clear services
-    push::store::remove_all(&state.pool, target_id).await?;
-    xbox::unlink(state, target_id).await?;
-    steam::unlink(state, target_id).await?;
 
     Ok(())
 }

@@ -9,24 +9,14 @@ use crate::api::rooms::access;
 use crate::api::rooms::access::NotifyUserPair;
 use crate::api::users;
 use crate::error::Result;
-use crate::services::push::send::{self, Payload};
-use crate::state::AppState;
+use crate::types::messages::Notification;
 use crate::types::rooms::Notify;
-
-// Data Structs //
-
-pub struct Notification {
-    pub room_name: String,
-    pub author: String,
-    pub body: String,
-    pub recipients: Vec<Uuid>,
-}
 
 // API Methods //
 
 // Notify a room's members
 pub async fn notify(
-    state: &AppState,
+    pool: &sqlx::SqlitePool,
     room_id: Uuid,
     author_id: Uuid,
     body: Option<&str>,
@@ -42,28 +32,19 @@ pub async fn notify(
     let mentioned = mentioned_ids(body);
 
     // The author is a member, so the room resolves for them
-    let room = rooms::get(&state.pool, room_id, author_id).await?;
-    let author = users::get(&state.pool, author_id).await?;
+    let room = rooms::get(pool, room_id, author_id).await?;
+    let author = users::get(pool, author_id).await?;
 
     // Get display names of everyone mentioned
-    let names = users::display_names(&state.pool, &mentioned).await?;
+    let names = users::display_names(pool, &mentioned).await?;
     let body = name_mentions(body, &names);
 
     // Get list of recipients eligible for receiving the notification
-    let pairs = access::list_notify_pairs(&state.pool, room_id).await?;
+    let pairs = access::list_notify_pairs(pool, room_id).await?;
     let recipients = recipients(&pairs, author_id, &mentioned);
 
-    // Push notifications to offline users
-    let payload = Payload {
-        room_id,
-        room: room.name.clone(),
-        author: author.display_name.clone(),
-        body: send::shorten(&body),
-        renotify: false
-    };
-    send::notify_offline(state, payload, &recipients);
-
     Ok(Notification {
+        room_id,
         room_name: room.name,
         author: author.display_name,
         body,

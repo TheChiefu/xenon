@@ -2,13 +2,13 @@
 
 pub mod accounts;
 pub mod auth;
+pub mod link;
 pub mod presence;
 pub mod routes;
 
 use std::time::Duration;
 
-use axum::routing::get;
-use axum::Router;
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::config;
@@ -18,26 +18,11 @@ use crate::services::xbox::presence::mappings::Mappings;
 use crate::state::platforms;
 use crate::state::AppState;
 use crate::types::platforms::Platform;
+use crate::types::users::LinkedAccount;
 
 pub const REDIRECT_PATH: &str = "/xbox/redirect";
 
 // Public Methods //
-
-/// Routes this service serves, none when config has no xbox section
-pub fn router() -> Router<AppState> {
-    if config::get().xbox.is_none() {
-        return Router::new();
-    }
-
-    Router::new()
-        .route("/me/xbox",
-            get(routes::get_account)
-            .post(routes::start)
-            .patch(routes::update)
-            .delete(routes::unlink)
-        )
-        .route(REDIRECT_PATH, get(routes::redirect))
-}
 
 /// Start presence polling, doing nothing when the config has no xbox section
 pub fn start(state: AppState) {
@@ -53,6 +38,20 @@ pub fn start(state: AppState) {
     };
 
     tokio::spawn(poll_presence(state, mappings, xbox));
+}
+
+/// Read a user's linked Xbox account
+pub async fn get_linked_account(pool: &SqlitePool, user_id: Uuid) -> Result<Option<LinkedAccount>> {
+    let Some(account) = accounts::get(pool, user_id).await? else {
+        return Ok(None);
+    };
+
+    let linked = LinkedAccount {
+        platform: Platform::Xbox,
+        handle: account.gamertag
+    };
+
+    Ok(Some(linked))
 }
 
 /// Removes a user's linked account
