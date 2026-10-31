@@ -32,6 +32,10 @@ pub async fn poll(state: &AppState) {
         };
 
         for summary in summaries {
+
+            // DEBUG: Log player summary
+            tracing::debug!("{}: player summary: {summary:?}", summary.steamid);
+
             for account in batch {
                 if account.steam_id == summary.steamid {
                     let metadata = to_metadata(&summary);

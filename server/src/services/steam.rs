@@ -46,11 +46,14 @@ pub fn start(state: AppState) {
         return;
     };
 
+    tracing::info!("enabled");
+
     tokio::spawn(poll_presence(state, steam.poll_interval_seconds));
 }
 
 async fn poll_presence(state: AppState, poll_interval_seconds: u64) {
     let mut interval = tokio::time::interval(Duration::from_secs(poll_interval_seconds));
+    tracing::info!("polling at ({poll_interval_seconds} seconds)");
 
     loop {
         interval.tick().await;

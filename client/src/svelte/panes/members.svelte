@@ -162,6 +162,14 @@
     text-overflow: ellipsis;
   }
 
+  .activity {
+    min-width: 0;
+  }
+
+  .more {
+    flex: none;
+  }
+
   .game {
     /* Smaller than the name, so the platform glyph is too */
     --icon-size: 1rem;
@@ -223,7 +231,7 @@
     {@const avatar = users.getAvatar(id)}
     {@const banner = users.getBanner(id)}
     {@const userState = users.getAppearance(id)}
-    {@const activity = users.getActivity(id)}
+    {@const [activity, ...others] = users.getActivities(id)}
     {@const offline = userState.appearance === Appearance.offline}
     <button
       class="member"
@@ -256,6 +264,9 @@
               {@html ICONS_PLATFORM[activity.platform]}
             </span>
             <span class="activity" title={activityText(activity)}>{activityText(activity)}</span>
+            {#if others.length > 0}
+              <span class="more" title={others.map(activityText).join("\n")}>(+{others.length})</span>
+            {/if}
           </span>
         {/if}
       </span>

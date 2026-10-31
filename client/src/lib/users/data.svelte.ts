@@ -153,33 +153,33 @@ export function clearAppearances(): void {
 
 // GAMES //
 
-// The first platform a user is active on, or undefined when none
-export function getActivity(id: string): GameActivity | undefined {
+// Every platform a user is active on
+export function getActivities(id: string): GameActivity[] {
   const activity = activities.get(id);
   if (activity === undefined) {
-    return undefined;
+    return [];
   }
 
-  for (const platform of [Platform.xbox, Platform.steam]) {
+  const active: GameActivity[] = [];
+  for (const platform of [Platform.steam, Platform.xbox]) {
     const metadata = activity[platform];
     if (metadata !== null && metadata.availability !== Availability.offline) {
-      return {
+      active.push({
         platform,
         availability: metadata.availability,
         title: metadata.game,
         detail: metadata.activity,
-      };
+      });
     }
   }
 
-  return undefined;
+  return active;
 }
 
 // Sets one platform's metadata for a user
 export function setActivity(id: string, platform: Platform, metadata: Metadata | null): void {
   const activity = activities.get(id) ?? { xbox: null, steam: null };
-  activity[platform] = metadata;
-  activities.set(id, activity);
+  activities.set(id, { ...activity, [platform]: metadata });
 }
 
 export function clearActivities(): void {

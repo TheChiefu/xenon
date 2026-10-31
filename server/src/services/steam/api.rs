@@ -18,7 +18,7 @@ struct Summaries {
     players: Vec<PlayerSummary>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct PlayerSummary {
     pub steamid: String,
     pub personaname: String,
@@ -26,7 +26,7 @@ pub struct PlayerSummary {
     pub gameextrainfo: Option<String>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(from = "u8")]
 pub enum PersonaState {
     Offline,

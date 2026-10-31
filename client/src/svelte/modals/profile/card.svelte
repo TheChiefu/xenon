@@ -17,7 +17,7 @@
     description: string;
     appearance?: Appearance | null;
     device?: Device | null;
-    game?: GameActivity | null;
+    games?: GameActivity[];
     role: GlobalRole;
     links: LinkedAccount[];
     created_at: string;
@@ -31,7 +31,7 @@
     description,
     appearance = null,
     device = null,
-    game = null,
+    games = [],
     role,
     links,
     created_at,
@@ -69,7 +69,7 @@
 
 <style>
   .card {
-    width: 18rem;
+    width: 22rem;
     border: 1px solid var(--border);
     background: var(--component);
     color: var(--text);
@@ -185,6 +185,10 @@
     gap: 0.4rem;
   }
 
+  .link .icon {
+    flex: none;
+  }
+
 </style>
 
 <div class="card">
@@ -228,13 +232,15 @@
         <dd>{LABELS_APPEARANCE[appearance]}{device === null ? "" : ` · ${LABELS_DEVICE[device]}`}</dd>
       {/if}
 
-      {#if game !== null}
+      {#if games.length > 0}
         <dt>Game Activity</dt>
         <dd>
-          <span class="link">
-            <span class="icon" title={LABELS_PLATFORM[game.platform]}>{@html ICONS_PLATFORM[game.platform]}</span>
-            {game.title ?? game.detail ?? game.availability}
-          </span>
+          {#each games as game (game.platform)}
+            <span class="link">
+              <span class="icon" title={LABELS_PLATFORM[game.platform]}>{@html ICONS_PLATFORM[game.platform]}</span>
+              {game.title ?? game.detail ?? game.availability}
+            </span>
+          {/each}
         </dd>
       {/if}
 

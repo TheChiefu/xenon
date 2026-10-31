@@ -90,7 +90,7 @@
       description={profile.description}
       appearance={userState.appearance}
       device={userState.device}
-      game={users.getActivity(profile.id) ?? null}
+      games={users.getActivities(profile.id)}
       role={profile.global_role}
       links={profile.linked_accounts}
       created_at={formatDate(profile.created_at)}
