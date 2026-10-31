@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Appearance } from "@/bindings/types/appearance";
+  import { Availability } from "@/bindings/types/platforms";
   import type { GameActivity } from "@/lib/users/data.svelte";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_AVAILABILITY, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";
@@ -53,6 +54,16 @@
     }
 
     return `${title} · ${activity.detail}`;
+  }
+
+  // Playing a game first, then online before away
+  function compareActivities(a: GameActivity, b: GameActivity): number {
+    const playing = Number(b.title !== null) - Number(a.title !== null);
+    if (playing !== 0) {
+      return playing;
+    }
+
+    return Number(a.availability === Availability.away) - Number(b.availability === Availability.away);
   }
 
   // Compare to members to see who is before or after the other
@@ -231,7 +242,7 @@
     {@const avatar = users.getAvatar(id)}
     {@const banner = users.getBanner(id)}
     {@const userState = users.getAppearance(id)}
-    {@const [activity, ...others] = users.getActivities(id)}
+    {@const [activity, ...others] = users.getActivities(id).toSorted(compareActivities)}
     {@const offline = userState.appearance === Appearance.offline}
     <button
       class="member"

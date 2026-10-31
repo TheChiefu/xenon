@@ -3,7 +3,7 @@
 use serde::Deserialize;
 
 use crate::config;
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use crate::services::CLIENT;
 
 const PLAYER_SUMMARIES_URL: &str = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/";
@@ -18,7 +18,7 @@ struct Summaries {
     players: Vec<PlayerSummary>
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct PlayerSummary {
     pub steamid: String,
     pub personaname: String,
@@ -26,7 +26,7 @@ pub struct PlayerSummary {
     pub gameextrainfo: Option<String>
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 #[serde(from = "u8")]
 pub enum PersonaState {
     Offline,
@@ -61,17 +61,23 @@ pub async fn player_summaries(steam_ids: &[&str]) -> Result<Vec<PlayerSummary>> 
     ])?;
 
     // Strips URL from errors so Web API key is never logged
-    let summaries = async {
+    let text = async {
         CLIENT
             .get(url)
             .send()
             .await?
             .error_for_status()?
-            .json::<SummariesResponse>()
+            .text()
             .await
     }
     .await
     .map_err(reqwest::Error::without_url)?;
+
+    // DEBUG: Log player summaries
+    tracing::debug!("player summaries: {text}");
+
+    let summaries: SummariesResponse = serde_json::from_str(&text)
+        .map_err(|e| AppError::Unavailable(format!("player summaries were unreadable: {e}")))?;
 
     Ok(summaries.response.players)
 }
