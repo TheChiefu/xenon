@@ -2,7 +2,7 @@
 
 ## Description
 A simple chat application for use in small to medium sized groups. It is a single
-server instance with many room types (public/locked/hidden). Unlike discord clones,
+server instance with public and hidden rooms. Unlike discord clones,
 this is not an ecosystem server but a single server with rooms acting
 as separators for groups.
 
@@ -13,7 +13,6 @@ Which is why SQLite was chosen for making database management simple
 ### Summary of Server
 The room types are as follows:
 - Public: Open to anyone on the server
-- Locked: Visible for search but requires a member to send an invite
 - Hidden: Non-discoverable and require an invite
   - They can function as a DM (ie. 1-to-1 room between two users)
 
@@ -29,7 +28,6 @@ links, file attachments, etc. Attachments can have a size and count limit
 (both of which are set in the server config). See the [configuration](#configuration) to learn more.
 
 User accounts can be one of the following global roles:
-- Owner: Single Account created on first boot
 - Admin: Can kick users and delete messages from public room
 - Member: Regular permissions (file upload, create rooms, etc)
 - Visitor: Can join and post in rooms (cannot upload files nor create rooms)
@@ -83,14 +81,16 @@ To change this set the `XENON_CONFIG` environment variable to a path.
 
 To see more information on the configuration file and its options, see here: [server/config.md](server/config.md).
 
-## Sidecar
-The sidecar is an optional companion service written in NodeJS that handles the work
-the server does not do itself. The server runs without it, but connecting one adds:
+## Commands
+To see the commands typed into the server's terminal, including setting up the first
+admin account, see here: [server/commands.md](server/commands.md).
+
+## Optional Services
+Each is turned on by adding its section to the config file:
 
 - Web push notifications (so closed mobile clients are told about new messages)
 - Xbox account linking and game presence
-
-To see more information on the sidecar and how to run one, see here: [sidecar/README.md](sidecar/README.md).
+- Steam account linking and game presence
 
 ## API
 The server exposes a REST API along with a WebSocket that delivers live events.
@@ -112,18 +112,12 @@ The only thing required to get it running is compiling the program and running t
 executable. The config file, file upload path, database file, and defaults are all
 setup on first run.
 
-The sidecar is an optional step that isn't required to run the server. No public
-client currently exists, but at some point I will add it to this repo.
-
 _Set expectations accordingly_
 
 ## AI Usage:
 Server code I write myself and use AI for adding/modifying snippets of code that match the
 existing codebase. I keep AI usage minimal here since it's core infrastructure code.
 It is also used for re-writing docstrings and comments in bulk.
-
-Currently the Sidecar's javascript codebase is entirely written with AI and will undergo a review and rewrite.
-It is an experimental feature and not essential server code so disable/don't run it, if it is not trusted.
 
 ## License:
 TBD
