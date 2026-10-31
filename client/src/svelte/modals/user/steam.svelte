@@ -1,6 +1,6 @@
 <script lang="ts">
   import { LABELS_PLATFORM, ICONS_PLATFORM } from "@/lib/labels";
-  import { MSG_ERROR, MSG_UNLINK_STEAM, refreshedText } from "@/lib/labels";
+  import { MSG_ERROR, MSG_UNLINK_STEAM, MSG_OPEN_SIGN_IN, MSG_SIGN_IN_READY, MSG_REFRESH_AFTER_SIGN_IN, refreshedText } from "@/lib/labels";
   import * as events from "@/lib/events";
   import { Platform } from "@/bindings/types/platforms";
   import type { LinkResponse } from "@/bindings/services/steam";
@@ -10,8 +10,10 @@
   import icon_link from "@/assets/icons/link.svg?raw";
   import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
   import icon_refresh from "@/assets/icons/refresh.svg?raw";
+  import icon_enter from "@/assets/icons/enter.svg?raw";
 
   let steam_notify = $state("");
+  let login_url: string | null = $state(null);
 
   // The caller's linked Steam account, from their profile
   const steam_account = $derived(
@@ -38,23 +40,16 @@
     }
   }
 
-  // Opens Steam sign-in in a new tab
+  // Fetches a Steam sign-in url for the sign-in link
   async function linkSteamAccount(): Promise<void> {
     steam_notify = "";
-    let sign_in: Window | null = null;
+    login_url = null;
 
     try {
-      // Opened before any await, browsers block tabs opened later
-      sign_in = window.open("", "_blank");
-
-      if (sign_in === null) {
-        throw new Error("Sign-in tab was blocked");
-      }
-
       const link: LinkResponse = await steamAPI.startLink();
-      sign_in.location.href = link.login_url;
+      login_url = link.login_url;
+      steam_notify = MSG_SIGN_IN_READY;
     } catch (failure) {
-      sign_in?.close();
       steam_notify = `${MSG_ERROR}: ${failureText(failure)}`;
     }
   }
@@ -72,6 +67,7 @@
     try {
       // Unlink on server and remove the entry from the current settings page
       await steamAPI.unlink();
+      login_url = null;
       await profile.load();
     } catch (failure) {
       steam_notify = `${MSG_ERROR}: ${failureText(failure)}`;
@@ -93,15 +89,21 @@
 
       <div class="platform-buttons">
         {#if steam_account === null}
-          <button class="icon-btn" aria-label="Link Steam" onclick={linkSteamAccount}>
+          <button class="icon-btn" aria-label="Link Steam" title="Link Steam" onclick={linkSteamAccount}>
             <span class="icon" aria-hidden="true">{@html icon_link}</span>
           </button>
+          {#if login_url !== null}
+            <a class="icon-btn" href={login_url} target="_blank" rel="noopener noreferrer" aria-label={MSG_OPEN_SIGN_IN} title={MSG_OPEN_SIGN_IN} onclick={() => steam_notify = MSG_REFRESH_AFTER_SIGN_IN}>
+              <span class="icon" aria-hidden="true">{@html icon_enter}</span>
+            </a>
+          {/if}
         {:else}
-          <button class="icon-btn is-danger" aria-label="Unlink Steam" onclick={unlinkSteamAccount}>
+          <button class="icon-btn is-danger" aria-label="Unlink Steam" title="Unlink Steam" onclick={unlinkSteamAccount}>
             <span class="icon" aria-hidden="true">{@html icon_link_broken}</span>
           </button>
         {/if}
-        <button class="icon-btn" aria-label="Refresh Steam Account" onclick={refreshSteamAccount}>
+        <span class="divider-vertical" aria-hidden="true"></span>
+        <button class="icon-btn" aria-label="Refresh Steam Account" title="Refresh Steam Account" onclick={refreshSteamAccount}>
           <span class="icon" aria-hidden="true">{@html icon_refresh}</span>
         </button>
       </div>
