@@ -11,7 +11,7 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::api;
-use crate::api::messages::{Cursor, Posted};
+use crate::api::messages::{Cursor, Posted, CLIENT_NONCE_LENGTH};
 use crate::api::messages::attachments::Attachment;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
@@ -71,12 +71,13 @@ pub async fn post(
     };
 
     // Check nonce byte count
-    let nonce: [u8; 16] = match bytes.try_into() {
+    let nonce: [u8; CLIENT_NONCE_LENGTH] = match bytes.try_into() {
         Ok(array) => array,
-        Err(_) => return Err(AppError::Validation("client_nonce must be 16 bytes".to_string()))
+        Err(_) => return Err(AppError::Validation(
+            format!("client_nonce must be {CLIENT_NONCE_LENGTH} bytes")
+        ))
     };
 
-    // Attempt to post a message
     let (result, files) = api::messages::post(
         &app_state.pool,
         room_id,
@@ -105,7 +106,6 @@ pub async fn post(
         }
     }
 
-    // Message is duplicate (no broadcast)
     Ok((status, Json(response)))
 }
 
@@ -127,7 +127,6 @@ pub async fn fetch(
         }
     };
 
-    // Attempt to fetch messages
     let result = api::messages::fetch(&pool, room_id, user_id, cursor).await?;
 
     // Convert returned vector of internal messages into vector of HTTP message responses
@@ -226,10 +225,8 @@ async fn notify_users(
         message.body.as_deref()
     ).await?;
 
-    // Notify offline users
     services::notify_offline(app_state, &notification);
 
-    // Create notification server event
     let event = ServerEvent::Notification {
         room_id,
         room_name: notification.room_name,
@@ -237,7 +234,6 @@ async fn notify_users(
         body: notification.body
     };
 
-    // Notify connections users
     registry::inform_users(&app_state.registry, &notification.recipients, event);
 
     Ok(())

@@ -26,6 +26,4 @@ export type RequestPasswordSet = { current_password: string, new_password: strin
 
 export type RespondRoomInvite = { room_id: string, room_name: string | null, };
 
-export type RespondRoomPreferences = { room_layout: string, };
-
 export type RespondRoomReadState = { room_id: string, last_read_seq: number, unread: number, };

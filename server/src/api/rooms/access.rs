@@ -42,11 +42,11 @@ pub async fn get(
 
     let mut conn = pool.acquire().await?;
 
-    if db::effective_permissions(&mut conn, room_id, caller_id).await?.is_none() {
+    if db::room_permissions(&mut conn, room_id, caller_id).await?.is_none() {
         return Err(AppError::Forbidden);
     }
 
-    let permissions = db::effective_permissions(&mut conn, room_id, target_id).await?;
+    let permissions = db::room_permissions(&mut conn, room_id, target_id).await?;
     let invited = db::invited_to_room(&mut conn, room_id, target_id).await?;
     let banned = db::banned_from_room(&mut conn, room_id, target_id).await?;
 
@@ -63,7 +63,7 @@ pub async fn list(
     let mut conn = pool.acquire().await?;
 
     // Check if the caller is a member of the room
-    if db::effective_permissions(&mut conn, room_id, caller_id).await?.is_none() {
+    if db::room_permissions(&mut conn, room_id, caller_id).await?.is_none() {
         return Err(AppError::Forbidden);
     }
 
@@ -97,7 +97,7 @@ pub async fn update(
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check caller's permission in the room
-    let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
+    let perms = db::room_permissions(&mut tx, room_id, caller_id).await?;
     let Some(perms) = perms else {
         return Err(AppError::Forbidden);
     };
@@ -114,7 +114,7 @@ pub async fn update(
 
     // Grant cannot be used against another holder. Your own row is exempt
     if caller_id != target_id {
-        let target = db::effective_permissions(&mut tx, room_id, target_id).await?;
+        let target = db::room_permissions(&mut tx, room_id, target_id).await?;
         let Some(target) = target else {
             return Err(AppError::NotFound);
         };

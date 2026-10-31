@@ -1,10 +1,10 @@
-import type { Appearance } from "@/bindings/types/status";
+import type { Appearance } from "@/bindings/types/appearance";
 import type { ClientEvent, ServerEvent } from "@/bindings/sockets/session/events";
-import { Device } from "@/bindings/types/status";
+import { Device } from "@/bindings/types/appearance";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
 import * as session from "@/lib/connection/session.svelte";
-import * as status from "@/lib/users/status.svelte";
+import * as appearance from "@/lib/users/appearance.svelte";
 
 let socket: WebSocket | null = null;
 let connected: boolean = $state(false);
@@ -29,7 +29,7 @@ export function connect(): void {
 
   const address = new URL(`${url}/ws`);
   address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
-  address.searchParams.set("status", status.get());
+  address.searchParams.set("appearance", appearance.get());
 
   const device = deviceName();
   if (device !== null) {
@@ -89,9 +89,9 @@ function receive(data: string): void {
   events.dispatch(received.type, received);
 }
 
-// Send user's new status to the server
-events.subscribe(LocalEvent.status_changed, (status: Appearance) => {
-  send({ type: "status", status });
+// Send user's new appearance to the server
+events.subscribe(LocalEvent.appearance_changed, (current: Appearance) => {
+  send({ type: "appearance", appearance: current });
 });
 
 // HELPERS //

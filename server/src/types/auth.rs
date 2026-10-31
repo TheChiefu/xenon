@@ -12,7 +12,8 @@ pub struct Registration {
     pub username: String,
     pub password: String,
     pub display_name: String,
-}/// The `registration_codes` columns
+}
+
 #[derive(sqlx::FromRow, Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/auth.ts"))]
 pub struct RegistrationCode {

@@ -22,7 +22,7 @@ pub async fn notify(
     body: Option<&str>,
 ) -> Result<Notification> {
 
-    // Construct message to send to users
+    // Use a placeholder body for messages with only attachments
     let body = match body {
         Some(val) => val,
         None => "Attachment(s)"
@@ -54,7 +54,7 @@ pub async fn notify(
 
 // HELPER METHODS //
 
-/// Get list of IDs elgible for notification
+/// Get list of IDs eligible for notification
 fn recipients(
     pairs: &[NotifyUserPair],
     author_id: Uuid,

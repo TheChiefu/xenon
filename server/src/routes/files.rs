@@ -23,7 +23,7 @@ use crate::validate;
 
 // DATA STRUCTS //
 
-#[derive(Clone, Serialize)]
+#[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/files.ts"))]
 pub struct RespondFile {
     pub id: Uuid,
@@ -76,10 +76,10 @@ pub async fn upload(
 
     // Reject a body over the body limit before reading it
     if bytes > max_body_bytes() {
-        return Err(AppError::TooLarge(config::get().uploads.file_size_max));
+        return Err(AppError::TooLarge(config::get().files.file_size_max));
     }
 
-    // Read POST body
+    // Read the first multipart field, which holds the file
     let field = match multipart.next_field().await {
         Ok(Some(field)) => field,
         Ok(None) => {
@@ -90,14 +90,13 @@ pub async fn upload(
     };
 
     // Get file name
-    let file_path: &str = field.file_name()
+    let file_name_raw: &str = field.file_name()
         .ok_or(AppError::Validation("no file name provided on file upload".to_string()))?;
 
-    // Setup reader
-    let file_name = validate::file_name(file_path)?;
+    // Validate the file name and set up the reader
+    let file_name = validate::file_name(file_name_raw)?;
     let reader = StreamReader::new(field.map_err(std::io::Error::other));
 
-    // Get result and return outcome
     let result = api::files::store(&pool, &file_name, reader).await?;
     match result {
         Stored::Created(file) => Ok((StatusCode::CREATED, Json(file.into()))),
@@ -112,7 +111,6 @@ pub async fn download(
     Path(file_id): Path<Uuid>,
 ) -> Result<Response> {
 
-    // Destructure the result
     let (file, handle) = api::files::fetch(&pool, file_id).await?;
 
     // Wrap handle into body and provide headers
@@ -122,17 +120,19 @@ pub async fn download(
         (header::CONTENT_DISPOSITION, "attachment".to_string()),
         (header::CONTENT_LENGTH, file.byte_size.to_string()),
         (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
-        (header::CACHE_CONTROL, "private, max-age=31536000, immutable".to_string()),
+        (header::CACHE_CONTROL, format!(
+            "private, max-age={}, immutable",
+            config::get().files.cache_max_age
+        )),
         (FILE_MIME_HEADER, file.mime.clone())
     ];
 
-    // Send response
     Ok((StatusCode::OK, headers, body).into_response())
 }
 
 /// Return the largest upload body accepted
 pub fn max_body_bytes() -> usize {
     let headroom_bytes = MEBIBYTE;
-    let max_file_bytes = config::get().uploads.file_size_max.to_int();
+    let max_file_bytes = config::get().files.file_size_max.to_int();
     (headroom_bytes + max_file_bytes) as usize
 }

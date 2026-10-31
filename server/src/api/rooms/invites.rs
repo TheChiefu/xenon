@@ -35,7 +35,7 @@ pub async fn create(
         return Err(AppError::Validation("cannot invite yourself".to_string()));
     }
 
-    if db::effective_permissions(&mut tx, room_id, target_id).await?.is_some() {
+    if db::room_permissions(&mut tx, room_id, target_id).await?.is_some() {
         return Err(AppError::Validation("user is already a member".to_string()));
     }
 
@@ -167,7 +167,7 @@ async fn require_permission(
     caller_id: Uuid,
 ) -> Result<()> {
 
-    let perms = db::effective_permissions(&mut *conn, room_id, caller_id).await?;
+    let perms = db::room_permissions(&mut *conn, room_id, caller_id).await?;
     if !perms.is_some_and(|p| p.contains(&Permission::Invite)) {
         return Err(AppError::Forbidden);
     }

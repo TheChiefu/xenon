@@ -51,7 +51,6 @@ pub fn join(
 ) -> Result<mpsc::Receiver<String>, JoinRefused> {
     let mut guard = utils::write_lock(&calls.routes);
 
-    // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
 
     if routes.by_user.contains_key(&user_id) {
@@ -60,11 +59,11 @@ pub fn join(
 
     // The first participant starts the call
     let participants = routes.by_room.entry(room_id).or_default();
-    if participants.len() >= config::get().calls.participants_max {
+    if participants.len() >= config::get().sockets.participants_max {
         return Err(JoinRefused::Full);
     }
 
-    let (sender, receiver) = mpsc::channel(config::get().calls.signal_queue_size);
+    let (sender, receiver) = mpsc::channel(config::get().sockets.signal_queue_size);
     participants.insert(user_id, sender);
     routes.by_user.insert(user_id, room_id);
 
@@ -78,7 +77,6 @@ pub fn leave(
 ) -> Option<Uuid> {
     let mut guard = utils::write_lock(&calls.routes);
 
-    // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
 
     let Some(room_id) = routes.by_user.remove(&user_id) else {
@@ -104,7 +102,6 @@ pub fn end(
 ) {
     let mut guard = utils::write_lock(&calls.routes);
 
-    // Borrow the routes out of the lock guard, so both maps can change at once
     let routes = &mut *guard;
 
     let Some(participants) = routes.by_room.remove(&room_id) else {
@@ -123,24 +120,24 @@ pub fn participants(
 ) -> Vec<Uuid> {
     let routes = utils::read_lock(&calls.routes);
 
-    let mut found = Vec::new();
+    let mut user_ids = Vec::new();
     if let Some(participants) = routes.by_room.get(&room_id) {
         for user_id in participants.keys() {
-            found.push(*user_id);
+            user_ids.push(*user_id);
         }
     }
 
-    found
+    user_ids
 }
 
 /// Build list of active calls in all given rooms
 pub fn snapshot(
-    calls: &ActiveCalls,
+    active_calls: &ActiveCalls,
     room_ids: &[Uuid],
 ) -> Vec<RoomCall> {
-    let routes = utils::read_lock(&calls.routes);
+    let routes = utils::read_lock(&active_calls.routes);
 
-    let mut calls = Vec::new();
+    let mut room_calls = Vec::new();
     for room_id in room_ids {
 
         // Skip rooms with no call
@@ -153,10 +150,15 @@ pub fn snapshot(
             user_ids.insert(*participant_id);
         }
 
-        calls.push(RoomCall { room_id: *room_id, participants: user_ids });
+        room_calls.push(
+            RoomCall {
+                room_id: *room_id,
+                participants: user_ids
+            }
+        );
     }
 
-    calls
+    room_calls
 }
 
 /// Read the room id of the call a participant is in
@@ -172,7 +174,7 @@ pub fn participant_call(
     }
 }
 
-/// Pass a signal to a target when both are in the same call, and drops it otherwise
+/// Pass a signal to a target when both are in the same call, and drop it otherwise
 pub fn forward(
     calls: &ActiveCalls,
     from: Uuid,

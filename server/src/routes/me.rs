@@ -16,7 +16,7 @@ use crate::routes::AuthUser;
 use crate::sockets::session::events::ServerEvent;
 use crate::state::{self, AppState};
 use crate::types::rooms::RoomInfo;
-use crate::types::users::UserProfile;
+use crate::types::users::{UserPreferences, UserProfile};
 
 // REQUESTS //
 
@@ -36,12 +36,6 @@ pub struct RequestDeleteAccount {
 }
 
 // RESPONSES //
-
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/me.ts"))]
-pub struct RespondRoomPreferences {
-    pub room_layout: String,
-}
 
 #[derive(Serialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/me.ts"))]
@@ -114,7 +108,7 @@ pub async fn update(
         body.banner_file_id,
     ).await?;
 
-    // Notify everyone sharing a room of the new name and pictures
+    // Notify everyone sharing a room of the new profile
     if let Some(profile) = updated {
         let event = ServerEvent::ProfileUpdated {
             user_id,
@@ -133,9 +127,9 @@ pub async fn update(
 pub async fn get_preferences(
     AuthUser(user_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
-) -> Result<Json<RespondRoomPreferences>> {
-    let room_layout = api::users::get_preferences(&pool, user_id).await?;
-    Ok(Json(RespondRoomPreferences { room_layout }))
+) -> Result<Json<UserPreferences>> {
+    let preferences = api::users::get_preferences(&pool, user_id).await?;
+    Ok(Json(preferences))
 }
 
 /// Write the caller's preferences

@@ -1,4 +1,4 @@
-//! Queries shared by more than one API module.
+//! Queries shared across the API, state, CLI and startup.
 //!
 //! Everything here takes a connection rather than a pool, so a caller can run
 //! several of these inside one transaction.
@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::{self, AppError, Result};
+use crate::security;
 use crate::types::rooms::{Permission, Visibility};
 use crate::types::time::DAY;
 use crate::types::users::GlobalRole;
@@ -58,8 +59,8 @@ pub async fn create_session(
     user_id: Uuid,
 ) -> Result<String> {
 
-    let token = utils::generate_session_token();
-    let lifetime = config::get().session.lifetime_days * DAY;
+    let token = security::generate_session_token();
+    let lifetime = config::get().auth.lifetime_days * DAY;
     sqlx::query(
         "
         INSERT INTO sessions (token_hash, user_id, created_at, expires_at)
@@ -76,8 +77,8 @@ pub async fn create_session(
     Ok(token.secret)
 }
 
-/// Resolves what a user is allowed to do in a room
-pub async fn effective_permissions(
+/// Reads a user's permissions in a room
+pub async fn room_permissions(
     conn: &mut sqlx::SqliteConnection,
     room_id: Uuid,
     user_id: Uuid,
@@ -328,7 +329,7 @@ pub async fn set_global_role(
 }
 
 /// Get count of all users on server
-pub async fn get_user_count(
+pub async fn user_count(
     conn: &mut sqlx::SqliteConnection,
 ) -> Result<i64> {
 
@@ -345,7 +346,7 @@ pub async fn get_user_count(
 }
 
 /// Get every blocked address
-pub async fn get_blocked_addresses(
+pub async fn blocked_addresses(
     conn: &mut sqlx::SqliteConnection,
 ) -> Result<Vec<IpAddr>> {
 

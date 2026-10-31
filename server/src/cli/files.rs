@@ -9,7 +9,7 @@ use crate::cli;
 use crate::error::{AppError, Result};
 use crate::state::AppState;
 
-pub const COMMANDS: &[&str] = &[
+const COMMANDS: &[&str] = &[
     "files clean",
     "files clean -t <threads>",
 ];
@@ -35,7 +35,7 @@ async fn clean(pool: &SqlitePool, threads: Option<&str>) -> Result<()> {
 
 // HELPER METHODS //
 
-/// Thread count typed with `-t`, or every available thread when none is given
+/// Number of threads to clean with, every available thread by default
 fn thread_count(threads: Option<&str>) -> Result<usize> {
 
     let Some(threads) = threads else {

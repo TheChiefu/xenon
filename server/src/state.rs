@@ -1,9 +1,7 @@
-//! What every handler is given:
-//! - the database
-//! - who is connected
+//! What every handler is given: the database and everything held in memory
 
+pub mod appearance;
 pub mod platforms;
-pub mod status;
 
 use axum::extract::FromRef;
 use sqlx::SqlitePool;
@@ -19,21 +17,17 @@ use crate::sockets::{call, session};
 use crate::sockets::call::registry::ActiveCalls;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry::Registry;
+use crate::state::appearance::Appearances;
 use crate::state::platforms::ReportedPlatforms;
-use crate::state::status::Statuses;
-use crate::types::status::Appearance;
 
 /// Cloned per request
-///
-/// `FromRef` generates a per-field accessor
-/// letting handlers keep asking for `State<SqlitePool>`
 #[derive(Clone, FromRef)]
 pub struct AppState {
     pub pool: SqlitePool,
     pub registry: Registry,
 
-    /// The status each user last declared
-    pub statuses: Statuses,
+    /// The appearance each user last declared
+    pub appearances: Appearances,
 
     /// Who is in each room's call
     pub calls: ActiveCalls,
@@ -55,7 +49,7 @@ impl AppState {
         AppState {
             pool,
             registry: Registry::default(),
-            statuses: Statuses::default(),
+            appearances: Appearances::default(),
             calls: ActiveCalls::default(),
             platforms: ReportedPlatforms::default(),
             address_limits: AddressLimits::default(),
@@ -64,18 +58,13 @@ impl AppState {
     }
 }
 
-/// Close every websocket a user has
+/// Sign a user out of every socket
 pub async fn disconnect(
     state: &AppState,
     user_id: Uuid,
 ) {
-    // Sign the user's clients out before their sockets close
     session::registry::inform_users(&state.registry, &[user_id], ServerEvent::SessionRevoked);
     session::registry::remove(&state.registry, user_id);
-
-    // Tell others the user is offline
-    status::announce(state, user_id, Appearance::Offline).await;
-
     leave_call(state, user_id).await;
 }
 
@@ -100,8 +89,8 @@ pub async fn snapshots(
     match shared_members(state, viewer_id).await {
         Ok(members) => {
             events.push(
-                ServerEvent::StatusSnapshot {
-                    users: status::snapshot(state, &members)
+                ServerEvent::AppearanceSnapshot {
+                    users: appearance::snapshot(state, &members)
                 }
             );
             events.push(
@@ -144,7 +133,7 @@ pub async fn broadcast(
     let members = match db::room_member_ids(&mut conn, room_id).await {
         Ok(members) => members,
         Err(e) => {
-            tracing::error!("could not acquire room members: {e}");
+            tracing::error!("could not read room members: {e}");
             return;
         }
     };
@@ -181,8 +170,10 @@ pub async fn inform_shared_members(
     session::registry::inform_users(&state.registry, &members, event);
 }
 
+// HELPER METHODS //
+
 /// Read everyone who shares a room with a user
-pub async fn shared_members(
+async fn shared_members(
     state: &AppState,
     user_id: Uuid,
 ) -> Result<Vec<Uuid>> {
@@ -192,7 +183,7 @@ pub async fn shared_members(
 }
 
 /// Read every room a user is a member of
-pub async fn member_rooms(
+async fn member_rooms(
     state: &AppState,
     user_id: Uuid,
 ) -> Result<Vec<Uuid>> {
@@ -200,8 +191,6 @@ pub async fn member_rooms(
     let room_ids = db::member_room_ids(&mut conn, user_id).await?;
     Ok(room_ids)
 }
-
-// HELPER METHODS //
 
 /// Acquires a connection, retrying on failure with a wait between attempts.
 async fn acquire_retrying(

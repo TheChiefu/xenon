@@ -15,8 +15,8 @@ const SHUTDOWN_GRACE: Duration = Duration::from_secs(10);
 /// Serve over TLS using the configured certificate and key
 /// Exits the process if either file cannot be read or parsed.
 pub async fn tls(app: Router, bind_addr: SocketAddr) {
-    let certificate = config::get().bind.certificate.as_ref().expect("certificate checked by caller");
-    let key = config::get().bind.key.as_ref().expect("key checked by caller");
+    let certificate = config::get().network.certificate.as_ref().expect("certificate checked by caller");
+    let key = config::get().network.key.as_ref().expect("key checked by caller");
 
     let tls = match RustlsConfig::from_pem_file(certificate, key).await {
         Ok(tls) => tls,

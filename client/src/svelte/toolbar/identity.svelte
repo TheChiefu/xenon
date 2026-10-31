@@ -4,10 +4,10 @@
   import { signOut } from "@/lib/api/auth";
   import * as profile from "@/lib/users/profile.svelte";
   import * as users from "@/lib/users/data.svelte";
-  import * as status from "@/lib/users/status.svelte";
-  import { LABELS_STATUS } from "@/lib/labels";
+  import * as appearance from "@/lib/users/appearance.svelte";
+  import { LABELS_APPEARANCE } from "@/lib/labels";
   import { GlobalRole } from "@/bindings/types/users";
-  import { Appearance } from "@/bindings/types/status";
+  import { Appearance } from "@/bindings/types/appearance";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/display/transitions";
@@ -18,7 +18,7 @@
 
   let menuOpen = $state(false);
 
-  const myStatus = $derived(users.getStatus(profile.get()?.id ?? ""));
+  const myState = $derived(users.getAppearance(profile.get()?.id ?? ""));
 
   // Messages
   const msg_sign_out = "Are you sure you want to sign out?";
@@ -55,10 +55,10 @@
     }
   }
 
-  function onStatusChange(event: Event) {
+  function onAppearanceChange(event: Event) {
     if (!(event.target instanceof HTMLSelectElement)) return;
 
-    status.set(event.target.value as Appearance);
+    appearance.set(event.target.value as Appearance);
   }
 
   function pressAway(event: PointerEvent) {
@@ -174,7 +174,7 @@
 <svelte:window onpointerdown={pressAway}/>
 
 <div class="identity">
-  <div class="frame status-{myStatus.status}">
+  <div class="frame status-{myState.appearance}">
     <div class="card">
       <button
         class="user"
@@ -209,11 +209,11 @@
       <select
         id="status"
         title="How you are shown to others when using the client"
-        value={status.getPreferred()}
-        onchange={onStatusChange}
+        value={appearance.getPreferred()}
+        onchange={onAppearanceChange}
       >
         {#each Object.values(Appearance) as value}
-          <option {value}>{LABELS_STATUS[value]}</option>
+          <option {value}>{LABELS_APPEARANCE[value]}</option>
         {/each}
       </select>
 

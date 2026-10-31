@@ -6,9 +6,9 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use crate::sockets::session::events::ServerEvent;
-use crate::state::{self, status, AppState};
+use crate::state::{self, appearance, AppState};
+use crate::types::appearance::Appearance;
 use crate::types::platforms::{Activity, Metadata, Platform, UserActivity};
-use crate::types::status::Appearance;
 use crate::utils;
 
 /// What each user's linked accounts last reported, keyed by user id
@@ -17,7 +17,8 @@ pub struct ReportedPlatforms {
     by_user: Arc<RwLock<HashMap<Uuid, Activity>>>
 }
 
-/// Stores a reported platform metadata and sends it to everyone sharing a room with its owner
+/// Stores a reported platform metadata and sends it to everyone sharing a room with its owner,
+/// or clears it while the owner appears Offline
 pub async fn report_metadata(
     state: &AppState,
     user_id: Uuid,
@@ -25,7 +26,7 @@ pub async fn report_metadata(
     metadata: Metadata,
 ) {
     // Offline users show no platform presence
-    if status::get(&state.statuses, user_id) == Some(Appearance::Offline) {
+    if appearance::get(&state.appearances, user_id) == Some(Appearance::Offline) {
         remove_metadata(&state.platforms, user_id, platform);
         return;
     }
@@ -65,6 +66,15 @@ pub async fn clear_metadata(
     if remove_metadata(&state.platforms, user_id, platform) {
         inform_updated(state, user_id, platform, None).await;
     }
+}
+
+/// Clear every platform metadata
+pub async fn clear_all(
+    state: &AppState,
+    user_id: Uuid,
+) {
+    clear_metadata(state, user_id, Platform::Xbox).await;
+    clear_metadata(state, user_id, Platform::Steam).await;
 }
 
 /// Send a user's platform presence to everyone sharing a room with them

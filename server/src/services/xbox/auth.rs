@@ -1,7 +1,6 @@
 //! Authorization headers for Xbox Live requests
 //! - Caches one Authorization header per user until XSTS token expires
 //! - Requests a new header with stored refresh token when none is cached
-//! - Removes linked account on invalid_grant from Microsoft or an XErr code from Xbox
 
 pub mod microsoft;
 pub mod xsts;
@@ -16,13 +15,14 @@ use uuid::Uuid;
 use crate::config;
 use crate::error::AppError;
 use crate::services::xbox::accounts::{self, Account};
+use crate::services::xbox::auth::xsts::XstsBody;
 use crate::utils;
 
 // DATA STRUCTS //
 
-/// How to handle failures on Microsoft calls:
+/// How to handle failures while authorizing an account:
 /// - Dead (No calls for this account will succeed)
-/// - Retry (MS services may be down)
+/// - Retry (A later attempt may succeed, such as when Microsoft or the database is down)
 #[derive(Debug)]
 pub enum Failure {
     Dead(String),
@@ -64,39 +64,36 @@ pub async fn get_header(
     pool: &SqlitePool,
     account: &Account,
     xbox: &config::Xbox,
-) -> Option<String> {
+) -> Result<String, Failure> {
 
     // Returns cached header if not expired
     if let Some(value) = get_cached_header(account.user_id) {
-        return Some(value);
+        return Ok(value);
     }
 
-    // Requests and caches a new header
-    match request_header(pool, account, xbox).await {
+    let xsts = request_xsts(pool, account, xbox).await?;
 
-        // No errors, return header
-        Ok(value) => Some(value),
+    // Check for expiry or invalid claims
+    let Some(expires_at) = utils::ms_rfc3339(&xsts.not_after) else {
+        return Err(Failure::Retry("XSTS expiry was unreadable".into()));
+    };
 
-        // If MS rejects refresh token, or Xbox rejects XSTS request with an XErr code
-        Err(Failure::Dead(message)) => {
-
-            // Remove the authorization header from the cache
-            tracing::info!("{}: removing linked account ({message})", account.xuid);
-            remove_header(account.user_id);
-
-            // Attempt to remove a linked account from DB
-            if let Err(e) = accounts::remove(pool, account.user_id).await {
-                tracing::error!("{}: could not remove linked account: {e}", account.xuid);
-            }
-            None
-        }
-
-        // If failure is retryable, log warning
-        Err(Failure::Retry(message)) => {
-            tracing::warn!("{}: {message}", account.xuid);
-            None
+    // Finds the account's claims by XUID
+    let mut claims = None;
+    for entry in &xsts.display_claims.xui {
+        if entry.xid == account.xuid {
+            claims = Some(entry);
         }
     }
+    let Some(claims) = claims else {
+        return Err(Failure::Retry("XSTS response had no xui entry for this account".into()));
+    };
+
+    // Builds Authorization header from user hash and XSTS token, then cache it
+    let value = format!("XBL3.0 x={};{}", claims.uhs, xsts.token);
+    set_cached_header(account.user_id, &value, expires_at);
+
+    Ok(value)
 }
 
 /// Removes cached Authorization header for a user
@@ -106,44 +103,34 @@ pub fn remove_header(user_id: Uuid) {
 
 // HELPER METHODS //
 
-/// Requests and caches a new Authorization header using stored refresh token
-async fn request_header(
+/// Requests XSTS token using stored refresh token
+async fn request_xsts(
     pool: &SqlitePool,
     account: &Account,
     xbox: &config::Xbox,
-) -> Result<String, Failure> {
+) -> Result<XstsBody, Failure> {
     let tokens = microsoft::refresh_tokens(&account.refresh_token, xbox).await?;
 
     // Replaces stored refresh token with new one from response
     if let Some(refresh_token) = &tokens.refresh_token {
-        accounts::set_refresh_token(pool, account.user_id, refresh_token)
-            .await
-            .map_err(|e| Failure::Retry(format!("could not store a replacement refresh token: {e}")))?;
-    }
-
-    // Request MS and XBL tokens
-    let user_token = xsts::request_user_token(&tokens.access_token).await?;
-    let xsts = xsts::request_xsts_token(&user_token).await?;
-
-    // Check for expiry or invalid claims
-    let Some(expires_at) = utils::ms_rfc3339(&xsts.not_after) else {
-        return Err(Failure::Retry("XSTS expiry was unreadable".into()));
-    };
-    let Some(claims) = xsts.get_display_claims() else {
-        return Err(Failure::Retry("XSTS response had no display claims".into()));
-    };
-
-    // Builds Authorization header from user hash and XSTS token, then cache it
-    let value = format!("XBL3.0 x={};{}", claims.uhs, xsts.token);
-    utils::write_lock(&AUTHORIZATIONS).insert(
-        account.user_id,
-        Authorization {
-            value: value.clone(),
-            expires_at
+        if let Err(e) = accounts::set_refresh_token(pool, account.user_id, refresh_token).await {
+            let message = format!("could not store a replacement refresh token: {e}");
+            return Err(Failure::Retry(message));
         }
-    );
+    }
+    
+    // Request Xbox Live user and XSTS tokens
+    let user_token = xsts::request_user_token(&tokens.access_token).await?;
+    xsts::request_xsts_token(&user_token).await
+}
 
-    Ok(value)
+/// Caches Authorization header until it expires
+fn set_cached_header(user_id: Uuid, value: &str, expires_at: i64) {
+    let authorization = Authorization {
+        value: value.to_string(),
+        expires_at
+    };
+    utils::write_lock(&AUTHORIZATIONS).insert(user_id, authorization);
 }
 
 /// Returns cached Authorization header if not expired

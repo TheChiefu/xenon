@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Appearance } from "@/bindings/types/status";
+  import { Appearance } from "@/bindings/types/appearance";
   import type { GameActivity } from "@/lib/users/data.svelte";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_AVAILABILITY, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";
@@ -46,7 +46,7 @@
 
   // Game title, followed by activity when reported
   function activityText(activity: GameActivity): string {
-    const title = activity.title ?? LABELS_AVAILABILITY[activity.status];
+    const title = activity.title ?? LABELS_AVAILABILITY[activity.availability];
 
     if (activity.detail === null) {
       return title;
@@ -222,9 +222,9 @@
   {#each ordered_ids as id (id)}
     {@const avatar = users.getAvatar(id)}
     {@const banner = users.getBanner(id)}
-    {@const status = users.getStatus(id)}
+    {@const userState = users.getAppearance(id)}
     {@const activity = users.getActivity(id)}
-    {@const offline = status.status === Appearance.offline}
+    {@const offline = userState.appearance === Appearance.offline}
     <button
       class="member"
       class:offline
@@ -260,13 +260,13 @@
         {/if}
       </span>
 
-      {#if status.device !== null}
-        <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[status.device]}>
-          {@html ICONS_DEVICE[status.device]}
+      {#if userState.device !== null}
+        <span class="icon device" aria-hidden="true" title={LABELS_DEVICE[userState.device]}>
+          {@html ICONS_DEVICE[userState.device]}
         </span>
       {/if}
 
-      <span class="status {status.status}"></span>
+      <span class="status {userState.appearance}"></span>
     </button>
   {/each}
 </div>

@@ -20,6 +20,7 @@ use crate::types::platforms::Platform;
 use crate::types::users::LinkedAccount;
 
 pub const REDIRECT_PATH: &str = "/xbox/redirect";
+pub const CONTRACT_VERSION_HEADER: &str = "x-xbl-contract-version";
 
 // PUBLIC METHODS //
 

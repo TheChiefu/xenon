@@ -3,9 +3,9 @@
 import { GlobalRole } from "@/bindings/types/users";
 import { Notify, Permission, Visibility } from "@/bindings/types/rooms";
 import { Availability, Platform } from "@/bindings/types/platforms";
-import { Appearance } from "@/bindings/types/status";
+import { Appearance } from "@/bindings/types/appearance";
 import { CallCloseCode } from "@/bindings/sockets/call/events";
-import { Device } from "@/bindings/types/status";
+import { Device } from "@/bindings/types/appearance";
 import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
 import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";
@@ -99,7 +99,7 @@ export const LABELS_ROLE: Record<GlobalRole, string> = {
   [GlobalRole.visitor]: "Visitor",
 };
 
-export const LABELS_STATUS: Record<Appearance, string> = {
+export const LABELS_APPEARANCE: Record<Appearance, string> = {
   [Appearance.online]: "Online",
   [Appearance.busy]: "Do Not Disturb",
   [Appearance.away]: "Away",

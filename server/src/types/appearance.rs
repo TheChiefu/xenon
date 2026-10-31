@@ -7,7 +7,7 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/status.ts", repr(enum = name)))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/appearance.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 pub enum Device {
     Windows,
@@ -21,7 +21,7 @@ pub enum Device {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/status.ts", repr(enum = name)))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/appearance.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum Appearance {
@@ -32,7 +32,7 @@ pub enum Appearance {
 }
 
 #[derive(Serialize, Clone)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/status.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/appearance.ts"))]
 pub struct UserState {
     pub user_id: Uuid,
     pub appearance: Appearance,

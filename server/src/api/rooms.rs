@@ -77,21 +77,21 @@ pub async fn update(
     default_permissions: Option<Vec<Permission>>,
 ) -> Result<()> {
 
-    // Extract name if available
+    // Validate the new name, if one is given
     let renaming = name.is_some();
     let name = validate::room_name(name.unwrap_or(""))?;
 
-    let revealing = visibility.is_some();
+    let changing_visibility = visibility.is_some();
     let granting = default_permissions.is_some();
 
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check if user has permissions
-    let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
+    let perms = db::room_permissions(&mut tx, room_id, caller_id).await?;
     let perms = perms.ok_or(AppError::Forbidden)?;
 
     // Check permissions for requested actions
-    if (renaming || revealing) && !perms.contains(&Permission::Rename) {
+    if (renaming || changing_visibility) && !perms.contains(&Permission::Rename) {
         return Err(AppError::Forbidden);
     }
     if granting && !perms.contains(&Permission::Grant) {
@@ -194,7 +194,7 @@ pub async fn delete(
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Deleting a room requires Permission::DeleteRoom
-    let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
+    let perms = db::room_permissions(&mut tx, room_id, caller_id).await?;
     let permitted = perms.is_some_and(|p| p.contains(&Permission::DeleteRoom));
     let staff = db::staff_over_room(&mut tx, room_id, caller_id).await?;
 
@@ -205,7 +205,7 @@ pub async fn delete(
     // Read the members before the delete
     let members = db::room_member_ids(&mut tx, room_id).await?;
 
-    // Deletion automatically cascades removes messages, attachments, etc
+    // Deleting the room also deletes its messages, attachments and other dependent rows
     sqlx::query("DELETE FROM rooms WHERE id = ?1")
     .bind(room_id)
     .execute(&mut *tx)
@@ -216,7 +216,7 @@ pub async fn delete(
     Ok(members)
 }
 
-/// Grant a user access to a room, spending an invite
+/// Grant a user access to a room, spending their invite unless the room is public
 pub async fn join(
     pool: &SqlitePool,
     room_id: Uuid,
@@ -284,7 +284,7 @@ pub async fn join(
     Ok(())
 }
 
-/// Remove user from room
+/// Removes user from room, deleting the room once no members remain
 pub async fn leave(
     pool: &SqlitePool,
     room_id: Uuid,
@@ -306,7 +306,7 @@ pub async fn can_connect(
 ) -> Result<bool> {
 
     let mut conn = pool.acquire().await?;
-    let permissions = db::effective_permissions(&mut conn, room_id, user_id).await?;
+    let permissions = db::room_permissions(&mut conn, room_id, user_id).await?;
 
     // A user with no access to the room has no permissions
     match permissions {

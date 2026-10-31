@@ -6,18 +6,18 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
+use crate::types::appearance::{Appearance, Device, UserState};
 use crate::types::calls::RoomCall;
 use crate::types::messages::MessageInfo;
 use crate::types::platforms::{Metadata, Platform, UserActivity};
-use crate::types::status::{Appearance, Device, UserState};
 
 /// What a client sends over its socket
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "sockets/session/events.ts"))]
 pub enum ClientEvent {
-    /// The status this connection declares
-    Status { status: Appearance }
+    /// The appearance this connection declares
+    Appearance { appearance: Appearance }
 }
 
 #[derive(Serialize, Clone)]
@@ -61,12 +61,12 @@ pub enum ServerEvent {
     RoomUpdated {
         room_id: Uuid
     },
-    StatusUpdated {
+    AppearanceUpdated {
         user_id: Uuid,
-        status: Appearance,
+        appearance: Appearance,
         device: Option<Device>
     },
-    StatusSnapshot {
+    AppearanceSnapshot {
         users: Vec<UserState>
     },
     ProfileUpdated {

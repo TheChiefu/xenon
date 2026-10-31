@@ -9,6 +9,7 @@ use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::ratelimit::{AddressLimits, LoginFailures};
+use crate::security;
 use crate::types::auth::{Registration, RegistrationCode};
 use crate::types::time::DAY;
 use crate::types::users::GlobalRole;
@@ -43,8 +44,8 @@ pub async fn authenticate(
     };
 
     // Extend session timer
-    let lifetime = config::get().session.lifetime_days * DAY;
-    let renew = config::get().session.renew_after_days_elapsed * DAY;
+    let lifetime = config::get().auth.lifetime_days * DAY;
+    let renew = config::get().auth.renew_after_days_elapsed * DAY;
     if expires_at < now + lifetime - renew {
         sqlx::query(
             "
@@ -151,7 +152,7 @@ pub async fn list_registration_codes(
     Ok(codes)
 }
 
-/// Creates an account, returning its id and session token
+/// Creates an account, counting a failed attempt against the IP
 pub async fn register(
     pool: &SqlitePool,
     address_limits: &AddressLimits,
@@ -167,8 +168,8 @@ pub async fn register(
         Err(AppError::Validation(_) | AppError::UsernameTaken | AppError::InvalidRegistrationCode)
     );
 
-    if failed && config::get().rate_limit.block_on_register_limit {
-        if address_limits.register_limit_reached(ip) {
+    if failed && config::get().auth.block_on_register_limit {
+        if address_limits.record_register_failure(ip) {
             block_address(pool, address_limits, ip, "registration").await?;
         }
     }
@@ -205,7 +206,7 @@ async fn create_account(
     }
 
     // Claim registration code
-    if config::get().session.registration_code_required {
+    if config::get().auth.registration_code_required {
         let code = registration.registration_code.as_deref().ok_or(AppError::InvalidRegistrationCode)?;
 
         let claimed = sqlx::query(
@@ -228,8 +229,7 @@ async fn create_account(
     }
     drop(conn);
 
-    // Hash password for storage in DB
-    let password_hash = utils::hash_password(password)?;
+    let password_hash = security::hash_password(password)?;
 
     // Open transaction
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
@@ -262,8 +262,7 @@ pub async fn change_password(
 
     validate::password(new_password)?;
 
-    // Hash new password
-    let password_hash = utils::hash_password(new_password)?;
+    let password_hash = security::hash_password(new_password)?;
 
     // Get stored password hash to check
     let stored_hash: Option<String> = sqlx::query_scalar(
@@ -281,7 +280,7 @@ pub async fn change_password(
     let stored_hash = stored_hash.ok_or(AppError::InvalidCredentials)?;
 
     // Check if given current password matches the one stored in the DB
-    if !utils::verify_password(current_password, &stored_hash)? {
+    if !security::verify_password(current_password, &stored_hash)? {
         return Err(AppError::InvalidCredentials);
     }
 
@@ -298,7 +297,6 @@ pub async fn change_password(
     .execute(&mut *tx)
     .await?;
 
-    // Commit transacation
     tx.commit().await?;
 
     Ok(())
@@ -340,8 +338,8 @@ pub async fn sign_in(
     let failed = matches!(result, Err(AppError::InvalidCredentials));
 
     // Too many failures, block IP
-    if failed && config::get().rate_limit.block_on_login_limit {
-        if address_limits.login_limit_reached(ip) {
+    if failed && config::get().auth.block_on_login_limit {
+        if address_limits.record_login_failure(ip) {
             block_address(pool, address_limits, ip, "login").await?;
         }
     }
@@ -349,7 +347,7 @@ pub async fn sign_in(
     result
 }
 
-/// Verify credentials abd return new session token.
+/// Verify credentials and return a new session token.
 /// Lock account after repeated failures
 async fn login(
     pool: &SqlitePool,
@@ -376,14 +374,11 @@ async fn login(
 
     // Not found, burn cycles to mask kind of API call
     let Some(user) = row else {
-        utils::burn_verify(password);
+        security::burn_verify(password);
         return Err(AppError::InvalidCredentials);
     };
 
-    // Verify Password:
-    // `?` is the corrupt-stored-hash case (server fault)
-    // `false` is an incorrect password
-    let verified = utils::verify_password(password, &user.password_hash)?;
+    let verified = security::verify_password(password, &user.password_hash)?;
 
     // Locked account returns the same error as a wrong password
     if user.locked {
@@ -413,7 +408,7 @@ async fn login(
         return Err(AppError::Banned);
     }
 
-    // Reset failure account once logged in
+    // Reset failure count once logged in
     failures.clear(user.id);
 
     // Create session key

@@ -50,7 +50,7 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Account>> {
     Ok(rows)
 }
 
-/// Stores a linked account (replaces exising one)
+/// Stores a linked account (replaces existing one)
 pub async fn save(
     pool: &SqlitePool,
     user_id: Uuid,

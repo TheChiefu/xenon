@@ -24,10 +24,14 @@ static VERIFIERS: RwLock<BTreeMap<Uuid, String>> = RwLock::new(BTreeMap::new());
 
 /// Returns authorization request URL for a user
 pub fn begin(user_id: Uuid) -> String {
+
+    // PKCE code verifier length, (43-128 char range)
+    const PKCE_VERIFIER_LENGTH: usize = 64;
+
     let xbox = config::get().xbox();
 
     // Random PKCE code verifier, kept until Microsoft redirects back
-    let verifier = utils::generate_code(64);
+    let verifier = utils::generate_code(PKCE_VERIFIER_LENGTH);
 
     // SHA-256 hash of code verifier, sent as code challenge
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
@@ -71,14 +75,14 @@ pub async fn complete(
     let user_token = xsts::request_user_token(&tokens.access_token).await?;
     let xsts = xsts::request_xsts_token(&user_token).await?;
 
-    // Rejects an XSTS token response without display claims
-    let Some(claims) = xsts.get_display_claims() else {
-        return Err(AppError::Validation("XSTS response had no display claims".into()));
+    let claims = match xsts.display_claims.xui.as_slice() {
+        [claims] => claims,
+        [] => return Err(AppError::Validation("XSTS response had no xui entry".into())),
+        _ => return Err(AppError::Validation("XSTS response had several xui entries".into()))
     };
 
     accounts::save(pool, user_id, &claims.xid, &claims.gtg, &refresh_token).await?;
 
-    // Removes cached Authorization header for this user
     auth::remove_header(user_id);
 
     Ok(())

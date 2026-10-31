@@ -10,6 +10,8 @@ use ts_rs::TS;
 use crate::error::Result;
 use crate::utils;
 
+const KEYPAIR_ROW: i64 = 1;
+
 /// A browser's push subscription
 #[derive(Deserialize, sqlx::FromRow)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/push.ts"))]
@@ -42,9 +44,10 @@ pub async fn keypair(pool: &SqlitePool) -> Result<Option<Keypair>> {
         "
         SELECT public_key, private_key
         FROM push_keys
-        WHERE id = 1
+        WHERE id = ?1
         "
     )
+    .bind(KEYPAIR_ROW)
     .fetch_optional(&mut *conn)
     .await?;
 
@@ -62,10 +65,11 @@ pub async fn set_keypair(
     sqlx::query(
         "
         INSERT INTO push_keys (id, public_key, private_key, created_at)
-        VALUES (1, ?1, ?2, ?3)
+        VALUES (?1, ?2, ?3, ?4)
         ON CONFLICT(id) DO NOTHING
         "
     )
+    .bind(KEYPAIR_ROW)
     .bind(public_key)
     .bind(private_key)
     .bind(utils::now_ms())

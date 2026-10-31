@@ -3,6 +3,8 @@ import type { Platform } from "./platforms";
 
 export type LinkedAccount = { platform: Platform, handle: string, };
 
+export type UserPreferences = { room_layout: string, };
+
 export type UserProfile = { id: string, username: string, display_name: string, description: string, avatar_file_id: string | null, banner_file_id: string | null, global_role: GlobalRole, created_at: number, banned: boolean, linked_accounts: Array<LinkedAccount>, };
 
 export enum GlobalRole { "admin" = "admin", "member" = "member", "visitor" = "visitor" }

@@ -5,6 +5,6 @@
  */
 export type ServerInfo = { name: string, version: string, kind: string, description: string, 
 /**
- * Limits sent to clients to
+ * Limits clients must stay within
  */
 limit_users_lookup: number, limit_message_page: number, limit_search_page: number, limit_room_page: number, limit_users_page: number, limit_file_bytes_max: number, limit_attachments_per_message_max: number, };

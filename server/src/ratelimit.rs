@@ -46,8 +46,8 @@ impl AddressLimits {
     }
 
     /// Counts a failed registration, returning whether the IP just reached the limit
-    pub fn register_limit_reached(&self, ip: IpAddr) -> bool {
-        let max = config::get().rate_limit.address_register_failures_max;
+    pub fn record_register_failure(&self, ip: IpAddr) -> bool {
+        let max = config::get().auth.address_register_failures_max;
         let mut by_ip = utils::mutex_lock(&self.by_ip);
         let record = by_ip.entry(accountable_address(ip)).or_default();
         record.register_failures += 1;
@@ -61,8 +61,8 @@ impl AddressLimits {
     }
 
     /// Counts a failed login, returning whether the IP just reached the limit
-    pub fn login_limit_reached(&self, ip: IpAddr) -> bool {
-        let max = config::get().rate_limit.address_login_failures_max;
+    pub fn record_login_failure(&self, ip: IpAddr) -> bool {
+        let max = config::get().auth.address_login_failures_max;
         let mut by_ip = utils::mutex_lock(&self.by_ip);
         let record = by_ip.entry(accountable_address(ip)).or_default();
         record.login_failures += 1;
@@ -96,7 +96,7 @@ impl LoginFailures {
 
     /// Counts a failed login, returning whether the account has reached its limit
     pub fn record_failure(&self, user_id: Uuid) -> bool {
-        let max = config::get().rate_limit.account_login_failures_max;
+        let max = config::get().auth.account_login_failures_max;
         let mut count_by_user = utils::mutex_lock(&self.count_by_user);
 
         let count = count_by_user.entry(user_id).or_insert(0);
@@ -122,12 +122,13 @@ fn accountable_address(ip: IpAddr) -> IpAddr {
     match ip {
         IpAddr::V4(_) => ip,
         IpAddr::V6(address) => {
+            const DEVICE_BITS: u32 = 64;
 
             // IPv6 address as a 128 bit number, first 64 bits are the network, last 64 bits are the device
             let bits = u128::from(address);
 
-            // Ones over the 64 network bits, zeros over the 64 device bits
-            let network_mask = u128::MAX << 64;
+            // Ones over the network bits, zeros over the device bits
+            let network_mask = u128::MAX << DEVICE_BITS;
 
             // Mask out the device bits, holding the incoming network accountable for the attempt
             IpAddr::V6(Ipv6Addr::from(bits & network_mask))

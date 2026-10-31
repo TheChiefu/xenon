@@ -1,15 +1,15 @@
-// Client Settings - Status this device presents to other users
+// Client Settings - Appearance this device presents to other users
 
-import { Appearance } from "@/bindings/types/status";
+import { Appearance } from "@/bindings/types/appearance";
 import * as settings from "@/lib/client/settings.svelte";
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
 
-const keyStatus = "default_status";
-const defaultStatus: Appearance = Appearance.online;
+const keyAppearance = "default_appearance";
+const defaultAppearance: Appearance = Appearance.online;
 const activityEvents = ["pointerdown", "keydown", "wheel"];
 
-let currentStatus: Appearance = $state(readPreferedStatus());
+let currentAppearance: Appearance = $state(readPreferredAppearance());
 let isAutoAway = $state(false);
 let awayTimer: number | undefined;
 
@@ -20,25 +20,25 @@ for (const event of activityEvents) {
 document.addEventListener("visibilitychange", onVisible);
 scheduleAway();
 
-// STATUS //
+// APPEARANCE //
 
 export function get(): Appearance {
-  if (isAutoAway && currentStatus === Appearance.online) {
+  if (isAutoAway && currentAppearance === Appearance.online) {
     return Appearance.away;
   }
-  return currentStatus;
+  return currentAppearance;
 }
 
-// The preferred status on this device
+// The preferred appearance on this device
 export function getPreferred(): Appearance {
-  return currentStatus;
+  return currentAppearance;
 }
 
-export function set(status: Appearance): void {
+export function set(appearance: Appearance): void {
   isAutoAway = false;
-  currentStatus = status;
-  localStorage.setItem(keyStatus, status); // Set status preference on client
-  events.dispatch(LocalEvent.status_changed, get()); // Send server event about status
+  currentAppearance = appearance;
+  localStorage.setItem(keyAppearance, appearance); // Set appearance preference on client
+  events.dispatch(LocalEvent.appearance_changed, get()); // Send server event about appearance
 }
 
 // IDLE //
@@ -46,7 +46,7 @@ export function set(status: Appearance): void {
 function onActivity(): void {
   if (isAutoAway) {
     isAutoAway = false;
-    events.dispatch(LocalEvent.status_changed, get());
+    events.dispatch(LocalEvent.appearance_changed, get());
   }
 
   scheduleAway();
@@ -72,21 +72,21 @@ function scheduleAway(): void {
 }
 
 function onAway(): void {
-  if (currentStatus !== Appearance.online) {
+  if (currentAppearance !== Appearance.online) {
     return;
   }
 
   isAutoAway = true;
-  events.dispatch(LocalEvent.status_changed, get());
+  events.dispatch(LocalEvent.appearance_changed, get());
 }
 
 // STORAGE //
 
-function readPreferedStatus(): Appearance {
-  const stored = localStorage.getItem(keyStatus);
-  const statuses: string[] = Object.values(Appearance);
-  if (stored === null || !statuses.includes(stored)) {
-    return defaultStatus;
+function readPreferredAppearance(): Appearance {
+  const stored = localStorage.getItem(keyAppearance);
+  const appearances: string[] = Object.values(Appearance);
+  if (stored === null || !appearances.includes(stored)) {
+    return defaultAppearance;
   }
   return stored as Appearance;
 }

@@ -29,7 +29,7 @@ const XENON_TOKEN: &str = "token";
 
 // STATE //
 
-/// Accounts related to steam login sessions
+/// Pending link tokens, keyed by the user who started linking
 static LINK_TOKENS: RwLock<BTreeMap<Uuid, String>> = RwLock::new(BTreeMap::new());
 
 // PUBLIC METHODS //

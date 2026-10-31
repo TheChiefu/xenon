@@ -82,14 +82,14 @@
   {#if failure !== null}
     <p>{failure}</p>
   {:else if profile !== null}
-    {@const status = users.getStatus(profile.id)}
+    {@const userState = users.getAppearance(profile.id)}
     <ProfileCard
       id={profile.id}
       display_name={profile.display_name}
       username={profile.username}
       description={profile.description}
-      status={status.status}
-      device={status.device}
+      appearance={userState.appearance}
+      device={userState.device}
       game={users.getActivity(profile.id) ?? null}
       role={profile.global_role}
       links={profile.linked_accounts}

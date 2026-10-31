@@ -4,6 +4,6 @@ export type RoomInfo = { id: string, name: string, visibility: Visibility, defau
 
 export enum Notify { "none" = "none", "mentions" = "mentions", "all" = "all" }
 
-export enum Permission { "post" = "post", "attach" = "attach", "delete_msg" = "delete_msg", "invite" = "invite", "rename" = "rename", "ban" = "ban", "grant" = "grant", "delete_room" = "delete_room", "connect" = "connect", "speak" = "speak", "mute" = "mute", "video" = "video" }
-
 export enum Visibility { "public" = "public", "hidden" = "hidden" }
+
+export enum Permission { "post" = "post", "attach" = "attach", "delete_msg" = "delete_msg", "invite" = "invite", "rename" = "rename", "ban" = "ban", "grant" = "grant", "delete_room" = "delete_room", "connect" = "connect", "speak" = "speak", "mute" = "mute", "video" = "video" }

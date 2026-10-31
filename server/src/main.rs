@@ -7,15 +7,16 @@ mod db;
 mod error;
 mod ratelimit;
 mod routes;
+mod security;
 mod serve;
 mod services;
 mod sockets;
 mod state;
+mod storage;
 mod types;
 mod utils;
 mod validate;
 
-use std::path::Path;
 use std::time::Duration;
 
 use sqlx::SqlitePool;
@@ -39,13 +40,13 @@ async fn main() -> Result<()> {
     tracing::info!("starting server");
 
     // Check if file directory is setup
-    ensure_files();
+    storage::ensure();
 
     let pool = connect_database().await?;
 
     // Tell the owner when no account exists yet
     let mut conn = pool.acquire().await?;
-    if db::get_user_count(&mut conn).await? == 0 {
+    if db::user_count(&mut conn).await? == 0 {
         tracing::warn!("no accounts exist, please create one [> help]");
     }
     drop(conn);
@@ -53,7 +54,7 @@ async fn main() -> Result<()> {
     // Build outbound HTTP client if any service is enabled
     services::init();
 
-    // Server server
+    // Server state
     let app_state = AppState::new(pool);
 
     // Read blocked addresses from the database
@@ -100,7 +101,7 @@ async fn connect_database() -> Result<SqlitePool> {
         .connect_with(options)
         .await?;
 
-    // Create initial DB if it does not already exists
+    // Apply any migrations not yet run
     sqlx::migrate!().run(&pool).await?;
     tracing::info!("connected to database: {db_path}");
 
@@ -110,23 +111,23 @@ async fn connect_database() -> Result<SqlitePool> {
 /// Marks every address saved in the database as blocked
 async fn load_blocked_addresses(app_state: &AppState) -> Result<()> {
     let mut conn = app_state.pool.acquire().await?;
-    let blocked = db::get_blocked_addresses(&mut conn).await?;
+    let blocked = db::blocked_addresses(&mut conn).await?;
     app_state.address_limits.load(blocked);
     Ok(())
 }
 
 /// Sets where tracing output is written.
 ///
-/// Output goes to stdout, and is appended to `storage.log` if one is set.
+/// Output goes to stdout, and is appended to the log file if one is set.
 fn init_tracing() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| {
             tracing_subscriber::EnvFilter::new(
-                format!("xenon={},sqlx=warn", config::get().logging.level)
+                format!("xenon={},sqlx=warn", config::get().server.log_level)
             )
         });
 
-    let path = &config::get().logging.file;
+    let path = &config::get().server.log_file;
     if path.is_empty() {
         tracing_subscriber::fmt().with_env_filter(filter).init();
         return;
@@ -146,40 +147,4 @@ fn init_tracing() {
         .with_writer(file.and(std::io::stdout))
         .with_ansi(false)
         .init();
-}
-
-/// Creates the file storage directories and verifies the temp one is writable.
-///
-/// Exits the process if any step fails.
-fn ensure_files() {
-
-    // Create or check if files folder path exists
-    let files_path = &config::get().storage.files;
-    if let Err(e) = std::fs::create_dir_all(files_path) {
-        eprintln!("{files_path}: {e}");
-        std::process::exit(1);
-    }
-
-    // Create/check "tmp" folder where streaming uploads sit
-    let subdir = Path::new(files_path).join("tmp");
-    if let Err(e) = std::fs::create_dir_all(&subdir) {
-        eprintln!("{}: {e}", subdir.display());
-        std::process::exit(1);
-    }
-
-    // Test if tmp directory is writable (create probe file)
-    let test_file = subdir.join("test");
-    if let Err(e) = std::fs::write(&test_file, "") {
-        eprintln!("{} is not writable: {e}", subdir.display());
-        std::process::exit(1);
-    }
-
-    // Remove probe file now that the write succeeded
-    if let Err(e) = std::fs::remove_file(&test_file) {
-        eprintln!("{}: {e}", test_file.display());
-        std::process::exit(1);
-    }
-
-    tracing::info!("file storage ready at: {files_path}");
-
 }

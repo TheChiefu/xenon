@@ -9,13 +9,12 @@ use serde::Deserialize;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
-use crate::routes::AuthUser;
+use crate::routes::{AuthUser, BEARER};
 use crate::sockets;
 use crate::sockets::session::events::{ClientEvent, ServerEvent};
 use crate::sockets::session::registry::{self, SocketDevice};
-use crate::state::status;
-use crate::state::{self, AppState};
-use crate::types::status::{Appearance, Device};
+use crate::state::{self, appearance, platforms, AppState};
+use crate::types::appearance::{Appearance, Device};
 
 // DATA STRUCTS //
 
@@ -25,7 +24,7 @@ use crate::types::status::{Appearance, Device};
 pub struct ConnectQuery {
     #[serde(default)]
     pub device: Option<Device>,
-    pub status: Appearance,
+    pub appearance: Appearance,
 }
 
 // ROUTING METHODS //
@@ -38,21 +37,21 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
 ) -> Response {
 
-    let handshake = ws.protocols(["Bearer"]);
+    let handshake = ws.protocols([BEARER]);
     let start_socket = move |socket| {
-        handle_socket(socket, user_id, query.device, query.status, app_state)
+        handle_socket(socket, user_id, query.device, query.appearance, app_state)
     };
     handshake.on_upgrade(start_socket)
 }
 
 // HELPER METHODS //
 
-/// Push server events to one connection until it closes
+/// Run one connection until it closes, relaying events both ways
 async fn handle_socket(
     socket: WebSocket,
     user_id: Uuid,
     device: Option<Device>,
-    status: Appearance,
+    appearance: Appearance,
     app_state: AppState,
 ) {
     // Identifies this socket's entry in the user's device list
@@ -65,7 +64,7 @@ async fn handle_socket(
     let already_connected = registry::is_connected(&app_state.registry, user_id);
     let mut receiver = registry::subscribe(&app_state.registry, user_id, device);
 
-    status::connected(&app_state, user_id, status, already_connected).await;
+    appearance::on_connect(&app_state, user_id, appearance, already_connected).await;
 
     // A single connection cannot be read and written at once, so it is split
     // into two parts that can be
@@ -81,7 +80,7 @@ async fn handle_socket(
     }
 
     registry::unsubscribe(&app_state.registry, user_id, socket_id, receiver);
-    status::disconnected(&app_state, user_id).await;
+    appearance::on_disconnect(&app_state, user_id).await;
 }
 
 /// Write every snapshot a viewer is sent through the socket
@@ -109,9 +108,9 @@ async fn send_events(
 
             // The channel keeps a fixed number of recent events and overwrites
             // the earliest to make room. This connection fell far enough behind
-            // that events it had not read were overwritten, so the client is
-            // told to re-read over HTTP. Its place in the channel moves forward
-            // to the earliest event still kept.
+            // that events it had not read were overwritten, so it is sent fresh
+            // snapshots to catch up. Its place in the channel moves forward to
+            // the earliest event still kept.
             Err(broadcast::error::RecvError::Lagged(skipped)) => {
                 tracing::warn!("socket for {user_id} skipped {skipped} events");
 
@@ -141,9 +140,12 @@ async fn read_events(
 ) {
     while let Some(event) = sockets::read::<ClientEvent>(socket, user_id).await {
         match event {
-            ClientEvent::Status { status } => {
-                status::set(&app_state.statuses, user_id, status);
-                status::announce(app_state, user_id, status).await;
+            ClientEvent::Appearance { appearance } => {
+                appearance::set(&app_state.appearances, user_id, appearance);
+                if appearance == Appearance::Offline {
+                    platforms::clear_all(app_state, user_id).await;
+                }
+                appearance::announce(app_state, user_id, appearance).await;
             }
         }
     }

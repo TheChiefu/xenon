@@ -19,8 +19,8 @@ export enum ServerEventType {
   member_left = "member_left",
   room_deleted = "room_deleted",
   room_updated = "room_updated",
-  status_updated = "status_updated",
-  status_snapshot = "status_snapshot",
+  appearance_updated = "appearance_updated",
+  appearance_snapshot = "appearance_snapshot",
   platform_snapshot = "platform_snapshot",
   platform_updated = "platform_updated",
   profile_updated = "profile_updated",
@@ -47,7 +47,7 @@ CallEventType satisfies { [Type in CallServerEvent["type"]]: Type };
 // Names of events sent within the client
 export enum LocalEvent {
   signed_out = "signed_out",
-  status_changed = "status_changed",
+  appearance_changed = "appearance_changed",
   user_selected = "user_selected",
   image_selected = "image_selected",
   confirm_requested = "confirm_requested",

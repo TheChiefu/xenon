@@ -32,12 +32,15 @@ use crate::error::{AppError, Result};
 use crate::ratelimit::AddressLimits;
 use crate::services;
 use crate::state::AppState;
-use crate::utils;
+use crate::security::{self, HashedToken};
+
+/// Auth scheme in the Authorization header and the WebSocket subprotocol
+pub const BEARER: &str = "Bearer";
 
 // DATA STRUCTS //
 pub struct AuthUser(
     pub Uuid, // Who the session belongs to
-    pub [u8; 32], // `sessions.token_hash` the request authenticated with
+    pub HashedToken, // `sessions.token_hash` the request authenticated with
 );
 
 impl<S> FromRequestParts<S> for AuthUser
@@ -52,7 +55,7 @@ where
         let token = bearer_token(parts)?;
 
         // Not a token this server could have issued
-        let session_hash = utils::hash_session_token(&token)
+        let session_hash = security::hash_session_token(&token)
             .ok_or(AppError::InvalidCredentials)?;
 
         // Authenticate
@@ -83,7 +86,7 @@ where
             .to_canonical();
 
         // Not from a listed proxy, return the client's own IP
-        if !config::get().bind.trusted_proxies.contains(&peer) {
+        if !config::get().network.trusted_proxies.contains(&peer) {
             return Ok(ClientIp(peer));
         }
 
@@ -152,7 +155,7 @@ pub fn router(state: AppState) -> Router {
         .route("/rooms/{id}/members", get(rooms::list_members))
         .route("/rooms/{id}/members/{user_id}",
             get(rooms::get_member)
-            .patch(rooms::patch_user)
+            .patch(rooms::update_member)
         )
         .route("/rooms/{id}/bans", get(rooms::list_bans))
         .route("/rooms/{id}/bans/{user_id}",
@@ -205,7 +208,6 @@ pub fn router(state: AppState) -> Router {
         .route("/server", get(server::info))
         .route("/server/version", get(server::version))
         .route("/server/type", get(server::kind))
-        .route("/health", get(server::health_check))
         .merge(services::router())
         .layer(middleware::from_fn_with_state(state.clone(), refuse_blocked))
         .with_state(state)
@@ -231,26 +233,33 @@ fn origin_allowed(origin: &http::HeaderValue, _: &Parts) -> bool {
     let Ok(origin) = origin.to_str() else { return false };
 
     // A wildcard entry allows any origin
-    if config.bind.allowed_origins.iter().any(|allowed| allowed == "*") {
+    if config.network.allowed_origins.iter().any(|allowed| allowed == "*") {
         return true;
     }
     // An explicitly listed origin is allowed
-    if config.bind.allowed_origins.iter().any(|allowed| allowed == origin) {
+    if config.network.allowed_origins.iter().any(|allowed| allowed == origin) {
         return true;
     }
     // A server unreachable from any other machine allows any local origin
     if config.binds_loopback() {
-        let Some((_, host)) = origin.split_once("://") else { return false };
-        let host = host.split(':').next().unwrap_or(host);
-        if host == "localhost" || host == "127.0.0.1" {
+        let Ok(uri) = origin.parse::<http::Uri>() else { return false };
+        let Some(host) = uri.host() else { return false };
+
+        if host == "localhost" {
             return true;
+        }
+
+        // IPv6 hosts [::1]
+        let address = host.trim_start_matches('[').trim_end_matches(']');
+        if let Ok(ip) = address.parse::<IpAddr>() {
+            return ip.is_loopback();
         }
     }
     false
 }
 
 fn cors_layer() -> CorsLayer {
-    let max_age = config::get().bind.cors_max_age;
+    let max_age = config::get().network.cors_max_age;
     CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(origin_allowed))
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::PUT, Method::DELETE])
@@ -272,7 +281,7 @@ fn bearer_token(parts: &Parts) -> Result<String> {
         (Some(header), None) => Ok(header
             .to_str()
             .ok()
-            .and_then(|value| value.strip_prefix("Bearer "))
+            .and_then(|value| value.strip_prefix(&format!("{BEARER} ")))
             .ok_or(AppError::InvalidCredentials)?
             .to_string()),
 
@@ -290,7 +299,7 @@ fn bearer_token(parts: &Parts) -> Result<String> {
 /// client sends as `Bearer, <token>` to mirror the Authorization header
 fn token_from_protocol(header: &http::HeaderValue) -> Option<String> {
     let mut offered = header.to_str().ok()?.split(',').map(str::trim);
-    if offered.next()? != "Bearer" {
+    if offered.next()? != BEARER {
         return None;
     }
     let token = offered.next()?;

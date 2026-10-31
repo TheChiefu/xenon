@@ -10,7 +10,7 @@ use crate::types::time::DAY;
 pub const REGISTRATION_CODE_DEFAULT_MAX_USES: i64 = 1;
 
 /// How long a registration code lasts when the request names no lifetime.
-pub const REGISTRATION_CODE_LIFETIME_MS: i64 = DAY * 7;
+pub const REGISTRATION_CODE_DEFAULT_LIFETIME_MS: i64 = DAY * 7;
 
 pub const REGISTRATION_CODE_DEFAULT_LENGTH: usize = 12;
 const REGISTRATION_CODE_LENGTH_MIN: usize = 4;
@@ -154,7 +154,7 @@ pub fn file_name(path: &str) -> Result<String> {
     };
     let name = &path[index..];
 
-    // Strip any folder leading dots (ie up dir / same dir)
+    // Reject names that are a directory (empty, same dir, up dir)
     if name.is_empty() || name == "." || name == ".." {
         return Err(AppError::Validation(
             format!("file name error: [{path}] names a directory")

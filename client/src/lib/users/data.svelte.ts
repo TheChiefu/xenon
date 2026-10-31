@@ -3,7 +3,7 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { ServerInfo } from "@/bindings/routes/server";
 import type { RespondSummary } from "@/bindings/routes/users";
-import { Appearance, type Device } from "@/bindings/types/status";
+import { Appearance, type Device, type UserState } from "@/bindings/types/appearance";
 import { Availability, Platform } from "@/bindings/types/platforms";
 import type { Activity, Metadata } from "@/bindings/types/platforms";
 import * as usersAPI from "@/lib/api/users";
@@ -18,23 +18,17 @@ const REGEX_USERNAME: RegExp = new RegExp(
   "g",
 );
 
-// A user's status and what they are connected from
-export interface UserStatus {
-  status: Appearance;
-  device: Device | null;
-}
-
 // What the UI shows for a user's game activity
 export interface GameActivity {
   platform: Platform;
-  status: Availability;
+  availability: Availability;
   title: string | null;
   detail: string | null;
 }
 
-// Maps containing a user ID per type (summary, their status, game activity)
+// Maps containing a user ID per type (summary, their appearance, game activity)
 const summaries: SvelteMap<string, RespondSummary> = new SvelteMap();
-const statuses: SvelteMap<string, UserStatus> = new SvelteMap();
+const appearances: SvelteMap<string, UserState> = new SvelteMap();
 const activities: SvelteMap<string, Activity> = new SvelteMap();
 const avatars: SvelteMap<string, FetchedFile> = new SvelteMap();
 const banners: SvelteMap<string, FetchedFile> = new SvelteMap();
@@ -143,18 +137,18 @@ export function cache(user: RespondSummary): void {
   summaries.set(user.id, user);
 }
 
-// STATUS //
+// APPEARANCE //
 
-export function getStatus(id: string): UserStatus {
-  return statuses.get(id) ?? { status: Appearance.offline, device: null };
+export function getAppearance(id: string): UserState {
+  return appearances.get(id) ?? { user_id: id, appearance: Appearance.offline, device: null };
 }
 
-export function setStatus(id: string, status: Appearance, device: Device | null): void {
-  statuses.set(id, { status, device });
+export function setAppearance(id: string, appearance: Appearance, device: Device | null): void {
+  appearances.set(id, { user_id: id, appearance, device });
 }
 
-export function clearStatuses(): void {
-  statuses.clear();
+export function clearAppearances(): void {
+  appearances.clear();
 }
 
 // GAMES //
@@ -171,7 +165,7 @@ export function getActivity(id: string): GameActivity | undefined {
     if (metadata !== null && metadata.availability !== Availability.offline) {
       return {
         platform,
-        status: metadata.availability,
+        availability: metadata.availability,
         title: metadata.game,
         detail: metadata.activity,
       };
@@ -276,7 +270,7 @@ export function clear(): void {
   }
 
   summaries.clear();
-  statuses.clear();
+  appearances.clear();
   activities.clear();
   avatars.clear();
   banners.clear();
@@ -284,18 +278,18 @@ export function clear(): void {
 
 // EVENTS //
 
-// Replace all user statuses from snapshot
-events.subscribe(ServerEventType.status_snapshot, (event) => {
-  clearStatuses();
+// Replace all user appearances from snapshot
+events.subscribe(ServerEventType.appearance_snapshot, (event) => {
+  clearAppearances();
 
   for (const user of event.users) {
-    setStatus(user.user_id, user.appearance, user.device);
+    setAppearance(user.user_id, user.appearance, user.device);
   }
 });
 
-// Update a user's status
-events.subscribe(ServerEventType.status_updated, (event) => {
-  setStatus(event.user_id, event.status, event.device);
+// Update a user's appearance
+events.subscribe(ServerEventType.appearance_updated, (event) => {
+  setAppearance(event.user_id, event.appearance, event.device);
 });
 
 // Replace all game activities from snapshot

@@ -163,7 +163,7 @@ impl IntoResponse for AppError {
     }
 }
 
-/// Shorthand: `Result<Uuid>` instead of `Result<Uuid, AppError>`.
+/// Result whose error is always this server's error
 pub type Result<T> = std::result::Result<T, AppError>;
 
 /// Map a unique-constraint failure to the error naming the column it hit
@@ -185,7 +185,7 @@ pub fn unique_violation(e: sqlx::Error) -> AppError {
 }
 
 /// Recover the status axum picked for a rejected body, such as 413 when the
-/// route's `DefaultBodyLimit` was exceeded
+/// route's body size limit was exceeded
 fn multipart_rejection(e: &std::io::Error) -> Option<(StatusCode, String)> {
     let source = e.get_ref()?;
     let multipart = source.downcast_ref::<MultipartError>()?;

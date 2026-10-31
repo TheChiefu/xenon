@@ -1,9 +1,9 @@
 //! Commands for server
 //!
 //! Bypasses layers (ie not bound to API or DB) since it's expected
-//! direct access to machine is given, which is elevated privlidge over server
+//! direct access to machine is given, which is elevated privilege over server
 //!
-//! Run the server inside `screen` to deatch from user console:
+//! Run the server inside `screen` to detach from user console:
 //! - Start server:         `screen -S xenon ./xenon`
 //! - Detach from screen:   Ctrl+A then D
 //! - Reattach to screen:   `screen -r xenon`
@@ -27,7 +27,7 @@ pub static EXIT: LazyLock<Notify> = LazyLock::new(Notify::new);
 /// Signal that the server is listening
 pub static READY: LazyLock<Notify> = LazyLock::new(Notify::new);
 
-pub const COMMANDS: &[&str] = &[
+const COMMANDS: &[&str] = &[
     "user <command>",
     "files <command>",
     "ip <command>",

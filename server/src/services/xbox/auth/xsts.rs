@@ -6,6 +6,7 @@
 use serde::Deserialize;
 
 use crate::services::CLIENT;
+use crate::services::xbox;
 use crate::services::xbox::auth::Failure;
 
 const USER_AUTH_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
@@ -34,7 +35,6 @@ struct UserAuthBody {
 }
 
 /// Fields read from XSTS token response
-
 #[derive(Deserialize)]
 pub struct XstsBody {
     #[serde(rename = "Token")]
@@ -46,13 +46,6 @@ pub struct XstsBody {
 
     #[serde(rename = "DisplayClaims")]
     pub display_claims: DisplayClaims
-}
-
-impl XstsBody {
-    /// Returns display claims if present
-    pub fn get_display_claims(&self) -> Option<&Claims> {
-        self.display_claims.xui.first()
-    }
 }
 
 #[derive(Deserialize)]
@@ -77,7 +70,7 @@ pub async fn request_user_token(access_token: &str) -> Result<String, Failure> {
 
     let sent = CLIENT
         .post(USER_AUTH_URL)
-        .header("x-xbl-contract-version", "1")
+        .header(xbox::CONTRACT_VERSION_HEADER, "1")
         .json(&body)
         .send()
         .await;
@@ -111,7 +104,7 @@ pub async fn request_xsts_token(user_token: &str) -> Result<XstsBody, Failure> {
 
     let sent = CLIENT
         .post(XSTS_AUTH_URL)
-        .header("x-xbl-contract-version", "1")
+        .header(xbox::CONTRACT_VERSION_HEADER, "1")
         .json(&body)
         .send()
         .await;

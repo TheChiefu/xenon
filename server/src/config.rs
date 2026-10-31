@@ -1,20 +1,15 @@
 //! The config file, read once at startup
 
-mod bind;
-mod calls;
+mod auth;
 mod database;
-mod info;
+mod files;
 mod lengths;
-mod logging;
+mod network;
 mod push;
-mod rate_limit;
 mod responses;
-mod services;
-mod session;
+mod server;
 mod sockets;
 mod steam;
-mod storage;
-mod uploads;
 mod xbox;
 
 use std::sync::OnceLock;
@@ -22,20 +17,15 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
-pub use bind::Bind;
-pub use calls::Calls;
+pub use auth::Auth;
 pub use database::Database;
-pub use info::Info;
+pub use files::Files;
 pub use lengths::Lengths;
-pub use logging::Logging;
+pub use network::Network;
 pub use push::Push;
-pub use rate_limit::RateLimit;
 pub use responses::Responses;
-pub use services::Services;
-pub use session::Session;
+pub use server::Server;
 pub use sockets::Sockets;
-pub use storage::Storage;
-pub use uploads::Uploads;
 pub use xbox::Xbox;
 pub use steam::Steam;
 
@@ -50,44 +40,34 @@ const CONFIG_VERSION: u8 = 1;
 #[serde(default)]
 pub struct Config {
     pub version: u8,
-    pub info: Info,
-    pub bind: Bind,
-    pub storage: Storage,
+    pub server: Server,
+    pub network: Network,
+    pub files: Files,
     pub database: Database,
-    pub logging: Logging,
-    pub session: Session,
+    pub auth: Auth,
     pub push: Option<Push>,
     pub xbox: Option<Xbox>,
     pub steam: Option<Steam>,
     pub lengths: Lengths,
-    pub uploads: Uploads,
     pub responses: Responses,
     pub sockets: Sockets,
-    pub calls: Calls,
-    pub services: Services,
-    pub rate_limit: RateLimit,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Config {
             version: CONFIG_VERSION,
-            info: Info::default(),
-            bind: Bind::default(),
-            storage: Storage::default(),
+            server: Server::default(),
+            network: Network::default(),
+            files: Files::default(),
             database: Database::default(),
-            logging: Logging::default(),
-            session: Session::default(),
+            auth: Auth::default(),
             push: None,
             xbox: None,
             steam: None,
             lengths: Lengths::default(),
-            uploads: Uploads::default(),
             responses: Responses::default(),
             sockets: Sockets::default(),
-            calls: Calls::default(),
-            services: Services::default(),
-            rate_limit: RateLimit::default(),
         }
     }
 }
@@ -149,10 +129,11 @@ impl Config {
             ));
         }
 
-        self.bind.validate()?;
-        self.storage.validate()?;
+        self.server.validate()?;
+        self.network.validate()?;
+        self.files.validate()?;
         self.database.validate()?;
-        self.session.validate()?;
+        self.auth.validate()?;
 
         if let Some(push) = &self.push {
             push.validate()?;
@@ -161,37 +142,32 @@ impl Config {
         if let Some(xbox) = &self.xbox {
             xbox.validate()?;
 
-            if self.bind.public_url.is_none() {
-                return Err("bind.public_url must be set when xbox is enabled".to_string());
+            if self.network.public_url.is_none() {
+                return Err("network.public_url must be set when xbox is enabled".to_string());
             }
         }
 
         if let Some(steam) = &self.steam {
             steam.validate()?;
 
-            if self.bind.public_url.is_none() {
-                return Err("bind.public_url must be set when steam is enabled".to_string());
+            if self.network.public_url.is_none() {
+                return Err("network.public_url must be set when steam is enabled".to_string());
             }
         }
 
         self.lengths.validate()?;
-        self.uploads.validate()?;
         self.responses.validate()?;
-        self.services.validate()?;
         self.sockets.validate()?;
-        self.calls.validate()?;
-        self.rate_limit.validate()?;
-        self.logging.validate()?;
 
         Ok(())
     }
 
     /// The address the listener binds.
-    /// Panics if `bind.ip` does not parse.
+    /// Panics if the configured IP does not parse.
     pub fn socket_addr(&self) -> SocketAddr {
         SocketAddr::new(
-            self.bind.ip.parse().expect("bind.ip validated at startup"),
-            self.bind.port
+            self.network.ip.parse().expect("network.ip validated at startup"),
+            self.network.port
         )
     }
 
@@ -201,7 +177,7 @@ impl Config {
     }
 
     pub fn public_url(&self) -> &str {
-        let url = self.bind.public_url.as_deref().expect("bind.public_url validated at startup");
+        let url = self.network.public_url.as_deref().expect("network.public_url validated at startup");
         url.trim_end_matches('/')
     }
 
@@ -217,12 +193,12 @@ impl Config {
 
     /// Whether a certificate and key are configured for the listener.
     pub fn tls_configured(&self) -> bool {
-        self.bind.certificate.is_some() && self.bind.key.is_some()
+        self.network.certificate.is_some() && self.network.key.is_some()
     }
 }
 
 /// Public accessor for static global config
-/// Panics if called before `init`
+/// Panics if called before the config is loaded
 pub fn get() -> &'static Config {
     CONFIG.get().expect("config not initialized")
 }

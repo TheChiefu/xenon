@@ -1,5 +1,4 @@
-//! Connected users: the sockets they hold, what is pushed to them, and what
-//! others are told about them.
+//! Connected users: the sockets they hold and what is pushed to them.
 
 pub mod call;
 pub mod session;

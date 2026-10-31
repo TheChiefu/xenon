@@ -25,7 +25,7 @@ pub struct Database {
     /// Seconds a statement waits for the write lock
     pub busy_timeout_seconds: u64,
 
-    /// Times a broadcast retries reading who to send to, on top of the first try
+    /// Times a broadcast retries acquiring a connection, on top of the first try
     pub broadcast_retries: u32,
 
     /// Milliseconds waited between broadcast retries
@@ -52,7 +52,7 @@ impl Database {
         Ok(())
     }
 
-    /// How long an unused connection stays open, or `None` to keep it open.
+    /// How long an unused connection stays open before closing
     pub fn idle_timeout(&self) -> Option<Duration> {
         match self.idle_timeout_seconds {
             0 => None,

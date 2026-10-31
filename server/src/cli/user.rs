@@ -1,9 +1,7 @@
 //! `user` commands
 //!
-//! Separate from API calls to not mix responsiblities.
-//!
-//! Commands issued from server maintainer(s) are assumed high trust level
-//! than HTTP calls over the internet.
+//! Commands issued by the server maintainer(s) are trusted more than
+//! HTTP calls over the internet.
 
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -12,13 +10,13 @@ use crate::api;
 use crate::cli;
 use crate::db;
 use crate::error::{AppError, Result};
+use crate::security;
 use crate::services;
 use crate::state::{self, AppState};
 use crate::types::users::GlobalRole;
-use crate::utils;
 use crate::validate;
 
-pub const COMMANDS: &[&str] = &[
+const COMMANDS: &[&str] = &[
     "user create <username>",
     "user role <username> <role>",
     "user unlock <username>",
@@ -49,8 +47,8 @@ pub async fn run(state: &AppState, args: &[&str]) -> Result<()> {
 async fn create(pool: &SqlitePool, username: &str) -> Result<()> {
     validate::username(username)?;
 
-    let password = utils::generate_code(12);
-    let hash = utils::hash_password(&password)?;
+    let password = security::generate_password();
+    let hash = security::hash_password(&password)?;
 
     let mut conn = pool.acquire().await?;
     db::create_user(&mut conn, Uuid::now_v7(), username, username, &hash, GlobalRole::Visitor).await?;
@@ -127,8 +125,8 @@ async fn unlock(pool: &SqlitePool, username: &str) -> Result<()> {
 async fn reset(pool: &SqlitePool, username: &str) -> Result<()> {
     let user_id = get_user_id(pool, username).await?;
 
-    let password = utils::generate_code(12);
-    let hash = utils::hash_password(&password)?;
+    let password = security::generate_password();
+    let hash = security::hash_password(&password)?;
 
     sqlx::query("UPDATE users SET password_hash = ?1 WHERE id = ?2")
         .bind(hash)
@@ -168,7 +166,7 @@ async fn get(pool: &SqlitePool, username: &str) -> Result<()> {
 
 // HELPER METHODS //
 
-/// Check if the given username exists
+/// Look up an account's id by username
 async fn get_user_id(pool: &SqlitePool, username: &str) -> Result<Uuid> {
     let id: Option<Uuid> = sqlx::query_scalar("
         SELECT id

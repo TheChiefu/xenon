@@ -2,9 +2,9 @@
   import type { LinkedAccount } from "@/bindings/types/users";
   import { Platform } from "@/bindings/types/platforms";
   import { type GlobalRole } from "@/bindings/types/users";
-  import { type Appearance, type Device } from "@/bindings/types/status";
+  import { type Appearance, type Device } from "@/bindings/types/appearance";
   import type { GameActivity } from "@/lib/users/data.svelte";
-  import { ICONS_PLATFORM, LABELS_DEVICE, LABELS_PLATFORM, LABELS_ROLE, LABELS_STATUS } from "@/lib/labels";
+  import { ICONS_PLATFORM, LABELS_APPEARANCE, LABELS_DEVICE, LABELS_PLATFORM, LABELS_ROLE } from "@/lib/labels";
   import type { FetchedFile } from "@/lib/utils";
   import * as settings from "@/lib/client/settings.svelte";
   import * as menu from "@/lib/display/menu.svelte";
@@ -15,7 +15,7 @@
     display_name: string;
     username: string;
     description: string;
-    status?: Appearance | null;
+    appearance?: Appearance | null;
     device?: Device | null;
     game?: GameActivity | null;
     role: GlobalRole;
@@ -29,7 +29,7 @@
     display_name,
     username,
     description,
-    status = null,
+    appearance = null,
     device = null,
     game = null,
     role,
@@ -223,9 +223,9 @@
     {/if}
 
     <dl class="meta">
-      {#if status !== null}
-        <dt>Status</dt>
-        <dd>{LABELS_STATUS[status]}{device === null ? "" : ` · ${LABELS_DEVICE[device]}`}</dd>
+      {#if appearance !== null}
+        <dt>Appearance</dt>
+        <dd>{LABELS_APPEARANCE[appearance]}{device === null ? "" : ` · ${LABELS_DEVICE[device]}`}</dd>
       {/if}
 
       {#if game !== null}
@@ -233,7 +233,7 @@
         <dd>
           <span class="link">
             <span class="icon" title={LABELS_PLATFORM[game.platform]}>{@html ICONS_PLATFORM[game.platform]}</span>
-            {game.title ?? game.detail ?? game.status}
+            {game.title ?? game.detail ?? game.availability}
           </span>
         </dd>
       {/if}

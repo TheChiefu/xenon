@@ -8,13 +8,13 @@ use uuid::Uuid;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::services;
-use crate::types::users::{GlobalRole, UserProfile};
+use crate::types::users::{GlobalRole, UserPreferences, UserProfile};
 use crate::utils;
 use crate::validate;
 
 // DATA STRUCTS //
 
-/// The `users` column
+/// A row of the users table
 #[derive(sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
@@ -43,7 +43,7 @@ pub struct UserSummary {
 // PUBLIC METHODS //
 
 /// List one page of user summaries
-pub async fn by_username_prefix(
+pub async fn list_page(
     pool: &SqlitePool,
     prefix: Option<String>,
     after: Option<Uuid>,
@@ -78,7 +78,7 @@ pub async fn by_username_prefix(
     Ok(users)
 }
 
-/// Read a user's public profile by id
+/// Read a user's full account row by id
 pub async fn get(
     pool: &SqlitePool,
     user_id: Uuid,
@@ -176,8 +176,7 @@ pub async fn display_names(
     Ok(rows.into_iter().collect())
 }
 
-/// Write a user's own profile, returning it as stored
-/// or `None` if no changes were made
+/// Write a user's own profile, returning it as stored when any field changes
 pub async fn update(
     pool: &SqlitePool,
     user_id: Uuid,
@@ -233,13 +232,13 @@ pub async fn update(
     Ok(Some(stored))
 }
 
-/// Read a user's room list layout
+/// Read a user's preferences
 pub async fn get_preferences(
     pool: &SqlitePool,
     user_id: Uuid,
-) -> Result<String> {
+) -> Result<UserPreferences> {
 
-    let room_layout: String = sqlx::query_scalar(
+    let preferences = sqlx::query_as(
         "
         SELECT room_layout
         FROM user_preferences
@@ -250,7 +249,7 @@ pub async fn get_preferences(
     .fetch_one(pool)
     .await?;
 
-    Ok(room_layout)
+    Ok(preferences)
 }
 
 /// Write a user's room list layout
@@ -285,7 +284,7 @@ pub async fn delete(
 
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
-    // Optionally delete the accounts message history
+    // Optionally delete the account's message history
     if delete_history {
         delete_all_messages(&mut tx, user_id).await?;
     }
@@ -412,6 +411,6 @@ async fn leave_every_room(
         db::remove_from_room(&mut *conn, *room_id, user_id).await?;
     }
 
-    // Return list of rooms remove from (to later notify members user left)
+    // Return list of rooms removed from (to later notify members user left)
     Ok(rooms)
 }

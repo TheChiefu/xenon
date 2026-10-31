@@ -16,6 +16,9 @@ use crate::types::rooms::Permission;
 use crate::utils;
 use crate::validate;
 
+/// Bytes in a client nonce
+pub const CLIENT_NONCE_LENGTH: usize = 16;
+
 // DATA STRUCTS //
 
 /// A `messages` row
@@ -72,7 +75,7 @@ pub async fn post(
     room_id: Uuid,
     author_id: Uuid,
     body: Option<&str>,
-    client_nonce: [u8; 16],
+    client_nonce: [u8; CLIENT_NONCE_LENGTH],
     attachments: &[AttachmentRequest],
 ) -> Result<(Posted, Vec<Attachment>)> {
 
@@ -83,7 +86,7 @@ pub async fn post(
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
     // Check user perms
-    let perms = db::effective_permissions(&mut tx, room_id, author_id).await?;
+    let perms = db::room_permissions(&mut tx, room_id, author_id).await?;
     if !can_post(perms, !attachments.is_empty()) {
         return Err(AppError::Forbidden);
     }
@@ -152,7 +155,7 @@ pub async fn fetch(
     let mut conn = pool.acquire().await?;
 
     // Check if user has permission to access the room
-    let perms = db::effective_permissions(&mut conn, room_id, user_id).await?;
+    let perms = db::room_permissions(&mut conn, room_id, user_id).await?;
     if perms.is_none() {
         return Err(AppError::Forbidden);
     }
@@ -225,7 +228,7 @@ pub async fn get(
     let message = fetch_by_id(&mut conn, message_id).await?;
 
     // Check if user has permission to access the room
-    let perms = db::effective_permissions(&mut conn, message.room_id, user_id).await?;
+    let perms = db::room_permissions(&mut conn, message.room_id, user_id).await?;
     if perms.is_none() {
         return Err(AppError::Forbidden);
     }
@@ -247,7 +250,7 @@ pub async fn delete(
     let room_id = message.room_id;
 
     // If caller has permission to delete
-    let perms = db::effective_permissions(&mut tx, room_id, caller_id).await?;
+    let perms = db::room_permissions(&mut tx, room_id, caller_id).await?;
     let permitted = can_delete(perms, caller_id, message.author_id);
     let staff = db::staff_over_room(&mut tx, room_id, caller_id).await?;
 
@@ -281,11 +284,11 @@ pub async fn edit(
 
     let mut tx = pool.begin_with(db::BEGIN_IMMEDIATE).await?;
 
-    // Check author
+    // Read the message to check its author
     let message = fetch_by_id(&mut tx, message_id).await?;
     let room_id = message.room_id;
 
-    // Does caller have permission to edit the message
+    // Only the author may edit the message
     if message.author_id != Some(caller_id) {
         return Err(AppError::Forbidden);
     }
@@ -339,7 +342,7 @@ fn validate_post(body: Option<&str>, attachments: &[AttachmentRequest]) -> Resul
     }
 
     // Over allowed attachment limit
-    let max_attachments = config::get().uploads.attachments_per_message_max;
+    let max_attachments = config::get().files.attachments_per_message_max;
     if attachments.len() > max_attachments {
         let err = format!("too many attachments, max allowed: {max_attachments}");
         return Err(AppError::Validation(err));
@@ -366,7 +369,7 @@ fn validate_post(body: Option<&str>, attachments: &[AttachmentRequest]) -> Resul
 async fn fetch_by_nonce(
     conn: &mut sqlx::SqliteConnection,
     author_id: Uuid,
-    client_nonce: [u8; 16],
+    client_nonce: [u8; CLIENT_NONCE_LENGTH],
 ) -> Result<Message> {
 
     let message = sqlx::query_as::<_, Message>(
@@ -416,7 +419,7 @@ fn can_post(perms: Option<Vec<Permission>>, has_attachments: bool) -> bool {
         return false;
     };
 
-    // Check if they can post text messages
+    // Check if they can post messages
     if !perms.contains(&Permission::Post) {
         return false;
     }

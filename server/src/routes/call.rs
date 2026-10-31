@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::api;
 use crate::config;
-use crate::routes::AuthUser;
+use crate::routes::{AuthUser, BEARER};
 use crate::sockets;
 use crate::sockets::call::events::{CallClientEvent, CallCloseCode, CallServerEvent, IceServer};
 use crate::sockets::call::registry::{self, JoinRefused};
@@ -27,7 +27,7 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
 ) -> Response {
 
-    let handshake = ws.protocols(["Bearer"]);
+    let handshake = ws.protocols([BEARER]);
     let start_socket = move |socket| {
         handle_socket(socket, user_id, room_id, app_state)
     };
@@ -36,7 +36,7 @@ pub async fn ws_handler(
 
 // HELPER METHODS //
 
-/// Socket information of a user in a room's call
+/// Run one participant's call socket, from joining the call until leaving it
 async fn handle_socket(
     mut socket: WebSocket,
     user_id: Uuid,
@@ -100,7 +100,7 @@ async fn send_joined(
     socket: &mut SplitSink<WebSocket, Message>,
 ) {
     let mut ice_servers = Vec::new();
-    if let Some(url) = &config::get().calls.stun_url {
+    if let Some(url) = &config::get().sockets.stun_url {
         ice_servers.push(IceServer { urls: url.clone() });
     }
 

@@ -9,7 +9,7 @@ use crate::db;
 use crate::error::{AppError, Result};
 use crate::state::AppState;
 
-pub const COMMANDS: &[&str] = &[
+const COMMANDS: &[&str] = &[
     "ip list",
     "ip block <address>",
     "ip unblock <address>",
@@ -43,10 +43,11 @@ async fn list_blocked(pool: &SqlitePool) -> Result<()> {
     }
 
     // Print list with header
-    let left = 40; let middle = 14;
-    println!("{:<left$}{:<middle$}{}", "Address", "Reason", "Created At");
+    let address_width = 40;
+    let reason_width = 14;
+    println!("{:<address_width$}{:<reason_width$}{}", "Address", "Reason", "Created At");
     for (address, reason, created_at) in rows {
-        println!("{:<left$}{:<middle$}{}", address, reason, created_at);
+        println!("{:<address_width$}{:<reason_width$}{}", address, reason, created_at);
     }
 
     Ok(())

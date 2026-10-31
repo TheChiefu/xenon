@@ -18,6 +18,8 @@ use crate::services::push::store::{self, Subscription};
 use crate::sockets::session::registry;
 use crate::state::AppState;
 
+// DATA STRUCTS //
+
 /// Notification contents as JSON, read by a service worker
 #[derive(Serialize)]
 pub struct Payload {
@@ -29,6 +31,8 @@ pub struct Payload {
     /// Alerts again rather than replacing quietly
     pub renotify: bool
 }
+
+// PUBLIC METHODS //
 
 /// Generates a keypair if there is none yet
 pub async fn ensure_keypair(pool: &SqlitePool) -> Result<()> {
@@ -75,8 +79,10 @@ pub fn notify_offline(app_state: &AppState, payload: Payload, user_ids: &[Uuid])
     });
 }
 
+// HELPER METHODS //
+
 /// Posts one payload per subscription
-pub async fn notify(
+async fn notify(
     pool: &SqlitePool,
     push: &config::Push,
     payload: &Payload,
@@ -103,7 +109,6 @@ pub async fn notify(
 
     for subscription in subscriptions {
 
-        // Encrypt payload
         let Some(request) = encrypt(&subscription, &encoded, &key, push) else {
             continue;
         };
@@ -117,7 +122,7 @@ pub async fn notify(
             }
         };
 
-        // Delete subscriptions if the response is an error
+        // Delete subscriptions the push service no longer knows
         if response.status() == StatusCode::NOT_FOUND || response.status() == StatusCode::GONE {
             store::remove_unreachable(pool, &subscription.endpoint).await?;
         }
@@ -126,25 +131,30 @@ pub async fn notify(
     Ok(())
 }
 
-/// Builds one encrypted request, signed with the VAPID key
+/// Encrypted request (signed with the VAPID key)
 fn encrypt(
     subscription: &Subscription,
     payload: &[u8],
     key: &ES256KeyPair,
     push: &config::Push,
 ) -> Option<reqwest::Request> {
+
+    // Read subscription's endpoint and keys
     let endpoint = subscription.endpoint.parse().ok()?;
-    let subscriber = PublicKey::from_sec1_bytes(&subscription.p256dh).ok()?;
+    let public_key = PublicKey::from_sec1_bytes(&subscription.p256dh).ok()?;
 
     if subscription.auth.len() != Auth::default().len() {
         return None;
     }
 
-    let request = WebPushBuilder::new(
+    // Encrypts and signs a payload into a request
+    let builder =  WebPushBuilder::new(
         endpoint,
-        subscriber,
+        public_key,
         Auth::clone_from_slice(&subscription.auth)
-    )
+    );
+
+    let request = builder
         .with_valid_duration(Duration::from_secs(push.ttl.into()))
         .with_vapid(key, &push.subject)
         .build(payload.to_vec())

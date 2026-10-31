@@ -6,7 +6,7 @@ use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// A count of bytes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ByteSize(i64); // DB is an i64, matching type here
 
 /// Units for convenience
@@ -76,7 +76,7 @@ impl ByteSize {
         // Extract value and unit from a string like 25MB into "25" and "MB"
         for (index, character) in cleaned.char_indices() {
             if !character.is_ascii_digit() {
-                split_index = index; // Move index back to first ASCII character
+                split_index = index; // First non-digit character
                 break;
             }
         }
@@ -92,9 +92,9 @@ impl ByteSize {
         };
 
         // If no unit is found assume bytes
-        let parsed_unit = if parsed_unit.is_empty() {
-            UNITS[UNITS.len()-1].0 // "B"
-        } else {parsed_unit};
+        if parsed_unit.is_empty() {
+            return Ok(ByteSize(value));
+        }
 
         // Multiply read value by the unit value
         for (upper, _, bytes) in UNITS {

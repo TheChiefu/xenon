@@ -51,7 +51,7 @@ pub fn load(path: &str) -> Mappings {
 }
 
 /// Removes symbols and extra spaces from title name
-pub fn remove_excessive(name: &str) -> String {
+pub fn clean_title(name: &str) -> String {
     let stripped: String = name
         .chars()
         .filter(|character| !matches!(character, &TRADEMARK | &REGISTERED | &COPYRIGHT ))
@@ -73,8 +73,7 @@ pub fn replace_prefix(prefixes: &HashMap<String, String>, rich_presence: &str) -
         let suffix = &rich_presence[prefix.len()..];
         let suffix = suffix.trim_start_matches([':', '-', ' ']);
 
-        // Returns replacement in parens (ie. "Reach (Campaign)") if a suffix
-        // exists, otherwise the replacement outright
+        // Appends the suffix in parentheses when one exists (ie. "Reach (Campaign)")
         return match suffix.is_empty() {
             true => replacement.clone(),
             false => format!("{replacement} ({suffix})")
@@ -90,13 +89,11 @@ pub fn lookup_key(name: &str) -> String {
     let mut key = String::with_capacity(name.len());
 
     for character in name.to_lowercase().chars() {
-        // Keeps letters and digits
         if character.is_alphanumeric() {
             key.push(character);
             continue;
         }
 
-        // Replaces spaces with underscores, drops everything else
         if character == ' ' {
             key.push('_');
         }

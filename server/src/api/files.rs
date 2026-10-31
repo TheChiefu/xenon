@@ -1,6 +1,6 @@
 //! The `files` table, and the bytes it points at on disk
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use futures_util::{stream, StreamExt, TryStreamExt};
 use sha2::{Digest, Sha256};
@@ -11,7 +11,8 @@ use uuid::Uuid;
 use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::types::bytesize::ByteSize;
+use crate::storage;
+use crate::types::bytesize::{ByteSize, KIBIBYTE};
 use crate::types::users::GlobalRole;
 use crate::utils;
 
@@ -62,16 +63,13 @@ pub async fn store<R>(
 where
     R: AsyncRead + Unpin,
 {
-    let files_path = &config::get().storage.files;
-
     // End file location is unknown until hashed,
     // write with tmp location/name until finished
-    let tmp_path = Path::new(files_path)
-        .join("tmp")
-        .join(Uuid::now_v7().to_string());
+    let file_id = Uuid::now_v7().to_string();
+    let tmp_path = storage::tmp_path().join(file_id);
 
     // Read stream into tmp file
-    let max_bytes = config::get().uploads.file_size_max;
+    let max_bytes = config::get().files.file_size_max;
     let stream = match read_stream(reader, &tmp_path, max_bytes).await {
         Ok(val) => val,
         Err(e) => {
@@ -83,8 +81,8 @@ where
 
     // Build sharded path and move tmp file into it (permanent location)
     let hex = hex::encode(&stream.sha256);
-    let path = blob_path(files_path, &hex);
-    if let Err(e) = move_to_shard(&tmp_path, &path).await {
+    let path = storage::blob_path(&hex);
+    if let Err(e) = storage::move_to_shard(&tmp_path, &path).await {
         // Move failed, delete tmp file to avoid leaving unused data on disk
         let _ = tokio::fs::remove_file(&tmp_path).await;
         return Err(e);
@@ -125,7 +123,7 @@ pub async fn fetch(
 
     // Rebuild path based on SHA256
     let hex_sha = hex::encode(&file.sha256);
-    let path = blob_path(&config::get().storage.files, &hex_sha);
+    let path = storage::blob_path(&hex_sha);
 
     // Get file reader handle
     match tokio::fs::File::open(&path).await {
@@ -160,13 +158,11 @@ pub async fn delete_unused_rows(pool: &SqlitePool) -> Result<Vec<File>> {
 
 /// Deletes each file's bytes from disk, returning the bytes freed
 pub async fn delete_unused_files(files: &[File], threads: usize) -> Result<i64> {
-    let files_path = &config::get().storage.files;
-
     let mut deletes = Vec::new();
     let mut bytes_deleted = 0;
     for file in files {
         let hex = hex::encode(&file.sha256);
-        let path = blob_path(files_path, &hex);
+        let path = storage::blob_path(&hex);
         deletes.push(tokio::fs::remove_file(path));
         bytes_deleted += file.byte_size;
     }
@@ -195,27 +191,6 @@ fn is_utf8_text(chunk: &[u8]) -> bool {
     }
 }
 
-/// Maps a hash to the directory holding it, such as `files/ab/cd`
-fn create_shard_path(files_path: &str, hex: &str) -> PathBuf {
-    Path::new(files_path)
-        .join(&hex[0..2]) // Top Level first 2 hex chars
-        .join(&hex[2..4]) // Second Level second 2 hex chars
-}
-
-/// Maps a hash to the file holding its bytes, such as `files/ab/cd/abcd...`
-fn blob_path(files_path: &str, hex: &str) -> PathBuf {
-    create_shard_path(files_path, hex).join(hex)
-}
-
-/// Create shard directory and rename the temp file into it
-async fn move_to_shard(tmp_path: &Path, blob_path: &Path) -> Result<()> {
-    if let Some(shard_dir) = blob_path.parent() {
-        tokio::fs::create_dir_all(shard_dir).await?;
-    }
-    tokio::fs::rename(tmp_path, blob_path).await?;
-    Ok(())
-}
-
 /// Reads a stream into a temp file, returning the metadata it gathered
 async fn read_stream<R>(
     mut reader: R,
@@ -228,7 +203,7 @@ where
     let mut tmp_file = tokio::fs::File::create(tmp_path).await?;
 
     // Setup reader and metadata properties
-    let mut buffer = [0u8; 65536]; // 64KiB chunks
+    let mut buffer = [0u8; 64 * KIBIBYTE as usize];
     let mut read_bytes: i64 = 0;
     let mut hasher = Sha256::new();
     let mut mime = "application/octet-stream";

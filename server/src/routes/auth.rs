@@ -96,7 +96,7 @@ pub async fn create_registration_code(
     Json(body): Json<RequestRegistrationCreate>,
 ) -> Result<(StatusCode, Json<RespondRegistrationCode>)> {
     let max_uses = body.max_uses.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_MAX_USES);
-    let lifetime = body.lifetime.unwrap_or(validate::REGISTRATION_CODE_LIFETIME_MS);
+    let lifetime = body.lifetime.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_LIFETIME_MS);
     let length = body.length.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_LENGTH);
     let code = api::auth::create_registration_code(
         &pool, caller_id, max_uses, lifetime, length

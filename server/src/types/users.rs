@@ -1,4 +1,4 @@
-//! Propeties of a user
+//! Properties of a user
 
 use std::fmt;
 use std::str::FromStr;
@@ -65,4 +65,10 @@ pub struct UserProfile {
 pub struct LinkedAccount {
     pub platform: Platform,
     pub handle: String,
+}
+
+#[derive(sqlx::FromRow, Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
+pub struct UserPreferences {
+    pub room_layout: String,
 }

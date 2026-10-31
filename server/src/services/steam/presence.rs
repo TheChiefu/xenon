@@ -34,7 +34,7 @@ pub async fn poll(state: &AppState) {
         for summary in summaries {
             for account in batch {
                 if account.steam_id == summary.steamid {
-                    let metadata = reported(&summary);
+                    let metadata = to_metadata(&summary);
                     platforms::report_metadata(state, account.user_id, Platform::Steam, metadata).await;
                 }
             }
@@ -42,7 +42,7 @@ pub async fn poll(state: &AppState) {
     }
 }
 
-fn reported(summary: &PlayerSummary) -> Metadata {
+fn to_metadata(summary: &PlayerSummary) -> Metadata {
     let availability = match summary.personastate {
         PersonaState::Offline => Availability::Offline,
         PersonaState::Online => Availability::Online,

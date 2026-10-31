@@ -104,7 +104,7 @@ pub async fn query(
             let max = config::get().responses.users_per_page;
             let limit = body.limit.unwrap_or(max).clamp(1, max);
 
-            api::users::by_username_prefix(&pool, body.username, body.after, limit).await?
+            api::users::list_page(&pool, body.username, body.after, limit).await?
         }
     };
 
@@ -126,7 +126,7 @@ pub async fn get(
     Ok(Json(profile))
 }
 
-/// Promote or demotes a user's global role
+/// Change a user's global role
 pub async fn set_role(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,

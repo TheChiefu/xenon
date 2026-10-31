@@ -10,14 +10,14 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::sockets::session::events::ServerEvent;
-use crate::types::status::Device;
+use crate::types::appearance::Device;
 use crate::utils;
 
 // DATA STRUCTS //
 
-pub struct Connected {
-    pub events: broadcast::Sender<String>,
-    pub devices: Vec<SocketDevice>
+struct Connected {
+    events: broadcast::Sender<String>,
+    devices: Vec<SocketDevice>
 }
 
 pub struct SocketDevice {
@@ -41,7 +41,8 @@ pub fn next_socket_id() -> u64 {
     NEXT_SOCKET_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Return a receiver on a user's channel, create entry if a first connection
+/// Return a receiver on a user's channel, creating the channel on a first connection
+/// and recording the socket's device
 pub fn subscribe(
     registry: &Registry,
     user_id: Uuid,
@@ -85,7 +86,7 @@ pub fn unsubscribe(
         None => return,
     };
 
-    // Remove the entry this socket added, if it added one
+    // Remove the device record this socket added, if it added one
     for i in 0..connected.devices.len() {
         if connected.devices[i].socket_id == socket_id {
             connected.devices.remove(i);

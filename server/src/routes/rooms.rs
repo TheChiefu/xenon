@@ -10,16 +10,16 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
+use crate::api;
+use crate::config;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
 use crate::sockets::call;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
-use crate::state::status;
+use crate::state::appearance;
 use crate::state::{self, AppState};
 use crate::types::rooms::{Notify, Permission, RoomInfo, Visibility};
-use crate::api;
-use crate::config;
 
 // REQUESTS //
 
@@ -139,7 +139,7 @@ pub async fn get_member(
 }
 
 /// Patch a member's information in a room
-pub async fn patch_user(
+pub async fn update_member(
     AuthUser(caller_id, ..): AuthUser,
     State(pool): State<SqlitePool>,
     Path((room_id, target_id)): Path<(Uuid, Uuid)>,
@@ -261,7 +261,6 @@ pub async fn update(
     Json(body): Json<Patch>,
 ) -> Result<StatusCode> {
 
-    // Update the room with the given patch
     api::rooms::update(
         &app_state.pool,
         room_id,
@@ -287,14 +286,13 @@ pub async fn create(
 
     let default_permissions = body.default_permissions;
 
-    // The creator takes every permission, or the template everyone else joins on
+    // Permissions the caller starts with in the new room
     let caller_permissions = if body.claim_all {
         Permission::ALL.to_vec()
     } else {
         default_permissions.clone()
     };
 
-    // Attempt to create room
     let id = api::rooms::create(
         &pool,
         caller_id,
@@ -336,7 +334,7 @@ pub async fn join(
     let event = ServerEvent::MemberJoined { room_id, user_id };
     state::broadcast(&app_state, room_id, event).await;
 
-    status::on_join(&app_state, user_id).await;
+    appearance::on_join(&app_state, user_id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }

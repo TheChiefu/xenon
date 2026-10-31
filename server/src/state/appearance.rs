@@ -1,4 +1,4 @@
-//! What is sent to a viewer about a user, and who it is sent to.
+//! The appearance each user declares, what a viewer is sent about it, and who it is sent to.
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -8,22 +8,21 @@ use uuid::Uuid;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
 use crate::state::{self, platforms, AppState};
-use crate::types::platforms::Platform;
-use crate::types::status::{Appearance, UserState};
+use crate::types::appearance::{Appearance, UserState};
 use crate::utils;
 
-/// The status each user last declared, keyed by user id
+/// The appearance each user last declared, keyed by user id
 #[derive(Clone, Default)]
-pub struct Statuses {
+pub struct Appearances {
     by_user: Arc<RwLock<HashMap<Uuid, Appearance>>>
 }
 
-/// Reads the status a user last declared
+/// Reads the appearance a user last declared
 pub fn get(
-    statuses: &Statuses,
+    appearances: &Appearances,
     user_id: Uuid,
 ) -> Option<Appearance> {
-    let held = utils::read_lock(&statuses.by_user);
+    let held = utils::read_lock(&appearances.by_user);
 
     match held.get(&user_id) {
         Some(appearance) => Some(*appearance),
@@ -31,17 +30,17 @@ pub fn get(
     }
 }
 
-/// Write the status a user declares
+/// Write the appearance a user declares
 pub fn set(
-    statuses: &Statuses,
+    appearances: &Appearances,
     user_id: Uuid,
     appearance: Appearance,
 ) {
-    let mut held = utils::write_lock(&statuses.by_user);
+    let mut held = utils::write_lock(&appearances.by_user);
     held.insert(user_id, appearance);
 }
 
-/// Build the status of every visible member
+/// Build the appearance of every visible member
 pub fn snapshot(
     state: &AppState,
     members: &[Uuid],
@@ -55,7 +54,7 @@ pub fn snapshot(
             continue;
         }
 
-        let Some(appearance) = get(&state.statuses,member_id) else {
+        let Some(appearance) = get(&state.appearances, member_id) else {
             continue;
         };
 
@@ -74,43 +73,46 @@ pub fn snapshot(
     users
 }
 
-/// Apply the status a new socket connects with, and announce the result
-pub async fn connected(
+/// Apply the appearance a new socket connects with, and announce the result
+pub async fn on_connect(
     state: &AppState,
     user_id: Uuid,
-    status: Appearance,
+    appearance: Appearance,
     already_connected: bool,
 ) {
-    let mut current_status = None;
+    let mut current_appearance = None;
     if already_connected {
-        current_status = get(&state.statuses,user_id);
+        current_appearance = get(&state.appearances, user_id);
     }
 
-    match current_status {
+    match current_appearance {
         None => {
-            set(&state.statuses, user_id, status);
+            set(&state.appearances, user_id, appearance);
         },
         Some(Appearance::Online) => {},
         Some(Appearance::Busy) => {},
         Some(Appearance::Away) => {
-            if status == Appearance::Online {
-                set(&state.statuses, user_id, status);
+            if appearance == Appearance::Online {
+                set(&state.appearances, user_id, appearance);
             }
         },
         Some(Appearance::Offline) => {
-            if status == Appearance::Online || status == Appearance::Away {
-                set(&state.statuses, user_id, status);
+            if appearance == Appearance::Online || appearance == Appearance::Away {
+                set(&state.appearances, user_id, appearance);
             }
         }
     }
 
-    if let Some(current) = get(&state.statuses,user_id) {
+    if let Some(current) = get(&state.appearances, user_id) {
+        if current == Appearance::Offline {
+            platforms::clear_all(state, user_id).await;
+        }
         announce(state, user_id, current).await;
     }
 }
 
 /// Announce a user as Offline once their last socket closes
-pub async fn disconnected(
+pub async fn on_disconnect(
     state: &AppState,
     user_id: Uuid,
 ) {
@@ -119,8 +121,8 @@ pub async fn disconnected(
     }
 }
 
-/// Sends the new member's status to the room
-/// and a snapshot of everyone visible to the new member.
+/// Sends the new member's appearance to everyone sharing a room with them,
+/// and sends the new member a snapshot of everyone visible to them.
 pub async fn on_join(
     state: &AppState,
     user_id: Uuid,
@@ -130,33 +132,26 @@ pub async fn on_join(
         return;
     }
 
-    let Some(appearance) = get(&state.statuses,user_id) else {
+    let Some(appearance) = get(&state.appearances, user_id) else {
         return;
     };
 
     announce(state, user_id, appearance).await;
 
-    // Send all snapshots
     for event in state::snapshots(state, user_id).await {
         registry::inform_users(&state.registry, &[user_id], event);
     }
 }
 
-/// Sends a user's status to everyone sharing a room with them
+/// Sends a user's appearance to everyone sharing a room with them
 pub async fn announce(
     state: &AppState,
     user_id: Uuid,
-    status: Appearance,
+    appearance: Appearance,
 ) {
-    // Offline users have no platform presence
-    if status == Appearance::Offline {
-        platforms::clear_metadata(state, user_id, Platform::Xbox).await;
-        platforms::clear_metadata(state, user_id, Platform::Steam).await;
-    }
-
     // Most recent device
     let device = registry::device(&state.registry, user_id);
 
-    let event = ServerEvent::StatusUpdated { user_id, status, device };
+    let event = ServerEvent::AppearanceUpdated { user_id, appearance, device };
     state::inform_shared_members(state, user_id, event).await;
 }

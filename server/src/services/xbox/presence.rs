@@ -7,12 +7,14 @@
 pub mod mappings;
 
 use reqwest::StatusCode;
+use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, AUTHORIZATION};
 use serde::Deserialize;
 
 use crate::config;
 use crate::services::CLIENT;
 use crate::services::xbox::accounts::{self, Account};
-use crate::services::xbox::auth;
+use crate::services::xbox;
+use crate::services::xbox::auth::{self, Failure};
 use crate::services::xbox::presence::mappings::{Mapping, Mappings};
 use crate::state::platforms;
 use crate::state::AppState;
@@ -60,7 +62,7 @@ struct Device {
 
 /// User's activity on Xbox Live
 #[derive(Deserialize, PartialEq)]
-pub enum PresenceState {
+enum PresenceState {
     Online,
     Away,
     Offline,
@@ -101,9 +103,13 @@ pub async fn poll(
     };
 
     for account in linked {
-        // Skips account if no Authorization header is available
-        let Some(authorization) = auth::get_header(&state.pool, &account, xbox).await else {
-            continue;
+        let authorization = match auth::get_header(&state.pool, &account, xbox).await {
+            Ok(authorization) => authorization,
+            Err(Failure::Dead(_)) => {
+                let _ = xbox::unlink(state, account.user_id).await;
+                continue;
+            }
+            Err(Failure::Retry(_)) => continue,
         };
 
         // Skips account if presence request fails
@@ -111,7 +117,7 @@ pub async fn poll(
             continue;
         };
 
-        let metadata = reported(record, account.honor_cloaked, mappings);
+        let metadata = to_metadata(record, account.honor_cloaked, mappings);
         platforms::report_metadata(state, account.user_id, Platform::Xbox, metadata).await;
     }
 }
@@ -125,10 +131,10 @@ async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
 
     let sent = CLIENT
         .get(url)
-        .header("Authorization", authorization)
-        .header("x-xbl-contract-version", "3")
-        .header("Accept", "application/json")
-        .header("Accept-Language", "en-US")
+        .header(AUTHORIZATION, authorization)
+        .header(xbox::CONTRACT_VERSION_HEADER, "3")
+        .header(ACCEPT, "application/json")
+        .header(ACCEPT_LANGUAGE, "en-US")
         .send()
         .await;
 
@@ -175,7 +181,7 @@ async fn fetch(account: &Account, authorization: &str) -> Option<Record> {
 }
 
 /// Converts presence record to platform presence, applying game mappings
-fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> Metadata {
+fn to_metadata(record: Record, honor_cloaked: bool, mappings: &Mappings) -> Metadata {
 
     // Cloaked users appear offline, hide everything else
     if record.cloaked && honor_cloaked {
@@ -194,7 +200,7 @@ fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> Metadat
         activity: None,
     };
 
-    // Finds game being played, skipping unnamed titles
+    // Finds the game being played, skipping titles that are not full screen, unnamed, or the home screen
     for device in record.devices {
         for title in device.titles {
             if
@@ -204,12 +210,12 @@ fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> Metadat
             { continue; }
 
             let mapping = mappings.get(&mappings::lookup_key(&title.name));
-            metadata.activity = detail(title.activity, mapping);
+            metadata.activity = activity_text(title.activity, mapping);
 
-            // Uses mapped title name, or reported name with symbols removed
+            // Uses the mapped title name, cleaning unmapped names
             metadata.game = Some(match mapping {
                 Some(mapping) => mapping.name.clone(),
-                None => mappings::remove_excessive(&title.name)
+                None => mappings::clean_title(&title.name)
             });
 
             return metadata;
@@ -220,7 +226,7 @@ fn reported(record: Record, honor_cloaked: bool, mappings: &Mappings) -> Metadat
 }
 
 /// Returns rich presence with mapped prefix, if title reports one
-fn detail(activity: Option<Activity>, mapping: Option<&Mapping>) -> Option<String> {
+fn activity_text(activity: Option<Activity>, mapping: Option<&Mapping>) -> Option<String> {
     let rich_presence = activity?.rich_presence?;
 
     match mapping {
