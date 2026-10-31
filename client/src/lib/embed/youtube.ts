@@ -70,3 +70,10 @@ export function embedUrl(href: string): string | null {
     const start = startSeconds(url);
     return start > 0 ? `${EMBED_ORIGIN}${id}?start=${start}` : `${EMBED_ORIGIN}${id}`;
 }
+
+// Allows credentialless iframes, which load embeds without cookies or storage
+declare module "svelte/elements" {
+    interface HTMLIframeAttributes {
+        credentialless?: boolean;
+    }
+}

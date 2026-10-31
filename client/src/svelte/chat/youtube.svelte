@@ -23,7 +23,10 @@ let { src }: Props = $props();
     class="entry"
     {src}
     title="YouTube video player"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    loading="lazy"
+    credentialless
+    sandbox="allow-scripts allow-same-origin allow-presentation"
+    allow="encrypted-media; picture-in-picture"
     referrerpolicy="strict-origin-when-cross-origin"
     allowfullscreen
 ></iframe>
