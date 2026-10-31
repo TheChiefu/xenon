@@ -48,6 +48,7 @@ pub async fn get_linked_account(pool: &SqlitePool, user_id: Uuid) -> Result<Opti
 
     let linked = LinkedAccount {
         platform: Platform::Xbox,
+        id: account.xuid,
         handle: account.gamertag
     };
 

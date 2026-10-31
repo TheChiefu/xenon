@@ -64,6 +64,7 @@ pub struct UserProfile {
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
 pub struct LinkedAccount {
     pub platform: Platform,
+    pub id: String,
     pub handle: String,
 }
 

@@ -28,6 +28,7 @@ pub async fn get_linked_account(pool: &SqlitePool, user_id: Uuid) -> Result<Opti
 
     let linked = LinkedAccount {
         platform: Platform::Steam,
+        id: account.steam_id,
         handle: account.persona_name
     };
 

@@ -40,7 +40,8 @@
   }: Props = $props();
 
   // Provide context menu on xbox handle click
-  function openXbox(event: MouseEvent, handle: string) {
+  function openXbox(event: MouseEvent, link: LinkedAccount) {
+    const handle = link.handle;
     const TRUE_ACHIEVEMENTS = "https://www.trueachievements.com/gamer/"
     const XBOX_PLAY = "https://www.xbox.com/en-US/play/user/"
 
@@ -57,11 +58,12 @@
     ]);
   }
 
-  function openSteam() {
-    window.open("", "_blank", "noopener");
+  function openSteam(_event: MouseEvent, link: LinkedAccount) {
+    const STEAM_PROFILE = "https://steamcommunity.com/profiles/";
+    window.open(STEAM_PROFILE + encodeURIComponent(link.id), "_blank", "noopener");
   }
 
-  const OPEN_PLATFORM: Record<Platform, (event: MouseEvent, handle: string) => void> = {
+  const OPEN_PLATFORM: Record<Platform, (event: MouseEvent, link: LinkedAccount) => void> = {
     [Platform.xbox]: openXbox,
     [Platform.steam]: openSteam,
   };
@@ -249,7 +251,7 @@
       <dt>Linked Accounts</dt>
       <dd>
         {#each links as link}
-          <button type="button" class="link inherit" onclick={(event) => OPEN_PLATFORM[link.platform](event, link.handle)}>
+          <button type="button" class="link inherit" onclick={(event) => OPEN_PLATFORM[link.platform](event, link)}>
             <span class="icon" title={LABELS_PLATFORM[link.platform]}>{@html ICONS_PLATFORM[link.platform]}</span>
             {link.handle}
           </button>
