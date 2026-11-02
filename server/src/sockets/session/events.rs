@@ -6,6 +6,8 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
+#[cfg(feature = "rtc")]
+use crate::rtc::events::RtcRoom;
 use crate::types::appearance::{Appearance, Device, UserState};
 use crate::types::messages::MessageInfo;
 use crate::types::platforms::{Metadata, Platform, UserActivity};
@@ -89,6 +91,20 @@ pub enum ServerEvent {
         user_id: Uuid,
         platform: Platform,
         metadata: Option<Metadata>
+    },
+    #[cfg(feature = "rtc")]
+    RtcSnapshot {
+        rooms: Vec<RtcRoom>
+    },
+    #[cfg(feature = "rtc")]
+    RtcJoined {
+        room_id: Uuid,
+        user_id: Uuid
+    },
+    #[cfg(feature = "rtc")]
+    RtcLeft {
+        room_id: Uuid,
+        user_id: Uuid
     },
     SessionRevoked
 }

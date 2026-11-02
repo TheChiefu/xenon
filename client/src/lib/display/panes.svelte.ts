@@ -7,11 +7,6 @@ export enum Pane {
   inbox = "inbox",
 }
 
-export enum DetailsTab {
-  members = "members",
-  call = "call",
-}
-
 interface Definition {
   open: boolean;
 }

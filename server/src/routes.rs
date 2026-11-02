@@ -207,12 +207,24 @@ pub fn router(state: AppState) -> Router {
         .route("/server/version", get(server::version))
         .route("/server/type", get(server::kind))
         .merge(services::router())
+        .merge(rtc_router())
         .layer(middleware::from_fn_with_state(state.clone(), refuse_blocked))
         .with_state(state)
         .layer(cors_layer())
 }
 
 // HELPER METHODS //
+
+/// Routes present when RTC is built in
+#[cfg(feature = "rtc")]
+fn rtc_router() -> Router<AppState> {
+    Router::new().route("/rooms/{id}/rtc", get(crate::rtc::socket::ws_handler))
+}
+
+#[cfg(not(feature = "rtc"))]
+fn rtc_router() -> Router<AppState> {
+    Router::new()
+}
 
 /// Refuse a request from a blocked IP before any route runs
 async fn refuse_blocked(

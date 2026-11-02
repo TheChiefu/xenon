@@ -4,7 +4,7 @@ import { GlobalRole } from "@/bindings/types/users";
 import { Notify, Permission, Visibility } from "@/bindings/types/rooms";
 import { Availability, Platform } from "@/bindings/types/platforms";
 import { Appearance } from "@/bindings/types/appearance";
-import { CallCloseCode } from "@/bindings/sockets/call/events";
+import { RtcCloseCode } from "@/bindings/rtc/events";
 import { Device } from "@/bindings/types/appearance";
 import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";
 import icon_steam from "@/assets/platforms/steam.svg?raw";
@@ -43,11 +43,12 @@ export const LABELS_ANIMATE_PHOTOS: Record<AnimatePhotos, string> = {
   [AnimatePhotos.Never]: "Never",
 };
 
-export const LABELS_CALL_CLOSE: Record<CallCloseCode, string> = {
-  [CallCloseCode.server_error]: "The server could not add you to the call",
-  [CallCloseCode.no_connect]: "You do not have permission to join calls in this room",
-  [CallCloseCode.already_in_call]: "You are already in a call",
-  [CallCloseCode.call_full]: "The call is full",
+export const LABELS_RTC_CLOSE: Partial<Record<RtcCloseCode, string>> = {
+  [RtcCloseCode.policy_violation]: "You are not a member of this room",
+  [RtcCloseCode.server_error]: "The server could not add you to the call",
+  [RtcCloseCode.full]: "The call is full",
+  [RtcCloseCode.kicked]: "You were removed from the call",
+  [RtcCloseCode.no_port]: "The server has no free connection slots",
 };
 
 export const LABELS_DEVICE: Record<Device, string> = {
@@ -76,10 +77,8 @@ export const LABELS_PERMISSION: Record<Permission, string> = {
   [Permission.ban]: "Remove members",
   [Permission.grant]: "Set members' permissions",
   [Permission.delete_room]: "Delete the room",
-  [Permission.connect]: "Join voice",
-  [Permission.speak]: "Speak in voice",
   [Permission.mute]: "Mute others",
-  [Permission.video]: "Show video / screenshare",
+  [Permission.kick]: "Kick others from call",
 };
 
 export const LABELS_PLATFORM: Record<Platform, string> = {

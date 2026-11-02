@@ -39,4 +39,4 @@ async-trait = { version = "0.1", optional = true }
 
 [features]
 ts_bindings = ["dep:ts-rs"] # Requires rust version 1.88.0
-voice = ["dep:webrtc", "dep:rtc", "dep:async-trait"]
+rtc = ["dep:webrtc", "dep:rtc", "dep:async-trait"]

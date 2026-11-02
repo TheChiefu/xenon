@@ -7,6 +7,8 @@ mod db;
 mod error;
 mod ratelimit;
 mod routes;
+#[cfg(feature = "rtc")]
+mod rtc;
 mod security;
 mod serve;
 mod services;

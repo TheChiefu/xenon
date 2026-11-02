@@ -28,6 +28,10 @@ pub struct AppState {
     /// The appearance each user last declared
     pub appearances: Appearances,
 
+    /// Who is connected over RTC in each room
+    #[cfg(feature = "rtc")]
+    pub rtc: crate::rtc::registry::Registry,
+
     /// What each user's linked account last reported
     pub platforms: ReportedPlatforms,
 
@@ -46,6 +50,8 @@ impl AppState {
             pool,
             registry: Registry::default(),
             appearances: Appearances::default(),
+            #[cfg(feature = "rtc")]
+            rtc: crate::rtc::registry::Registry::default(),
             platforms: ReportedPlatforms::default(),
             address_limits: AddressLimits::default(),
             login_failures: LoginFailures::default(),
@@ -60,6 +66,9 @@ pub async fn disconnect(
 ) {
     session::registry::inform_users(&state.registry, &[user_id], ServerEvent::SessionRevoked);
     session::registry::remove(&state.registry, user_id);
+
+    #[cfg(feature = "rtc")]
+    crate::rtc::end_user(state, user_id);
 }
 
 /// Build every snapshot a viewer is sent
@@ -83,6 +92,18 @@ pub async fn snapshots(
             );
         }
         Err(e) => tracing::error!("could not read who shares a room with {viewer_id}: {e}")
+    }
+
+    #[cfg(feature = "rtc")]
+    match member_rooms(state, viewer_id).await {
+        Ok(room_ids) => {
+            events.push(
+                ServerEvent::RtcSnapshot {
+                    rooms: crate::rtc::registry::snapshot(&state.rtc, &room_ids)
+                }
+            );
+        }
+        Err(e) => tracing::error!("could not read the rooms of {viewer_id}: {e}")
     }
 
     events

@@ -1,7 +1,7 @@
 // Listeners are registered under an event name,
 // publishing the name calls each of its listeners, passing them the published data
 
-import type { CallServerEvent } from "@/bindings/sockets/call/events";
+import type { RtcServerEvent } from "@/bindings/rtc/events";
 import type { ServerEvent } from "@/bindings/sockets/session/events";
 import { CHOICE_NO, CHOICE_YES } from "@/lib/labels";
 
@@ -26,23 +26,25 @@ export enum ServerEventType {
   profile_updated = "profile_updated",
   resync = "resync",
   notification = "notification",
-  call_snapshot = "call_snapshot",
-  participant_joined = "participant_joined",
-  participant_left = "participant_left",
+  rtc_snapshot = "rtc_snapshot",
+  rtc_joined = "rtc_joined",
+  rtc_left = "rtc_left",
   session_revoked = "session_revoked",
 }
 
 // Check the enum has a matching entry for each server event type in the bindings
 ServerEventType satisfies { [Type in ServerEvent["type"]]: Type };
 
-// Names of events sent over the call socket
-export enum CallEventType {
-  call_joined = "call_joined",
-  signal = "signal",
+// Names of events sent over the RTC socket, in either direction
+export enum RtcEventType {
+  offer = "offer",
+  answer = "answer",
+  candidate = "candidate",
+  kick = "kick",
 }
 
-// Check the enum has a matching entry for each call socket event type in the bindings
-CallEventType satisfies { [Type in CallServerEvent["type"]]: Type };
+// Check the enum has a matching entry for each RTC socket event type in the bindings
+RtcEventType satisfies { [Type in RtcServerEvent["type"]]: Type };
 
 // Names of events sent within the client
 export enum LocalEvent {

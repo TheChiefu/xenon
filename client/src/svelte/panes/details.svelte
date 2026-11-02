@@ -1,7 +1,6 @@
 <script lang="ts">
   import Members from "./members.svelte";
   import Call from "./call.svelte";
-  import { DetailsTab } from "@/lib/display/panes.svelte";
 
   interface Props {
     roomId: string | null;
@@ -9,42 +8,27 @@
   }
 
   let { roomId, open }: Props = $props();
-
-  let current_tab: DetailsTab = $state(DetailsTab.members);
 </script>
 
 <style>
 
-  .tabs {
+  .half {
+    flex: 1;
+    min-height: 0;
     display: flex;
-    flex: none;
+    flex-direction: column;
   }
 
-  .tabs > button {
-    flex: 1;
+  .half + .half {
+    border-top: 1px solid var(--border);
   }
 
 </style>
 
-<div class="tabs">
-  <button
-    class="is-tab"
-    class:is-active={current_tab === DetailsTab.members}
-    onclick={() => current_tab = DetailsTab.members}
-  >
-    Members
-  </button>
-  <button
-    class="is-tab"
-    class:is-active={current_tab === DetailsTab.call}
-    onclick={() => current_tab = DetailsTab.call}
-  >
-    Call
-  </button>
+<div class="half">
+  <Members {roomId} {open}/>
 </div>
 
-{#if current_tab === DetailsTab.members}
-  <Members {roomId} {open}/>
-{:else}
+<div class="half">
   <Call {roomId}/>
-{/if}
+</div>

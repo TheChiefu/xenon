@@ -4,9 +4,9 @@
   import * as rooms from "@/lib/rooms/data.svelte";
   import * as users from "@/lib/users/data.svelte";
   import * as profile from "@/lib/users/profile.svelte";
-  import * as session from "@/lib/call/session.svelte";
-  import * as call_participants from "@/lib/call/participants.svelte";
-  import * as levels from "@/lib/call/levels.svelte";
+  import * as session from "@/lib/rtc/session.svelte";
+  import * as call_participants from "@/lib/rtc/participants.svelte";
+  import * as levels from "@/lib/rtc/levels.svelte";
 
   import icon_headphones from "@/assets/icons/headphones.svg?raw";
   import icon_headphones_muted from "@/assets/icons/headphones-muted.svg?raw";

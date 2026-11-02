@@ -233,6 +233,9 @@ pub async fn ban_user(
     let event = ServerEvent::MemberLeft { room_id, user_id: target_id };
     state::broadcast(&app_state, room_id, event).await;
 
+    #[cfg(feature = "rtc")]
+    crate::rtc::end_in_room(&app_state, room_id, target_id, crate::rtc::events::RtcCloseCode::Kicked);
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -307,6 +310,9 @@ pub async fn delete(
 ) -> Result<StatusCode> {
 
     let members = api::rooms::delete(&app_state.pool, room_id, caller_id).await?;
+
+    #[cfg(feature = "rtc")]
+    crate::rtc::end_room(&app_state, room_id);
 
     // Notify everyone who was in the room
     let event = ServerEvent::RoomDeleted { room_id };

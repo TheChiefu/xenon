@@ -37,15 +37,13 @@ pub enum Permission {
     Ban, // Remove a user from the room
     Grant, // Set other users' permissions
     DeleteRoom, // Delete the room
-    Connect, // Join voice chat
-    Speak, // Speak in voice chat
-    Mute, // Mute others in voice chat
-    Video, // Show video / screenshare
+    Mute, // Mute others
+    Kick, // Kick others in call
 }
 
 impl Permission {
     /// Every permission
-    pub const ALL: [Permission; 12] = [
+    pub const ALL: [Permission; 10] = [
         Self::Post,
         Self::Attach,
         Self::DeleteMsg,
@@ -54,10 +52,8 @@ impl Permission {
         Self::Ban,
         Self::Grant,
         Self::DeleteRoom,
-        Self::Connect,
-        Self::Speak,
         Self::Mute,
-        Self::Video,
+        Self::Kick,
     ];
 
 }

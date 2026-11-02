@@ -298,21 +298,21 @@ pub async fn leave(
     Ok(())
 }
 
-/// Check whether a user may join a room's voice chat
-pub async fn can_connect(
+/// Check whether a user may kick others in a room
+#[cfg(feature = "rtc")]
+pub async fn can_kick_from_call(
     pool: &SqlitePool,
     room_id: Uuid,
-    user_id: Uuid,
+    caller_id: Uuid,
 ) -> Result<bool> {
 
     let mut conn = pool.acquire().await?;
-    let permissions = db::room_permissions(&mut conn, room_id, user_id).await?;
 
-    // A user with no access to the room has no permissions
-    match permissions {
-        Some(permissions) => Ok(permissions.contains(&Permission::Connect)),
-        None => Ok(false)
-    }
+    let perms = db::room_permissions(&mut conn, room_id, caller_id).await?;
+    let permitted = perms.is_some_and(|p| p.contains(&Permission::Kick));
+    let staff = db::staff_over_room(&mut conn, room_id, caller_id).await?;
+
+    Ok(permitted || staff)
 }
 
 /// List rooms a user is a member of
