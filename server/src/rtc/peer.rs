@@ -120,10 +120,7 @@ pub async fn connect(
             send_encodings: Vec::new()
         };
         let transceiver = connection.add_transceiver_from_kind(media.kind(), Some(receive)).await?;
-
-        if let Some(receiver) = transceiver.receiver().await? {
-            receivers.insert(receiver.id(), media);
-        }
+        receivers.insert(RTCRtpReceiverId::from(transceiver.id()), media);
     }
 
     let peer = Peer {
