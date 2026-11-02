@@ -89,7 +89,6 @@ export async function join(roomId: string): Promise<void> {
 }
 
 export function leave(): void {
-  socket.close();
   end();
 }
 
@@ -154,6 +153,7 @@ function closed(code: number): void {
 }
 
 function end(): void {
+  socket.close();
   connection.close();
   audio.clear();
   room_id = null;
