@@ -9,7 +9,8 @@ use uuid::Uuid;
 use webrtc::media_stream::track_local::TrackLocal;
 use webrtc::media_stream::track_remote::{TrackRemote, TrackRemoteEvent};
 use webrtc::peer_connection::{
-    PeerConnectionEventHandler, RTCPeerConnectionIceEvent, RTCPeerConnectionState,
+    PeerConnectionEventHandler, RTCIceConnectionState, RTCPeerConnectionIceEvent,
+    RTCPeerConnectionState,
 };
 
 use crate::rtc::events::{RTCIceCandidateInit, RtcCloseCode, RtcServerEvent};
@@ -52,9 +53,15 @@ impl PeerConnectionEventHandler for Handler {
 
     /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onconnectionstatechange
     async fn on_connection_state_change(&self, state: RTCPeerConnectionState) {
+        tracing::debug!("{} connection state: {state}", self.user_id);
+
         if state == RTCPeerConnectionState::Failed {
             end(&self.closing, RtcCloseCode::Normal);
         }
+    }
+
+    async fn on_ice_connection_state_change(&self, state: RTCIceConnectionState) {
+        tracing::debug!("{} ice state: {state}", self.user_id);
     }
 
     /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-ontrack

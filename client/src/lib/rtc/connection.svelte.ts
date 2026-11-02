@@ -48,8 +48,14 @@ export function open(
   // https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-ontrack
   opened.ontrack = onTrack;
 
+  opened.oniceconnectionstatechange = () => {
+    console.debug(new Date().toISOString(), "rtc ice state:", opened.iceConnectionState);
+  };
+
   // https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onconnectionstatechange
   opened.onconnectionstatechange = () => {
+    console.debug(new Date().toISOString(), "rtc connection state:", opened.connectionState);
+
     if (opened.connectionState === "failed") {
       onFailed();
     }
