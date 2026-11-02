@@ -24,7 +24,7 @@ Every key in `config.toml` and its default. Missing keys use their default. If
 | `allowed_origins` | `[]` | Origins allowed to make cross-origin requests, `"*"` for any |
 | `cors_max_age` | `3600` | Seconds a browser caches a cross-origin preflight |
 | `trusted_proxies` | `[]` | Proxies whose `X-Forwarded-For` is read as the client IP |
-| `public_url` | _unset_ | This server's public address, required by `[xbox]` and `[steam]` |
+| `public_url` | _unset_ | This server's public address, for anything that has to link or connect back to it |
 | `request_timeout_seconds` | `30` | Seconds a request to Xbox, Steam or a push service waits |
 
 When `ip` is a loopback address, `localhost` and loopback origins are allowed on any port.
@@ -94,6 +94,10 @@ When `ip` is a loopback address, `localhost` and loopback origins are allowed on
 | Key | Default | Meaning |
 |-|-|-|
 | `event_queue_size` | `32` | Live events queued per user |
+| `participants_max` | `10` | Most users in one room's call, at least `2` |
+| `udp_ports` | `{ start = 50000, end = 50099 }` | UDP ports calls use, one per user in a call |
+
+`participants_max` and `udp_ports` exist only when built with the `rtc` feature.
 
 ## Optional services
 

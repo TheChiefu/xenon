@@ -64,6 +64,8 @@ cd server
 cargo build --release
 ```
 
+Voice calls are behind the `rtc` feature: add `--features rtc` to the build command.
+
 To update the client TypeScript bindings based off of the rust code, run this from
 the `server` directory:
 ```bash
