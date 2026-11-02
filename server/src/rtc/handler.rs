@@ -126,6 +126,13 @@ async fn forward(
                     let mut packet = packet.clone();
                     packet.header.ssrc = ssrc;
 
+                    // Extension ids are negotiated per connection, and the sender's are
+                    // rejected on the recipient's connection
+                    // https://www.rfc-editor.org/rfc/rfc8285#section-5
+                    packet.header.extension = false;
+                    packet.header.extension_profile = 0;
+                    packet.header.extensions.clear();
+
                     if let Err(e) = track.write_rtp(packet).await {
                         tracing::debug!("could not forward {media:?} from {sender_id} to {}: {e}", peer.user_id);
                     }
