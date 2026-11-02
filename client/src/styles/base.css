@@ -56,6 +56,8 @@ pre {
     padding: 0.4rem;
     margin: 0.25rem 0;
     color: var(--text-dim);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 code {
