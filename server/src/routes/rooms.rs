@@ -14,7 +14,6 @@ use crate::api;
 use crate::config;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::sockets::call;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
 use crate::state::appearance;
@@ -234,11 +233,6 @@ pub async fn ban_user(
     let event = ServerEvent::MemberLeft { room_id, user_id: target_id };
     state::broadcast(&app_state, room_id, event).await;
 
-    // Ban removes the user from the room's call
-    if call::registry::participant_call(&app_state.calls, target_id) == Some(room_id) {
-        state::leave_call(&app_state, target_id).await;
-    }
-
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -313,7 +307,6 @@ pub async fn delete(
 ) -> Result<StatusCode> {
 
     let members = api::rooms::delete(&app_state.pool, room_id, caller_id).await?;
-    call::registry::end(&app_state.calls, room_id);
 
     // Notify everyone who was in the room
     let event = ServerEvent::RoomDeleted { room_id };

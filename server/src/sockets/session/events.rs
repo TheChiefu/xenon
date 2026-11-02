@@ -7,7 +7,6 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::types::appearance::{Appearance, Device, UserState};
-use crate::types::calls::RoomCall;
 use crate::types::messages::MessageInfo;
 use crate::types::platforms::{Metadata, Platform, UserActivity};
 
@@ -90,17 +89,6 @@ pub enum ServerEvent {
         user_id: Uuid,
         platform: Platform,
         metadata: Option<Metadata>
-    },
-    CallSnapshot {
-        calls: Vec<RoomCall>
-    },
-    ParticipantJoined {
-        room_id: Uuid,
-        user_id: Uuid
-    },
-    ParticipantLeft {
-        room_id: Uuid,
-        user_id: Uuid
     },
     SessionRevoked
 }

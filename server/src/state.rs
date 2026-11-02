@@ -13,8 +13,7 @@ use crate::config;
 use crate::db;
 use crate::error::Result;
 use crate::ratelimit::{AddressLimits, LoginFailures};
-use crate::sockets::{call, session};
-use crate::sockets::call::registry::ActiveCalls;
+use crate::sockets::session;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry::Registry;
 use crate::state::appearance::Appearances;
@@ -28,9 +27,6 @@ pub struct AppState {
 
     /// The appearance each user last declared
     pub appearances: Appearances,
-
-    /// Who is in each room's call
-    pub calls: ActiveCalls,
 
     /// What each user's linked account last reported
     pub platforms: ReportedPlatforms,
@@ -50,7 +46,6 @@ impl AppState {
             pool,
             registry: Registry::default(),
             appearances: Appearances::default(),
-            calls: ActiveCalls::default(),
             platforms: ReportedPlatforms::default(),
             address_limits: AddressLimits::default(),
             login_failures: LoginFailures::default(),
@@ -65,18 +60,6 @@ pub async fn disconnect(
 ) {
     session::registry::inform_users(&state.registry, &[user_id], ServerEvent::SessionRevoked);
     session::registry::remove(&state.registry, user_id);
-    leave_call(state, user_id).await;
-}
-
-/// Remove a user from their call and tell its room
-pub async fn leave_call(
-    state: &AppState,
-    user_id: Uuid,
-) {
-    if let Some(room_id) = call::registry::leave(&state.calls, user_id) {
-        let event = ServerEvent::ParticipantLeft { room_id, user_id };
-        broadcast(state, room_id, event).await;
-    }
 }
 
 /// Build every snapshot a viewer is sent
@@ -100,17 +83,6 @@ pub async fn snapshots(
             );
         }
         Err(e) => tracing::error!("could not read who shares a room with {viewer_id}: {e}")
-    }
-
-    match member_rooms(state, viewer_id).await {
-        Ok(room_ids) => {
-            events.push(
-                ServerEvent::CallSnapshot {
-                    calls: call::registry::snapshot(&state.calls, &room_ids)
-                }
-            );
-        }
-        Err(e) => tracing::error!("could not read the rooms of {viewer_id}: {e}")
     }
 
     events

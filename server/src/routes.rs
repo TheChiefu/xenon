@@ -1,7 +1,6 @@
 //! The HTTP router and the auth extractor.
 
 mod auth;
-mod call;
 mod files;
 mod me;
 mod messages;
@@ -162,7 +161,6 @@ pub fn router(state: AppState) -> Router {
             put(rooms::ban_user)
             .delete(rooms::unban_user)
         )
-        .route("/rooms/{id}/call", get(call::ws_handler))
 
         // Messages
         .route("/messages/{id}",

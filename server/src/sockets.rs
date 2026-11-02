@@ -1,6 +1,5 @@
 //! Connected users: the sockets they hold and what is pushed to them.
 
-pub mod call;
 pub mod session;
 
 use axum::extract::ws::{Message, WebSocket};

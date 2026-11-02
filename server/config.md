@@ -17,13 +17,13 @@ Every key in `config.toml` and its default. Missing keys use their default. If
 
 | Key | Default | Meaning |
 |-|-|-|
-| `ip` | `127.0.0.1` | Address the server listens on |
+| `ip` | `0.0.0.0` | Address the server listens on |
 | `port` | `3000` | Port the server listens on |
 | `certificate` | _unset_ | PEM certificate chain, serves HTTPS when set with `key` |
 | `key` | _unset_ | PEM private key for `certificate` |
 | `allowed_origins` | `[]` | Origins allowed to make cross-origin requests, `"*"` for any |
 | `cors_max_age` | `3600` | Seconds a browser caches a cross-origin preflight |
-| `trusted_proxies` | `["127.0.0.1", "::1"]` | Proxies whose `X-Forwarded-For` is read as the client IP |
+| `trusted_proxies` | `[]` | Proxies whose `X-Forwarded-For` is read as the client IP |
 | `public_url` | _unset_ | This server's public address, required by `[xbox]` and `[steam]` |
 | `request_timeout_seconds` | `30` | Seconds a request to Xbox, Steam or a push service waits |
 
@@ -94,12 +94,6 @@ When `ip` is a loopback address, `localhost` and loopback origins are allowed on
 | Key | Default | Meaning |
 |-|-|-|
 | `event_queue_size` | `32` | Live events queued per user |
-| `participants_max` | `10` | Most people in a call, at least `2` |
-| `reconnect_grace_seconds` | `30` | Seconds a dropped user keeps their place in a call |
-| `signal_size_max` | `"16KiB"` | Largest call setup message, at least `"8KiB"` |
-| `signals_per_second` | `50` | Call setup messages allowed per user per second |
-| `signal_queue_size` | `256` | Call setup messages queued per user |
-| `stun_url` | _unset_ | STUN server for calls, as `stun:host:port` |
 
 ## Optional services
 

@@ -1,6 +1,6 @@
 //! The `[network]` section of the config file.
 
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -71,18 +71,13 @@ impl Network {
 impl Default for Network {
     fn default() -> Self {
         Network {
-            ip: "127.0.0.1".to_string(),
+            ip: "0.0.0.0".to_string(),
             port: 3000,
             certificate: None,
             key: None,
             allowed_origins: Vec::new(),
             cors_max_age: (1 * HOUR / SECOND) as u64,
-
-            // Default to localhost as trusted proxy source
-            trusted_proxies: vec![
-                IpAddr::V4(Ipv4Addr::LOCALHOST),
-                IpAddr::V6(Ipv6Addr::LOCALHOST)
-            ],
+            trusted_proxies: Vec::new(),
             public_url: None,
             request_timeout_seconds: 30
         }
