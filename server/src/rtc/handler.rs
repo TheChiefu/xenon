@@ -100,6 +100,7 @@ async fn forward(
                 if let Some(peer) = registry::peer(&registry, sender_id) {
                     media = peer.media_of(init.receiver_id);
                 }
+                tracing::debug!("{sender_id} opened a track, media: {media:?}");
             }
             TrackRemoteEvent::OnRtpPacket(packet) => {
                 let Some(media) = media else {
