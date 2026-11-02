@@ -3,6 +3,7 @@
 //! https://www.w3.org/TR/webrtc/#rtcpeerconnection-interface
 
 use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 use argon2::password_hash::rand_core::{OsRng, RngCore};
@@ -13,7 +14,7 @@ use webrtc::media_stream::track_local::TrackLocal;
 use webrtc::media_stream::track_local::static_rtp::TrackLocalStaticRTP;
 use webrtc::peer_connection::{
     register_default_interceptors, MediaEngine, PeerConnection, PeerConnectionBuilder,
-    RTCIceCandidateType, RTCSessionDescription, Registry as Interceptors, SettingEngineBuilder,
+    RTCSessionDescription, Registry,
 };
 use webrtc::rtp_transceiver::{
     RtpSender, RTCRtpReceiverId, RTCRtpTransceiverDirection, RTCRtpTransceiverInit,
@@ -26,7 +27,7 @@ use crate::rtc::events::{
 };
 use crate::rtc::handler::{self, Handler};
 use crate::rtc::media::{self, Media};
-use crate::rtc::registry::Registry;
+use crate::rtc::connections::Connections;
 use crate::utils;
 
 // DATA STRUCTS //
@@ -66,8 +67,7 @@ pub async fn connect(
     user_id: Uuid,
     room_id: Uuid,
     port: u16,
-    public_ips: Vec<String>,
-    registry: Registry,
+    connections: Connections,
 ) -> Result<(Arc<Peer>, mpsc::UnboundedReceiver<String>)> {
     let (outbound, receiver) = mpsc::unbounded_channel();
     let (closing, _) = watch::channel(None);
@@ -84,20 +84,17 @@ pub async fn connect(
     };
     media_engine.register_codec(audio_codec, RtpCodecKind::Audio)?;
     media_engine.register_codec(video_codec, RtpCodecKind::Video)?;
-    let interceptors = register_default_interceptors(Interceptors::new(), &mut media_engine)?;
+    let interceptors = register_default_interceptors(Registry::new(), &mut media_engine)?;
 
-    // Without public addresses the machine's own addresses are advertised
-    // https://docs.rs/rtc/latest/rtc/peer_connection/configuration/setting_engine/struct.SettingEngineBuilder.html#method.with_nat_1to1_ips
-    let mut setting_engine = SettingEngineBuilder::new();
-    if !public_ips.is_empty() {
-        setting_engine = setting_engine.with_nat_1to1_ips(public_ips, RTCIceCandidateType::Host);
-    }
-    let setting_engine = setting_engine.build();
+    let addresses = vec![
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port).to_string(),
+        SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port).to_string()
+    ];
 
     let handler = Handler {
         user_id,
         room_id,
-        registry,
+        connections,
         outbound: outbound.clone(),
         closing: closing.clone()
     };
@@ -105,23 +102,20 @@ pub async fn connect(
     let connection = PeerConnectionBuilder::new()
         .with_media_engine(media_engine)
         .with_interceptor_registry(interceptors)
-        .with_setting_engine(setting_engine)
         .with_handler(Arc::new(handler))
-        .with_udp_addrs(vec![format!("0.0.0.0:{port}")])
+        .with_udp_addrs(addresses)
         .build()
         .await?;
     let connection: Arc<dyn PeerConnection> = Arc::new(connection);
 
-    let mut receivers = HashMap::new();
-    for media in Media::ALL {
-        let receive = RTCRtpTransceiverInit {
-            direction: RTCRtpTransceiverDirection::Recvonly,
-            streams: Vec::new(),
-            send_encodings: Vec::new()
-        };
-        let transceiver = connection.add_transceiver_from_kind(media.kind(), Some(receive)).await?;
-        receivers.insert(RTCRtpReceiverId::from(transceiver.id()), media);
-    }
+    let media = Media::Microphone;
+    let receive = RTCRtpTransceiverInit {
+        direction: RTCRtpTransceiverDirection::Recvonly,
+        streams: Vec::new(),
+        send_encodings: Vec::new()
+    };
+    let transceiver = connection.add_transceiver_from_kind(media.kind(), Some(receive)).await?;
+    let receivers = HashMap::from([(RTCRtpReceiverId::from(transceiver.id()), media)]);
 
     let peer = Peer {
         user_id,
@@ -139,12 +133,11 @@ pub async fn connect(
 
 impl Peer {
 
-    /// Add tracks carrying each of another user's media
+    /// Add a track carrying another user's microphone
     pub async fn add_sender(&self, sender_id: Uuid) -> Result<()> {
-        for media in Media::ALL {
-            let sent = self.send(sender_id, media).await?;
-            utils::mutex_lock(&self.sent).insert((sender_id, media), sent);
-        }
+        let media = Media::Microphone;
+        let sent = self.send(sender_id, media).await?;
+        utils::mutex_lock(&self.sent).insert((sender_id, media), sent);
 
         Ok(())
     }
@@ -275,15 +268,26 @@ impl Peer {
         let ssrc = OsRng.next_u32();
         let track = Arc::new(TrackLocalStaticRTP::new(media::track_of(sender_id, media, ssrc)));
 
-        let sender = self.connection.add_track(track.clone() as Arc<dyn TrackLocal>).await?;
+        // A new transceiver per track, as add_track would reuse one of this peer's own slots
+        // https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-addtransceiver
+        let send = RTCRtpTransceiverInit {
+            direction: RTCRtpTransceiverDirection::Sendonly,
+            streams: Vec::new(),
+            send_encodings: Vec::new()
+        };
+        let transceiver = self.connection
+            .add_transceiver_from_track(track.clone() as Arc<dyn TrackLocal>, Some(send))
+            .await?;
 
-        let sent = Sent {
+        let Some(sender) = transceiver.sender().await? else {
+            return Err(webrtc::error::Error::Other(format!("no sender for {sender_id}'s {media:?}")));
+        };
+
+        Ok(Sent {
             track,
             sender,
             ssrc
-        };
-
-        Ok(sent)
+        })
     }
 
     /// Whether an offer can be sent now, otherwise marks one as needed after the answer

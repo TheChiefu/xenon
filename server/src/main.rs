@@ -125,7 +125,7 @@ fn init_tracing() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| {
             tracing_subscriber::EnvFilter::new(
-                format!("xenon={},sqlx=warn", config::get().server.log_level)
+                format!("xenon={},sqlx=warn,webrtc=warn,rtc=warn", config::get().server.log_level)
             )
         });
 

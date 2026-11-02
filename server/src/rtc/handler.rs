@@ -2,20 +2,22 @@
 //!
 //! https://www.w3.org/TR/webrtc/#event-summary
 
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use tokio::sync::{mpsc, watch};
+use url::{Host, Url};
 use uuid::Uuid;
 use webrtc::media_stream::track_local::TrackLocal;
 use webrtc::media_stream::track_remote::{TrackRemote, TrackRemoteEvent};
 use webrtc::peer_connection::{
-    PeerConnectionEventHandler, RTCIceConnectionState, RTCPeerConnectionIceEvent,
-    RTCPeerConnectionState,
+    PeerConnectionEventHandler, RTCIceCandidate, RTCPeerConnectionIceEvent, RTCPeerConnectionState,
 };
 
+use crate::config;
+use crate::rtc::connections::{self, Connections};
 use crate::rtc::events::{RTCIceCandidateInit, RtcCloseCode, RtcServerEvent};
 use crate::rtc::media::Media;
-use crate::rtc::registry::{self, Registry};
 use crate::sockets;
 
 // DATA STRUCTS //
@@ -23,7 +25,7 @@ use crate::sockets;
 pub struct Handler {
     pub user_id: Uuid,
     pub room_id: Uuid,
-    pub registry: Registry,
+    pub connections: Connections,
     pub outbound: mpsc::UnboundedSender<String>,
     pub closing: Arc<watch::Sender<Option<RtcCloseCode>>>
 }
@@ -31,9 +33,42 @@ pub struct Handler {
 #[async_trait::async_trait]
 impl PeerConnectionEventHandler for Handler {
 
+    /// Send the browser this server address, and a copy with the public IP for callers outside the server's network
     /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onicecandidate
     async fn on_ice_candidate(&self, event: RTCPeerConnectionIceEvent) {
-        let init = match event.candidate.to_json() {
+        self.send_candidate(&event.candidate);
+
+        let Ok(host) = event.candidate.address.parse::<IpAddr>() else {
+            return;
+        };
+
+        for address in public_addresses().await {
+            if address.is_ipv4() == host.is_ipv4() && address != host {
+                let mut candidate = event.candidate.clone();
+                candidate.address = address.to_string();
+                self.send_candidate(&candidate);
+            }
+        }
+    }
+
+    /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onconnectionstatechange
+    async fn on_connection_state_change(&self, state: RTCPeerConnectionState) {
+        if state == RTCPeerConnectionState::Failed {
+            end(&self.closing, RtcCloseCode::Normal);
+        }
+    }
+
+    /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-ontrack
+    async fn on_track(&self, track: Arc<dyn TrackRemote>) {
+        tokio::spawn(forward(self.connections.clone(), self.room_id, self.user_id, track));
+    }
+}
+
+impl Handler {
+
+    /// Send a candidate to the browser
+    fn send_candidate(&self, candidate: &RTCIceCandidate) {
+        let init = match candidate.to_json() {
             Ok(init) => init,
             Err(e) => {
                 tracing::warn!("could not read a candidate for {}: {e}", self.user_id);
@@ -49,24 +84,6 @@ impl PeerConnectionEventHandler for Handler {
         };
 
         send(&self.outbound, &RtcServerEvent::Candidate { candidate });
-    }
-
-    /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onconnectionstatechange
-    async fn on_connection_state_change(&self, state: RTCPeerConnectionState) {
-        tracing::debug!("{} connection state: {state}", self.user_id);
-
-        if state == RTCPeerConnectionState::Failed {
-            end(&self.closing, RtcCloseCode::Normal);
-        }
-    }
-
-    async fn on_ice_connection_state_change(&self, state: RTCIceConnectionState) {
-        tracing::debug!("{} ice state: {state}", self.user_id);
-    }
-
-    /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-ontrack
-    async fn on_track(&self, track: Arc<dyn TrackRemote>) {
-        tokio::spawn(forward(self.registry.clone(), self.room_id, self.user_id, track));
     }
 }
 
@@ -94,7 +111,7 @@ pub fn end(closing: &watch::Sender<Option<RtcCloseCode>>, code: RtcCloseCode) {
 
 /// Copy a user's incoming media to everyone else in the room until the track ends
 async fn forward(
-    registry: Registry,
+    connections: Connections,
     room_id: Uuid,
     sender_id: Uuid,
     track: Arc<dyn TrackRemote>,
@@ -104,17 +121,16 @@ async fn forward(
     while let Some(event) = track.poll().await {
         match event {
             TrackRemoteEvent::OnOpen(init) => {
-                if let Some(peer) = registry::peer(&registry, sender_id) {
+                if let Some(peer) = connections::peer(&connections, sender_id) {
                     media = peer.media_of(init.receiver_id);
                 }
-                tracing::debug!("{sender_id} opened a track, media: {media:?}");
             }
             TrackRemoteEvent::OnRtpPacket(packet) => {
                 let Some(media) = media else {
                     continue;
                 };
 
-                for peer in registry::peers(&registry, room_id) {
+                for peer in connections::in_room(&connections, room_id) {
                     if peer.user_id == sender_id {
                         continue;
                     }
@@ -140,5 +156,29 @@ async fn forward(
             }
             _ => {}
         }
+    }
+}
+
+/// Look up the server's public IPv4 and IPv6 addresses
+async fn public_addresses() -> Vec<IpAddr> {
+    let Some(public_url) = &config::get().network.public_url else {
+        return Vec::new();
+    };
+
+    let Ok(url) = Url::parse(public_url) else {
+        return Vec::new();
+    };
+
+    match url.host() {
+        Some(Host::Ipv4(address)) => vec![IpAddr::V4(address)],
+        Some(Host::Ipv6(address)) => vec![IpAddr::V6(address)],
+        Some(Host::Domain(domain)) => match tokio::net::lookup_host((domain, 0)).await {
+            Ok(addresses) => addresses.map(|address| address.ip()).collect(),
+            Err(e) => {
+                tracing::error!("could not resolve network.public_url, advertising only the machine's own addresses: {e}");
+                Vec::new()
+            }
+        },
+        None => Vec::new()
     }
 }

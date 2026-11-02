@@ -108,15 +108,9 @@ pub fn vp8() -> RTCRtpCodec {
 /// Retransmission and keyframe requests a video receiver may send
 /// https://www.rfc-editor.org/rfc/rfc4585#section-4.2
 fn video_feedback() -> Vec<RTCPFeedback> {
-    let feedback = [("nack", ""), ("nack", "pli"), ("ccm", "fir")];
-
-    let mut list = Vec::new();
-    for (typ, parameter) in feedback {
-        list.push(RTCPFeedback {
-            typ: typ.to_owned(),
-            parameter: parameter.to_owned()
-        });
-    }
-
-    list
+    vec![
+        RTCPFeedback { typ: "nack".to_owned(), parameter: String::new() },
+        RTCPFeedback { typ: "nack".to_owned(), parameter: "pli".to_owned() },
+        RTCPFeedback { typ: "ccm".to_owned(), parameter: "fir".to_owned() },
+    ]
 }

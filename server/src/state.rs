@@ -30,7 +30,7 @@ pub struct AppState {
 
     /// Who is connected over RTC in each room
     #[cfg(feature = "rtc")]
-    pub rtc: crate::rtc::registry::Registry,
+    pub rtc: crate::rtc::connections::Connections,
 
     /// What each user's linked account last reported
     pub platforms: ReportedPlatforms,
@@ -51,7 +51,7 @@ impl AppState {
             registry: Registry::default(),
             appearances: Appearances::default(),
             #[cfg(feature = "rtc")]
-            rtc: crate::rtc::registry::Registry::default(),
+            rtc: crate::rtc::connections::Connections::default(),
             platforms: ReportedPlatforms::default(),
             address_limits: AddressLimits::default(),
             login_failures: LoginFailures::default(),
@@ -68,7 +68,7 @@ pub async fn disconnect(
     session::registry::remove(&state.registry, user_id);
 
     #[cfg(feature = "rtc")]
-    crate::rtc::end_user(state, user_id);
+    crate::rtc::end_user(state, user_id, None, crate::rtc::events::RtcCloseCode::Normal);
 }
 
 /// Build every snapshot a viewer is sent
@@ -99,7 +99,7 @@ pub async fn snapshots(
         Ok(room_ids) => {
             events.push(
                 ServerEvent::RtcSnapshot {
-                    rooms: crate::rtc::registry::snapshot(&state.rtc, &room_ids)
+                    rooms: crate::rtc::connections::snapshot(&state.rtc, &room_ids)
                 }
             );
         }

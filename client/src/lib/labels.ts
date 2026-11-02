@@ -48,8 +48,7 @@ export const LABELS_RTC_CLOSE: Partial<Record<RtcCloseCode, string>> = {
   [RtcCloseCode.server_error]: "The server could not add you to the call",
   [RtcCloseCode.full]: "The call is full",
   [RtcCloseCode.kicked]: "You were removed from the call",
-  [RtcCloseCode.no_port]: "The server has no free connection slots",
-};
+  [RtcCloseCode.no_port]: "The server has no free connection slots",};
 
 export const LABELS_DEVICE: Record<Device, string> = {
   [Device.windows]: "Windows",

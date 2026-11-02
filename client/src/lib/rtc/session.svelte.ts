@@ -1,16 +1,16 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import type { RtcCloseCode, RtcServerEvent } from "@/bindings/rtc/events";
-import { RtcEventType, ServerEventType } from "@/lib/events";
+import type { RtcCloseCode } from "@/bindings/rtc/events";
+import { ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
-import * as audio from "@/lib/rtc/audio.svelte";
 import * as connection from "@/lib/rtc/connection.svelte";
 import * as levels from "@/lib/rtc/levels.svelte";
-import * as socket from "@/lib/rtc/socket.svelte";
 import * as profile from "@/lib/users/profile.svelte";
 import { LABELS_RTC_CLOSE, MSG_MICROPHONE_DENIED } from "@/lib/labels";
 
 // A screen share's stream id is the user id with this added
 const SCREEN_SUFFIX: string = ":screen";
+
+export const VOLUME_MAX: number = 100;
 
 // STATE //
 
@@ -25,7 +25,8 @@ const volumes: SvelteMap<string, number> = new SvelteMap();
 // Participants muted on this client only
 const muted_users: SvelteSet<string> = new SvelteSet();
 
-export const VOLUME_MAX: number = 100;
+// Playback of each participant's microphone, keyed by user id
+const players: Map<string, HTMLAudioElement> = new Map();
 
 // GETTERS //
 
@@ -72,11 +73,10 @@ export async function join(roomId: string): Promise<void> {
     return;
   }
 
-  end();
+  leave();
 
-  connection.open(microphone, receiveTrack, end);
+  connection.open(roomId, microphone, play, closed);
   connection.setMicrophoneEnabled(mic_enabled);
-  audio.setAllMuted(!sound_enabled);
 
   // Measure own microphone for the speaking bar
   const self_id = profile.get()?.id;
@@ -85,14 +85,20 @@ export async function join(roomId: string): Promise<void> {
   }
 
   room_id = roomId;
-  socket.open(roomId, receive, closed);
 }
 
 export function leave(): void {
-  end();
+  connection.close();
+
+  for (const user_id of [...players.keys()]) {
+    stop(user_id);
+  }
+
+  levels.clear();
+  room_id = null;
 }
 
-// TOGGLES //
+// SETTINGS //
 
 export function setMicEnabled(enabled: boolean): void {
   mic_enabled = enabled;
@@ -101,13 +107,17 @@ export function setMicEnabled(enabled: boolean): void {
 
 export function setSoundEnabled(enabled: boolean): void {
   sound_enabled = enabled;
-  audio.setAllMuted(!enabled);
+  players.forEach((audio, user_id) => applyMuted(user_id, audio));
 }
 
 // Sets one participant's volume, as a percent
 export function setVolume(user_id: string, percent: number): void {
   volumes.set(user_id, percent);
-  audio.setVolume(user_id, percent / VOLUME_MAX);
+
+  const audio = players.get(user_id);
+  if (audio !== undefined) {
+    audio.volume = percent / VOLUME_MAX;
+  }
 }
 
 // Mutes or unmutes one participant on this client
@@ -118,45 +128,57 @@ export function setUserMuted(user_id: string, muted: boolean): void {
     muted_users.delete(user_id);
   }
 
-  audio.setUserMuted(user_id, muted);
-}
-
-// EVENTS //
-
-function receive(event: RtcServerEvent): void {
-  switch (event.type) {
-    case RtcEventType.offer:
-      connection.receiveOffer(event.description).catch(console.warn);
-      break;
-
-    case RtcEventType.candidate:
-      connection.receiveCandidate(event.candidate).catch(console.warn);
-      break;
+  const audio = players.get(user_id);
+  if (audio !== undefined) {
+    applyMuted(user_id, audio);
   }
 }
 
+// HELPERS //
+
 // Plays a participant's microphone. Camera and screen share are not shown.
-function receiveTrack(event: RTCTrackEvent): void {
+function play(event: RTCTrackEvent): void {
   const stream = event.streams[0];
 
   if (stream === undefined || event.track.kind !== "audio" || stream.id.endsWith(SCREEN_SUFFIX)) {
     return;
   }
 
-  audio.play(stream.id, stream);
+  const user_id = stream.id;
+  stop(user_id);
+
+  const audio = new Audio();
+  audio.srcObject = stream;
+  audio.volume = getVolume(user_id) / VOLUME_MAX;
+  applyMuted(user_id, audio);
+
+  players.set(user_id, audio);
+  levels.watch(user_id, stream);
+
+  // Playback started before any user interaction is blocked by the browser
+  audio.play().catch(console.warn);
 }
 
-// Ends the session after the RTC socket closes, showing why when known
+function stop(user_id: string): void {
+  const audio = players.get(user_id);
+
+  if (audio === undefined) {
+    return;
+  }
+
+  audio.srcObject = null;
+  players.delete(user_id);
+  levels.unwatch(user_id);
+}
+
+function applyMuted(user_id: string, audio: HTMLAudioElement): void {
+  audio.muted = !sound_enabled || muted_users.has(user_id);
+}
+
+// Ends the session after the RTC socket closes or the connection fails, showing why when known
 function closed(code: number): void {
   failure = LABELS_RTC_CLOSE[code as RtcCloseCode] ?? null;
-  end();
-}
-
-function end(): void {
-  socket.close();
-  connection.close();
-  audio.clear();
-  room_id = null;
+  leave();
 }
 
 // LISTENERS //
@@ -164,6 +186,6 @@ function end(): void {
 // Stop playing a participant who left this room
 events.subscribe(ServerEventType.rtc_left, (event) => {
   if (event.room_id === room_id) {
-    audio.stop(event.user_id);
+    stop(event.user_id);
   }
 });

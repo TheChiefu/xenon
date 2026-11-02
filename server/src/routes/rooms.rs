@@ -234,7 +234,7 @@ pub async fn ban_user(
     state::broadcast(&app_state, room_id, event).await;
 
     #[cfg(feature = "rtc")]
-    crate::rtc::end_in_room(&app_state, room_id, target_id, crate::rtc::events::RtcCloseCode::Kicked);
+    crate::rtc::end_user(&app_state, target_id, Some(room_id), crate::rtc::events::RtcCloseCode::Kicked);
 
     Ok(StatusCode::NO_CONTENT)
 }
