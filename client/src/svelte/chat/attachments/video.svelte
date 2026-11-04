@@ -19,9 +19,8 @@ let { url, filename }: Props = $props();
 
     .entry {
         height: var(--media-height);
-        min-width: 0;
-        max-width: 100%;
-        padding: 1rem;
+        min-width: 95%;
+        max-width: 95%;
         border: 1px solid var(--border);
     }
 
