@@ -17,7 +17,7 @@
 :root {
   --icon-size: 1.25rem;
   --status-bar-width: 0.4rem;
-  --media-height: clamp(12rem, 30vh, 30rem);
+  --media-height: clamp(12rem, 50vh, 40rem);
   --file-height: 3.5rem;
   --file-width: 24rem;
 }
