@@ -124,8 +124,9 @@ async fn load_blocked_addresses(app_state: &AppState) -> Result<()> {
 fn init_tracing() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| {
+            // Browsers offer newer DTLS extensions the library skips, warning about each one
             tracing_subscriber::EnvFilter::new(
-                format!("xenon={},sqlx=warn,webrtc=warn,rtc=warn", config::get().server.log_level)
+                format!("xenon={},sqlx=warn,webrtc=warn,rtc=warn,rtc_dtls=error", config::get().server.log_level)
             )
         });
 

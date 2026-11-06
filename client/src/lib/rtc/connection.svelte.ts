@@ -6,20 +6,28 @@ import type {
   RTCSessionDescriptionInit as SessionDescription,
   RtcClientEvent,
   RtcServerEvent,
+  RtcStream,
 } from "@/bindings/rtc/events";
-import { RtcEventType } from "@/lib/events";
+import { LocalEvent, RtcEventType } from "@/lib/events";
+import * as events from "@/lib/events";
 import * as session from "@/lib/connection/session.svelte";
 
 // The server's offer opens with the slots this browser sends in, in this order
 const SLOT_MICROPHONE: number = 0;
-const SLOTS_SENT: number = 1;
+const SLOT_SCREEN_AUDIO: number = 1;
+const SLOT_SCREEN_VIDEO: number = 2;
+const SLOTS_SENT: number = 3;
 
 let socket: WebSocket | null = null;
 let connection: RTCPeerConnection | null = null;
 let microphone: MediaStream | null = null;
+let screen: MediaStream | null = null;
 
 // Candidates that arrived before the server's first offer was applied
 let pending: IceCandidate[] = [];
+
+// Streams from the others in this call
+let streams: RtcStream[] = [];
 
 // CONNECTION //
 
@@ -39,6 +47,7 @@ export function open(
 
   microphone = stream;
   pending = [];
+  streams = [];
 
   const address = new URL(`${url}/rooms/${roomId}/rtc`);
   address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
@@ -84,7 +93,7 @@ export function open(
   };
 }
 
-// Closes the socket and the connection without reporting it, and stops the microphone
+// Closes the socket and the connection without reporting it, and stops sending
 export function close(): void {
   if (socket !== null) {
     socket.onclose = null;
@@ -93,16 +102,34 @@ export function close(): void {
 
   connection?.close();
   microphone?.getTracks().forEach((track) => track.stop());
+  screen?.getTracks().forEach((track) => track.stop());
 
   socket = null;
   connection = null;
   microphone = null;
+  screen = null;
   pending = [];
+  streams = [];
+}
+
+// The stream with this id
+export function findStream(stream_id: string): RtcStream | undefined {
+  return streams.find((entry) => entry.stream_id === stream_id);
 }
 
 // Enables or disables the microphone without renegotiating
 export function setMicrophoneEnabled(enabled: boolean): void {
   microphone?.getAudioTracks().forEach((track) => track.enabled = enabled);
+}
+
+// Sends a screen share, or stops it when none is given, without renegotiating
+export async function setScreen(stream: MediaStream | null): Promise<void> {
+  screen?.getTracks().forEach((track) => track.stop());
+  screen = stream;
+
+  if (connection !== null && connection.remoteDescription !== null) {
+    await fillSlots(connection);
+  }
 }
 
 export function send(event: RtcClientEvent): void {
@@ -116,11 +143,16 @@ export function send(event: RtcClientEvent): void {
 async function receive(event: RtcServerEvent): Promise<void> {
   switch (event.type) {
     case RtcEventType.offer:
+      streams = event.streams;
       await receiveOffer(event.description);
       break;
 
     case RtcEventType.candidate:
       await receiveCandidate(event.candidate);
+      break;
+
+    case RtcEventType.screen:
+      events.dispatch(LocalEvent.screen_shared, event);
       break;
   }
 }
@@ -133,16 +165,7 @@ async function receiveOffer(description: SessionDescription): Promise<void> {
   }
 
   await connection.setRemoteDescription(description);
-
-  // Every slot this browser sends in sends, so a track can fill one later without a new offer
-  const slots = connection.getTransceivers().slice(0, SLOTS_SENT);
-  slots.forEach((slot) => slot.direction = "sendonly");
-
-  const track = microphone?.getAudioTracks()[0] ?? null;
-  const slot = slots[SLOT_MICROPHONE];
-  if (slot !== undefined && slot.sender.track !== track) {
-    await slot.sender.replaceTrack(track);
-  }
+  await fillSlots(connection);
 
   for (const candidate of pending) {
     await connection.addIceCandidate(candidate);
@@ -156,6 +179,26 @@ async function receiveOffer(description: SessionDescription): Promise<void> {
     type: RtcEventType.answer,
     description: { type: "answer", sdp: answer.sdp ?? "" },
   });
+}
+
+// Every slot this browser sends in sends, so a track can fill one later without a new offer
+async function fillSlots(opened: RTCPeerConnection): Promise<void> {
+  const slots = opened.getTransceivers().slice(0, SLOTS_SENT);
+  slots.forEach((slot) => slot.direction = "sendonly");
+
+  await fillSlot(slots[SLOT_MICROPHONE], microphone?.getAudioTracks()[0] ?? null);
+  await fillSlot(slots[SLOT_SCREEN_AUDIO], screen?.getAudioTracks()[0] ?? null);
+  await fillSlot(slots[SLOT_SCREEN_VIDEO], screen?.getVideoTracks()[0] ?? null);
+}
+
+// https://www.w3.org/TR/webrtc/#dom-rtcrtpsender-replacetrack
+async function fillSlot(
+  slot: RTCRtpTransceiver | undefined,
+  track: MediaStreamTrack | null,
+): Promise<void> {
+  if (slot !== undefined && slot.sender.track !== track) {
+    await slot.sender.replaceTrack(track);
+  }
 }
 
 // https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-addicecandidate

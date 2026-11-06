@@ -5,9 +5,12 @@
 pub mod connections;
 pub mod events;
 pub mod socket;
+mod forwarding;
 mod handler;
+mod link;
 mod media;
 mod peer;
+mod signal;
 
 use std::sync::Arc;
 
@@ -32,14 +35,16 @@ pub async fn leave(
     };
 
     for other in &remaining {
-        other.remove_sender(peer.user_id).await;
+        other.forwarding.remove_sender(peer.user_id).await;
         other.negotiate().await;
     }
 
     drop(lock);
 
-    peer.end(RtcCloseCode::Normal);
-    peer.close().await;
+    peer.signal.end(RtcCloseCode::Normal);
+    if let Err(e) = peer.link.close().await {
+        tracing::warn!("could not close the connection of {}: {e}", peer.user_id);
+    }
 
     let event = ServerEvent::RtcLeft { room_id: peer.room_id, user_id: peer.user_id };
     state::broadcast(state, peer.room_id, event).await;
@@ -57,7 +62,7 @@ pub fn end_user(
     };
 
     if room_id.is_none_or(|room_id| room_id == peer.room_id) {
-        peer.end(code);
+        peer.signal.end(code);
     }
 }
 
@@ -67,6 +72,6 @@ pub fn end_room(
     room_id: Uuid,
 ) {
     for peer in connections::in_room(&state.rtc, room_id) {
-        peer.end(RtcCloseCode::Normal);
+        peer.signal.end(RtcCloseCode::Normal);
     }
 }

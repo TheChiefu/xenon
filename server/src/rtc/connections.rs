@@ -1,6 +1,6 @@
 ﻿//! Who is connected over RTC in each room
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 use tokio::sync::Mutex;
@@ -19,7 +19,10 @@ struct Rooms {
     by_id: HashMap<Uuid, HashMap<Uuid, Arc<Peer>>>,
 
     /// The room a user is connected to
-    by_user: HashMap<Uuid, Uuid>
+    by_user: HashMap<Uuid, Uuid>,
+
+    /// Users sharing their screen
+    sharing: HashSet<Uuid>
 }
 
 #[derive(Clone, Default)]
@@ -70,8 +73,23 @@ pub fn remove(connections: &Connections, peer: &Arc<Peer>) -> Option<Vec<Arc<Pee
     }
 
     rooms.by_user.remove(&peer.user_id);
+    rooms.sharing.remove(&peer.user_id);
 
     Some(remaining)
+}
+
+pub fn set_sharing(connections: &Connections, user_id: Uuid, sharing: bool) {
+    let mut rooms = utils::write_lock(&connections.rooms);
+
+    if sharing {
+        rooms.sharing.insert(user_id);
+    } else {
+        rooms.sharing.remove(&user_id);
+    }
+}
+
+pub fn is_sharing(connections: &Connections, user_id: Uuid) -> bool {
+    utils::read_lock(&connections.rooms).sharing.contains(&user_id)
 }
 
 pub fn peer(connections: &Connections, user_id: Uuid) -> Option<Arc<Peer>> {

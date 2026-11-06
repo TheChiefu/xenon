@@ -2,13 +2,18 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { RtcRoom } from "@/bindings/rtc/events";
 import { LocalEvent, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
+import * as users from "@/lib/users/data.svelte";
 
 // Users connected over RTC in each of the user's rooms, keyed by room id
 const rooms: SvelteMap<string, SvelteSet<string>> = new SvelteMap();
 
 // GETTERS //
 
-export function get(room_id: string): string[] {
+export function get(room_id: string | null): string[] {
+  if (room_id === null || room_id === undefined) {
+    return []
+  } 
+
   const participants = rooms.get(room_id);
 
   if (participants === undefined) {
@@ -16,6 +21,15 @@ export function get(room_id: string): string[] {
   }
 
   return [...participants];
+}
+
+// Participants in a room's call, ordered by display name
+export function getSorted(room_id: string | null): string[] {
+  return get(room_id).toSorted(users.compareNames);
+}
+
+export function hasCall(room_id: string): boolean {
+  return (rooms.get(room_id)?.size ?? 0) > 0;
 }
 
 // LISTENERS //

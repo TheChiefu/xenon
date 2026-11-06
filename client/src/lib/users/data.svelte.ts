@@ -202,6 +202,13 @@ export function getDisplayName(id: string | null): string {
   return user.display_name;
 }
 
+// Orders two users by display name
+export function compareNames(a: string, b: string): number {
+  const name_a = getDisplayName(a);
+  const name_b = getDisplayName(b);
+  return name_a.localeCompare(name_b);
+}
+
 export function getAvatar(id: string): FetchedFile | undefined {
   return avatars.get(id);
 }

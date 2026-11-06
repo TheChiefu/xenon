@@ -14,8 +14,9 @@
   import BottomToolbar from "./toolbar/bottom.svelte";
   import Container from "./panes/container.svelte";
   import Rooms from "./panes/rooms.svelte";
-  import Details from "./panes/details.svelte";
-  import Chat from "./chat/area.svelte";
+  import Active from "./call/active.svelte";
+  import Preview from "./call/preview.svelte";
+  import Content from "./content.svelte";
   import Xbox from "./panes/xbox.svelte";
   import Inbox from "./panes/inbox.svelte";
   import ContextMenu from "./context_menu.svelte";
@@ -46,7 +47,7 @@
   import * as events from "@/lib/events";
 
   import icon_rooms from "@/assets/icons/door-open.svg?raw";
-  import icon_users from "@/assets/icons/users.svg?raw";
+  import icon_call from "@/assets/icons/user-broadcast.svg?raw";
   import icon_inbox from "@/assets/icons/mail.svg?raw";
   import icon_search from "@/assets/icons/search.svg?raw";
 
@@ -55,8 +56,8 @@
 
   // Keep track of which panes are open or not
   const opened: Record<Pane, boolean> = $state({
-    [Pane.room]: false,
-    [Pane.details]: false,
+    [Pane.rooms]: false,
+    [Pane.call]: false,
     [Pane.xbox]: false,
     [Pane.inbox]: false,
   });
@@ -67,16 +68,16 @@
       {
         label: "Rooms",
         icon: icon_rooms,
-        active: panes.isOpen(Pane.room),
+        active: panes.isOpen(Pane.rooms),
         kind: Kind.Regular,
-        onclick: () => panes.toggle(Pane.room),
+        onclick: () => panes.toggle(Pane.rooms),
       },
       {
-        label: "Details",
-        icon: icon_users,
-        active: panes.isOpen(Pane.details),
+        label: "Call",
+        icon: icon_call,
+        active: panes.isOpen(Pane.call),
         kind: Kind.Regular,
-        onclick: () => panes.toggle(Pane.details),
+        onclick: () => panes.toggle(Pane.call),
       },
       {
         label: "Inbox",
@@ -160,22 +161,23 @@
     <!-- Togglable Panes -->
     <div class="panes">
 
-      <!-- Room Navigator -->
-      {#if opened[Pane.room]}
-        <Container pane={Pane.room}>
-          <Rooms/>
+      <!-- Rooms and Members -->
+      {#if opened[Pane.rooms]}
+        <Container pane={Pane.rooms}>
+          <Rooms {roomId} open={panes.isOpen(Pane.rooms)}/>
         </Container>
       {/if}
 
-      <!-- Room Details -->
-      {#if opened[Pane.details]}
-        <Container pane={Pane.details}>
-          <Details {roomId} open={panes.isOpen(Pane.details)}/>
+      <!-- Call -->
+      {#if opened[Pane.call]}
+        <Container pane={Pane.call}>
+          <Preview {roomId}/>
+          <Active/>
         </Container>
       {/if}
 
-      <!-- Chat Box: Always loaded-->
-      <Chat {roomId}/>
+      <!-- Chat and Stream: Always loaded-->
+      <Content {roomId}/>
 
       {#if opened[Pane.inbox]}
         <Container pane={Pane.inbox}>

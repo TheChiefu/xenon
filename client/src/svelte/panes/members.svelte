@@ -24,7 +24,7 @@
 
     return members.get(roomId);
   });
-  const ordered_ids: string[] = $derived(member_ids.toSorted(compareMembers));
+  const ordered_ids: string[] = $derived(member_ids.toSorted(users.compareNames));
   let failure: string | null = $state(null);
 
   // Loads members of a selected room
@@ -66,12 +66,6 @@
     return Number(a.availability === Availability.away) - Number(b.availability === Availability.away);
   }
 
-  // Compare to members to see who is before or after the other
-  function compareMembers(a: string, b: string): number {
-    const name_a = users.getDisplayName(a);
-    const name_b = users.getDisplayName(b);
-    return name_a.localeCompare(name_b);
-  }
 
 </script>
 
@@ -113,6 +107,7 @@
   /* Rows */
 
   .member {
+    flex: none;
     --avatar-size: 3rem;
     position: relative;
     height: var(--avatar-size);
@@ -191,7 +186,6 @@
     font-size: 0.78rem;
   }
 
-  
   .device {
     flex: none;
     margin-right: 0.5rem;

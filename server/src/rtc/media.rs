@@ -1,7 +1,11 @@
 //! The media a user sends the server, and how each is encoded
 
+use serde::Serialize;
 use uuid::Uuid;
 use webrtc::media_stream::MediaStreamTrack;
+
+#[cfg(feature = "ts_bindings")]
+use ts_rs::TS;
 
 use ::rtc::peer_connection::configuration::media_engine::{MIME_TYPE_OPUS, MIME_TYPE_VP8};
 use ::rtc::rtp_transceiver::rtp_sender::{
@@ -17,18 +21,18 @@ const OPUS_FORMAT_PARAMETERS: &str = "minptime=10;useinbandfec=1";
 // DATA STRUCTS //
 
 /// What a user sends the server, each in a slot of its own
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "rtc/events.ts", repr(enum = name)))]
+#[serde(rename_all = "snake_case")]
 pub enum Media {
     Microphone,
-    Camera,
     ScreenAudio,
     ScreenVideo
 }
 
 impl Media {
-    pub const ALL: [Media; 4] = [
+    pub const ALL: [Media; 3] = [
         Media::Microphone,
-        Media::Camera,
         Media::ScreenAudio,
         Media::ScreenVideo
     ];
@@ -36,36 +40,23 @@ impl Media {
     pub fn kind(self) -> RtpCodecKind {
         match self {
             Media::Microphone | Media::ScreenAudio => RtpCodecKind::Audio,
-            Media::Camera | Media::ScreenVideo => RtpCodecKind::Video
-        }
-    }
-
-    fn name(self) -> &'static str {
-        match self {
-            Media::Microphone => "microphone",
-            Media::Camera => "camera",
-            Media::ScreenAudio => "screen_audio",
-            Media::ScreenVideo => "screen_video"
+            Media::ScreenVideo => RtpCodecKind::Video
         }
     }
 }
 
 // PUBLIC METHODS //
 
-/// A track of a user's media. Its stream id is `{user_id}` for the microphone and
-/// camera, and `{user_id}:screen` for a screen share.
+/// A track of a user's media, in the stream it plays with
 /// https://www.w3.org/TR/mediacapture-streams/#dom-mediastream-id
-pub fn track_of(sender_id: Uuid, media: Media, ssrc: u32) -> MediaStreamTrack {
+pub fn track_of(media: Media, stream_id: Uuid, ssrc: u32) -> MediaStreamTrack {
     let codec = match media.kind() {
         RtpCodecKind::Video => vp8(),
         _ => opus()
     };
 
-    let stream_id = match media {
-        Media::Microphone | Media::Camera => sender_id.to_string(),
-        Media::ScreenAudio | Media::ScreenVideo => format!("{sender_id}:screen")
-    };
-    let track_id = format!("{sender_id}-{}", media.name());
+    let stream_id = stream_id.to_string();
+    let track_id = Uuid::now_v7().to_string();
     let label = track_id.clone();
 
     let coding = RTCRtpCodingParameters {

@@ -41,6 +41,7 @@ export enum RtcEventType {
   answer = "answer",
   candidate = "candidate",
   kick = "kick",
+  screen = "screen",
 }
 
 // Check the enum has a matching entry for each RTC socket event type in the bindings
@@ -60,6 +61,7 @@ export enum LocalEvent {
   rooms_changed = "rooms_changed",
   room_settings_requested = "room_settings_requested",
   search_requested = "search_requested",
+  screen_shared = "screen_shared",
 }
 
 // A question with one button per choice, answered with the clicked button's position, or null when dismissed

@@ -25,7 +25,6 @@
   const BOTTOM_MARGIN = 4; // Pixels from the bottom still counted as at the bottom
   const KEY_SCROLL_POS = "scroll_positions";
 
-  const roomName: string = $derived(roomId === null ? "" : room.get(roomId)?.name ?? "");
   const roomMessages: MessageInfo[] = $derived(roomId === null ? [] : messages.get(roomId));
   const selfId: string = $derived(profile.get()?.id ?? "");
   const canDeleteAny: boolean = $derived(roomId !== null && canDeleteOthers(roomId));
@@ -283,11 +282,6 @@
     align-items: center;
   }
 
-  .header h3 {
-    margin-right: auto;
-    font-size: 1rem;
-  }
-
   .messages {
     flex: 1;
     min-height: 0;
@@ -308,14 +302,13 @@
 
 <div class="chat">
 
-  <div class="header">
-    <h3>{roomName}</h3>
-    {#if roomId !== null && messages.hasOlderMessages(roomId)}
+  {#if roomId !== null && messages.hasOlderMessages(roomId)}
+    <div class="header">
       <button class="icon-btn" aria-label="Load More" title="Load More" onclick={showOlder}>
         <span class="icon" aria-hidden="true">{@html icon_arrow_up}</span>
       </button>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   <div class="messages" bind:this={list} onscroll={onScroll} onscrollend={savePositions}>
     <div bind:this={content}>

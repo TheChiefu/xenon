@@ -5,7 +5,6 @@
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, watch};
 use url::{Host, Url};
 use uuid::Uuid;
 use webrtc::media_stream::track_local::TrackLocal;
@@ -18,7 +17,7 @@ use crate::config;
 use crate::rtc::connections::{self, Connections};
 use crate::rtc::events::{RTCIceCandidateInit, RtcCloseCode, RtcServerEvent};
 use crate::rtc::media::Media;
-use crate::sockets;
+use crate::rtc::signal::Signal;
 
 // DATA STRUCTS //
 
@@ -26,8 +25,7 @@ pub struct Handler {
     pub user_id: Uuid,
     pub room_id: Uuid,
     pub connections: Connections,
-    pub outbound: mpsc::UnboundedSender<String>,
-    pub closing: Arc<watch::Sender<Option<RtcCloseCode>>>
+    pub signal: Arc<Signal>
 }
 
 #[async_trait::async_trait]
@@ -54,7 +52,7 @@ impl PeerConnectionEventHandler for Handler {
     /// https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onconnectionstatechange
     async fn on_connection_state_change(&self, state: RTCPeerConnectionState) {
         if state == RTCPeerConnectionState::Failed {
-            end(&self.closing, RtcCloseCode::Normal);
+            self.signal.end(RtcCloseCode::Normal);
         }
     }
 
@@ -83,28 +81,8 @@ impl Handler {
             usernameFragment: init.username_fragment
         };
 
-        send(&self.outbound, &RtcServerEvent::Candidate { candidate });
+        self.signal.send(&RtcServerEvent::Candidate { candidate });
     }
-}
-
-// PUBLIC METHODS //
-
-/// Queue an event for a peer's RTC socket
-pub fn send(outbound: &mpsc::UnboundedSender<String>, event: &RtcServerEvent) {
-    if let Some(text) = sockets::encode(event) {
-        let _ = outbound.send(text);
-    }
-}
-
-/// Ask for a peer's RTC socket to close, keeping the first code given
-pub fn end(closing: &watch::Sender<Option<RtcCloseCode>>, code: RtcCloseCode) {
-    closing.send_if_modified(|current| {
-        if current.is_some() {
-            return false;
-        }
-        *current = Some(code);
-        true
-    });
 }
 
 // HELPER METHODS //
@@ -122,7 +100,7 @@ async fn forward(
         match event {
             TrackRemoteEvent::OnOpen(init) => {
                 if let Some(peer) = connections::peer(&connections, sender_id) {
-                    media = peer.media_of(init.receiver_id);
+                    media = peer.forwarding.media_of(init.receiver_id);
                 }
             }
             TrackRemoteEvent::OnRtpPacket(packet) => {
@@ -135,7 +113,7 @@ async fn forward(
                         continue;
                     }
 
-                    let Some((track, ssrc)) = peer.sent_from(sender_id, media) else {
+                    let Some((track, ssrc)) = peer.forwarding.sink(sender_id, media) else {
                         continue;
                     };
 

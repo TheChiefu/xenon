@@ -11,6 +11,14 @@ export function get(id: RoomId): RoomInfo | undefined {
   return rooms.get(id);
 }
 
+export function getName(id: RoomId | null): string {
+  if (id === null) {
+    return "";
+  }
+
+  return rooms.get(id)?.name ?? "";
+}
+
 export function list(): RoomInfo[] {
   return [...rooms.values()];
 }

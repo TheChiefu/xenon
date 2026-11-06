@@ -64,12 +64,12 @@
   flex: none;
 }
 
-.panes > .pane-room {
-  width: 19rem;
+.panes > .pane-rooms {
+  width: 16rem;
 }
 
-.panes > .pane-details {
-  width: 18rem;
+.panes > .pane-call {
+  width: 16rem;
 }
 
 .panes > .pane-inbox,
@@ -99,6 +99,23 @@
   position: absolute;
   inset: 0;
   z-index: 1;
+}
+
+
+/* Header Bars */
+
+.header-bar {
+  flex: none;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+
+.header-bar h3 {
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 

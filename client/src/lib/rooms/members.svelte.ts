@@ -32,6 +32,14 @@ export function getPermissions(roomId: string, userId: string): Permission[] {
   return permissions.get(roomId)?.get(userId) ?? [];
 }
 
+export function hasPermission(roomId: string | null, userId: string, permission: Permission): boolean {
+  if (roomId === null) {
+    return false;
+  }
+
+  return getPermissions(roomId, userId).includes(permission);
+}
+
 export function hasPermissions(roomId: string, userId: string): boolean {
   return permissions.get(roomId)?.has(userId) ?? false;
 }

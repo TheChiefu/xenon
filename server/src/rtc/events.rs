@@ -8,6 +8,8 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::rtc::media::Media;
+
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
@@ -54,7 +56,8 @@ pub struct RTCIceCandidateInit {
 pub enum RtcClientEvent {
     Answer { description: RTCSessionDescriptionInit },
     Candidate { candidate: RTCIceCandidateInit },
-    Kick { user_id: Uuid }
+    Kick { user_id: Uuid },
+    Screen { sharing: bool }
 }
 
 /// What the server sends over an RTC socket
@@ -62,8 +65,9 @@ pub enum RtcClientEvent {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "rtc/events.ts"))]
 pub enum RtcServerEvent {
-    Offer { description: RTCSessionDescriptionInit },
-    Candidate { candidate: RTCIceCandidateInit }
+    Offer { description: RTCSessionDescriptionInit, streams: Vec<RtcStream> },
+    Candidate { candidate: RTCIceCandidateInit },
+    Screen { user_id: Uuid, sharing: bool }
 }
 
 /// Codes the server closes an RTC socket with
@@ -80,4 +84,13 @@ pub enum RtcCloseCode {
     Full = 4001,
     Kicked = 4002,
     NoPort = 4003
+}
+
+/// A stream offer
+#[derive(Serialize, Clone)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "rtc/events.ts"))]
+pub struct RtcStream {
+    pub stream_id: Uuid,
+    pub user_id: Uuid,
+    pub media: Media
 }

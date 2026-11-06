@@ -15,7 +15,7 @@ use crate::config;
 use crate::error::AppError;
 use crate::routes::{AuthUser, BEARER};
 use crate::rtc::{self, connections};
-use crate::rtc::events::{RtcClientEvent, RtcCloseCode};
+use crate::rtc::events::{RtcClientEvent, RtcCloseCode, RtcServerEvent};
 use crate::rtc::peer::{self, Peer};
 use crate::sockets;
 use crate::sockets::session::events::ServerEvent;
@@ -75,7 +75,9 @@ async fn handle_socket(
     }
 
     if let Err(code) = join(&app_state, &peer).await {
-        peer.close().await;
+        if let Err(e) = peer.link.close().await {
+            tracing::warn!("could not close the connection of {user_id}: {e}");
+        }
         close(&mut socket, code).await;
         return;
     }
@@ -85,7 +87,7 @@ async fn handle_socket(
     let code = tokio::select! {
         _ = write_events(&mut outgoing, receiver) => RtcCloseCode::Normal,
         _ = read_events(&mut incoming, &peer, &app_state) => RtcCloseCode::Normal,
-        code = peer.ended() => code
+        code = peer.signal.ended() => code
     };
 
     let frame = CloseFrame { code: code as u16, reason: "".into() };
@@ -122,13 +124,17 @@ async fn join(
     let others = connections::insert(&app_state.rtc, peer.clone())?;
 
     for other in &others {
-        if let Err(e) = peer.add_sender(other.user_id).await {
+        if let Err(e) = peer.forwarding.add_sender(other.user_id).await {
             tracing::error!("could not add {}'s tracks for {}: {e}", other.user_id, peer.user_id);
         }
-        if let Err(e) = other.add_sender(peer.user_id).await {
+        if let Err(e) = other.forwarding.add_sender(peer.user_id).await {
             tracing::error!("could not add {}'s tracks for {}: {e}", peer.user_id, other.user_id);
         }
         other.negotiate().await;
+
+        if connections::is_sharing(&app_state.rtc, other.user_id) {
+            peer.signal.send(&RtcServerEvent::Screen { user_id: other.user_id, sharing: true });
+        }
     }
 
     peer.negotiate().await;
@@ -171,8 +177,29 @@ async fn read_events(
     while let Some(event) = sockets::read::<RtcClientEvent>(socket, peer.user_id).await {
         match event {
             RtcClientEvent::Answer { description } => peer.answer(description).await,
-            RtcClientEvent::Candidate { candidate } => peer.add_candidate(candidate).await,
-            RtcClientEvent::Kick { user_id } => kick(app_state, peer, user_id).await
+            RtcClientEvent::Candidate { candidate } => {
+                if let Err(e) = peer.link.add_candidate(candidate).await {
+                    tracing::debug!("could not add a candidate from {}: {e}", peer.user_id);
+                }
+            }
+            RtcClientEvent::Kick { user_id } => kick(app_state, peer, user_id).await,
+            RtcClientEvent::Screen { sharing } => share(app_state, peer, sharing)
+        }
+    }
+}
+
+/// Tell everyone else in the peer's room whether the peer is sharing their screen
+fn share(
+    app_state: &AppState,
+    peer: &Arc<Peer>,
+    sharing: bool,
+) {
+    connections::set_sharing(&app_state.rtc, peer.user_id, sharing);
+
+    let event = RtcServerEvent::Screen { user_id: peer.user_id, sharing };
+    for other in connections::in_room(&app_state.rtc, peer.room_id) {
+        if other.user_id != peer.user_id {
+            other.signal.send(&event);
         }
     }
 }
