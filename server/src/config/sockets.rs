@@ -16,7 +16,11 @@ pub struct Sockets {
 
     /// UDP ports RTC connections use, forwarded on the router
     #[cfg(feature = "rtc")]
-    pub udp_ports: RangeInclusive<u16>
+    pub udp_ports: RangeInclusive<u16>,
+
+    /// STUN server for calls
+    #[cfg(feature = "rtc")]
+    pub stun_url: Option<String>
 }
 
 impl Sockets {
@@ -41,6 +45,14 @@ impl Sockets {
             if self.udp_ports.is_empty() {
                 return Err("sockets.udp_ports.end must be at least sockets.udp_ports.start".to_string());
             }
+
+            // https://www.rfc-editor.org/rfc/rfc7064#section-3.1
+            if let Some(stun_url) = &self.stun_url
+                && !stun_url.starts_with("stun:")
+                && !stun_url.starts_with("stuns:")
+            {
+                return Err("sockets.stun_url must start with stun: or stuns:".to_string());
+            }
         }
 
         Ok(())
@@ -54,7 +66,9 @@ impl Default for Sockets {
             #[cfg(feature = "rtc")]
             participants_max: 10,
             #[cfg(feature = "rtc")]
-            udp_ports: 50000..=50099
+            udp_ports: 50000..=50099,
+            #[cfg(feature = "rtc")]
+            stun_url: None
         }
     }
 }

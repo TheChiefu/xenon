@@ -10,6 +10,7 @@ import type {
 } from "@/bindings/rtc/events";
 import { LocalEvent, RtcEventType } from "@/lib/events";
 import * as events from "@/lib/events";
+import * as server from "@/lib/connection/server.svelte";
 import * as session from "@/lib/connection/session.svelte";
 
 // The server's offer opens with the slots this browser sends in, in this order
@@ -62,7 +63,7 @@ export function open(
     }
   };
 
-  const opened = new RTCPeerConnection();
+  const opened = new RTCPeerConnection({ iceServers: iceServers() });
   connection = opened;
 
   // https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-onicecandidate
@@ -199,6 +200,18 @@ async function fillSlot(
   if (slot !== undefined && slot.sender.track !== track) {
     await slot.sender.replaceTrack(track);
   }
+}
+
+// The server's STUN server, when one is set
+// https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-iceservers
+function iceServers(): RTCIceServer[] {
+  const stun_url = server.getInfo()?.stun_url ?? null;
+
+  if (stun_url === null) {
+    return [];
+  }
+
+  return [{ urls: stun_url }];
 }
 
 // https://www.w3.org/TR/webrtc/#dom-rtcpeerconnection-addicecandidate

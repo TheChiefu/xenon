@@ -96,8 +96,9 @@ When `ip` is a loopback address, `localhost` and loopback origins are allowed on
 | `event_queue_size` | `32` | Live events queued per user |
 | `participants_max` | `10` | Most users in one room's call, at least `2` |
 | `udp_ports` | `{ start = 50000, end = 50099 }` | UDP ports calls use, one per user in a call |
+| `stun_url` | _unset_ | STUN server browsers use in calls, such as `"stun:stun.l.google.com:19302"` |
 
-`participants_max` and `udp_ports` exist only when built with the `rtc` feature.
+`participants_max`, `udp_ports` and `stun_url` exist only when built with the `rtc` feature.
 
 ## Optional services
 

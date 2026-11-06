@@ -7,4 +7,8 @@ export type ServerInfo = { name: string, version: string, kind: string, descript
 /**
  * Limits clients must stay within
  */
-limit_users_lookup: number, limit_message_page: number, limit_search_page: number, limit_room_page: number, limit_users_page: number, limit_file_bytes_max: number, limit_attachments_per_message_max: number, };
+limit_users_lookup: number, limit_message_page: number, limit_search_page: number, limit_room_page: number, limit_users_page: number, limit_file_bytes_max: number, limit_attachments_per_message_max: number, 
+/**
+ * STUN server for calls, when one is set
+ */
+stun_url: string | null, };

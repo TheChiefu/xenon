@@ -27,6 +27,10 @@ pub struct ServerInfo {
     pub limit_users_page: i64,
     pub limit_file_bytes_max: i64,
     pub limit_attachments_per_message_max: usize,
+
+    /// STUN server for calls, when one is set
+    #[cfg(feature = "rtc")]
+    pub stun_url: Option<String>,
 }
 
 // ROUTING METHODS //
@@ -48,6 +52,8 @@ pub async fn info() -> Json<ServerInfo> {
         limit_users_page: config.responses.users_per_page,
         limit_file_bytes_max: config.files.file_size_max.to_int(),
         limit_attachments_per_message_max: config.files.attachments_per_message_max,
+        #[cfg(feature = "rtc")]
+        stun_url: config.sockets.stun_url.clone(),
     };
 
     Json(info)
