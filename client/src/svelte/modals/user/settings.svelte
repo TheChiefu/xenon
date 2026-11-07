@@ -3,6 +3,7 @@
   import { modal } from "@/lib/display/modal";
   import Profile from "./profile.svelte";
   import Client from "./client.svelte";
+  import Call from "./call.svelte";
   import Account from "./account.svelte";
   import Links from "./links.svelte";
   import icon_x from "@/assets/icons/x.svg?raw";
@@ -17,6 +18,7 @@
   const tabs = [
     { label: "Profile", view: Profile },
     { label: "Client", view: Client },
+    { label: "Call", view: Call },
     { label: "Account", view: Account },
     { label: "Links", view: Links },
   ];

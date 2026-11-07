@@ -133,6 +133,59 @@ export async function setScreen(stream: MediaStream | null): Promise<void> {
   }
 }
 
+// Applies the screen share's resolution, framerate and bitrate cap to the
+// active share, live, without renegotiating
+export async function applyScreenSettings(
+  width: number,
+  height: number,
+  frame_rate: number,
+  bitrate_kbps: number,
+): Promise<void> {
+  const track = screen?.getVideoTracks()[0];
+
+  if (track === undefined) {
+    return;
+  }
+
+  // Tell the encoder the content is a screen
+  track.contentHint = "screen";
+
+  // The encoder downscales the capture to fit these sizes
+  // https://www.w3.org/TR/mediacapture-main/#dom-mediastreamtrack-applyconstraints
+  await track.applyConstraints({
+    width: { ideal: width },
+    height: { ideal: height },
+    frameRate: { ideal: frame_rate },
+  });
+
+  // Cap the sender's bitrate, when a cap is set
+  // https://www.w3.org/TR/webrtc/#dom-rtcrtpsender-setparameters
+  if (connection === null) {
+    return;
+  }
+
+  const sender = connection.getSenders().find((entry) => entry.track === track);
+
+  if (sender === undefined) {
+    return;
+  }
+
+  const parameters = sender.getParameters();
+
+  let encodings = parameters.encodings;
+  if (encodings.length === 0) {
+    encodings = [{}];
+  }
+
+  if (bitrate_kbps > 0) {
+    encodings[0].maxBitrate = bitrate_kbps * 1000;
+  } else {
+    encodings[0].maxBitrate = undefined;
+  }
+
+  await sender.setParameters({ ...parameters, encodings });
+}
+
 export function send(event: RtcClientEvent): void {
   if (socket?.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(event));

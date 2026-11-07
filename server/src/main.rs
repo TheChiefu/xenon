@@ -126,7 +126,10 @@ fn init_tracing() {
         .unwrap_or_else(|_| {
             // Browsers offer newer DTLS extensions the library skips, warning about each one
             tracing_subscriber::EnvFilter::new(
-                format!("xenon={},sqlx=warn,webrtc=warn,rtc=warn,rtc_dtls=error", config::get().server.log_level)
+                format!(
+                    "xenon={},sqlx=warn,webrtc=warn,rtc=warn,rtc_dtls=error,rtc_dtls=error",
+                    config::get().server.log_level
+                )
             )
         });
 

@@ -62,6 +62,7 @@ export enum LocalEvent {
   room_settings_requested = "room_settings_requested",
   search_requested = "search_requested",
   screen_shared = "screen_shared",
+  screen_share_settings_changed = "screen_share_settings_changed",
 }
 
 // A question with one button per choice, answered with the clicked button's position, or null when dismissed

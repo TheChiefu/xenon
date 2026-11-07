@@ -1,12 +1,13 @@
 import { Media } from "@/bindings/rtc/events";
 import type { RtcCloseCode } from "@/bindings/rtc/events";
-import { RtcEventType, ServerEventType } from "@/lib/events";
+import { LocalEvent, RtcEventType, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
 import * as connection from "@/lib/rtc/connection.svelte";
 import * as levels from "@/lib/rtc/levels.svelte";
 import * as microphones from "@/lib/rtc/microphones.svelte";
 import * as screens from "@/lib/rtc/screens.svelte";
 import * as sounds from "@/lib/rtc/sounds";
+import * as screen_share from "@/lib/client/screen_share.svelte";
 import * as profile from "@/lib/users/profile.svelte";
 import { LABELS_RTC_CLOSE, MSG_MICROPHONE_DENIED } from "@/lib/labels";
 
@@ -102,7 +103,14 @@ export async function setScreenEnabled(enabled: boolean): Promise<void> {
   let screen: MediaStream;
 
   try {
-    screen = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    screen = await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        width: { ideal: screen_share.getWidth() },
+        height: { ideal: screen_share.getHeight() },
+        frameRate: { ideal: screen_share.getFrameRate() },
+      },
+      audio: true,
+    });
   } catch {
     return;
   }
@@ -114,6 +122,12 @@ export async function setScreenEnabled(enabled: boolean): Promise<void> {
 
   screen_enabled = true;
   await connection.setScreen(screen);
+  await connection.applyScreenSettings(
+    screen_share.getWidth(),
+    screen_share.getHeight(),
+    screen_share.getFrameRate(),
+    screen_share.getBitrate(),
+  );
   connection.send({ type: RtcEventType.screen, sharing: true });
 }
 
@@ -147,6 +161,20 @@ function closed(code: number): void {
 }
 
 // LISTENERS //
+
+// Applies changed screen share settings to the active share, live
+events.subscribe(LocalEvent.screen_share_settings_changed, () => {
+  if (!screen_enabled) {
+    return;
+  }
+
+  connection.applyScreenSettings(
+    screen_share.getWidth(),
+    screen_share.getHeight(),
+    screen_share.getFrameRate(),
+    screen_share.getBitrate(),
+  ).catch(console.warn);
+});
 
 // A participant joined this call, or this user joined one
 events.subscribe(ServerEventType.rtc_joined, (event) => {
