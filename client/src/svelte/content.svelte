@@ -33,13 +33,28 @@
     <button class="is-tab" class:is-active={showing_stream} onclick={showStream}>Stream</button>
   </div>
 
-  {#if showing_stream}
-    <StreamBar/>
-    <Stream/>
-  {:else}
+  <div class="pane" class:hidden={showing_stream}>
     {#if roomId !== null}
       <RoomBar {roomId}/>
     {/if}
     <Chat {roomId}/>
-  {/if}
+  </div>
+
+  <div class="pane" class:hidden={!showing_stream}>
+    <StreamBar/>
+    <Stream/>
+  </div>
 </div>
+
+<style>
+  .pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pane.hidden {
+    display: none;
+  }
+</style>
