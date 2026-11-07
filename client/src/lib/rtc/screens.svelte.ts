@@ -38,13 +38,9 @@ export function getWatchedScreen(): MediaStream | null {
 
 // WATCHING //
 
-// Shows a participant's screen share, or stops showing it when already shown
+// Shows a participant's screen share, keeping it shown when already shown
 export function watch(user_id: string): void {
-  if (watching === user_id) {
-    watching = null;
-  } else {
-    watching = user_id;
-  }
+  watching = user_id;
 }
 
 export function stopWatching(): void {

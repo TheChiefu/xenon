@@ -10,6 +10,8 @@
   import * as call_participants from "@/lib/rtc/participants.svelte";
   import * as levels from "@/lib/rtc/levels.svelte";
   import * as screens from "@/lib/rtc/screens.svelte";
+  import { LocalEvent } from "@/lib/events";
+  import * as events from "@/lib/events";
 
   import icon_headphones from "@/assets/icons/headphones.svg?raw";
   import icon_headphones_muted from "@/assets/icons/headphones-muted.svg?raw";
@@ -188,7 +190,10 @@
               class:is-on={screens.getWatching() === user_id}
               aria-label="Watch {name}"
               title="Watch"
-              onclick={() => screens.watch(user_id)}
+              onclick={() => {
+                screens.watch(user_id);
+                events.dispatch(LocalEvent.stream_requested);
+              }}
             >
               <span class="icon" aria-hidden="true">{@html icon_monitor}</span>
             </button>

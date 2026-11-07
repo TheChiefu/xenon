@@ -63,6 +63,8 @@ export enum LocalEvent {
   search_requested = "search_requested",
   screen_shared = "screen_shared",
   screen_share_settings_changed = "screen_share_settings_changed",
+  stream_requested = "stream_requested",
+  chat_requested = "chat_requested",
 }
 
 // A question with one button per choice, answered with the clicked button's position, or null when dismissed

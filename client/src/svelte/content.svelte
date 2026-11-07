@@ -3,6 +3,8 @@
   import StreamBar from "./bars/stream.svelte";
   import Chat from "./chat/area.svelte";
   import Stream from "./stream/area.svelte";
+  import { LocalEvent } from "@/lib/events";
+  import * as events from "@/lib/events";
 
   interface Props {
     roomId: string | null;
@@ -19,6 +21,10 @@
   function showStream(): void {
     showing_stream = true;
   }
+
+  // Switch tabs when a screen share is watched or closed
+  events.subscribe(LocalEvent.stream_requested, showStream);
+  events.subscribe(LocalEvent.chat_requested, showChat);
 </script>
 
 <div class="chat column">

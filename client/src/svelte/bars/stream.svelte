@@ -1,6 +1,8 @@
 <script lang="ts">
   import * as screens from "@/lib/rtc/screens.svelte";
   import * as users from "@/lib/users/data.svelte";
+  import { LocalEvent } from "@/lib/events";
+  import * as events from "@/lib/events";
   import icon_x from "@/assets/icons/x.svg?raw";
 
   const watching: string | null = $derived(screens.getWatching());
@@ -14,7 +16,10 @@
     aria-label="Close video"
     title="Close Video"
     disabled={watching === null}
-    onclick={screens.stopWatching}
+    onclick={() => {
+      screens.stopWatching();
+      events.dispatch(LocalEvent.chat_requested);
+    }}
   >
     <span class="icon" aria-hidden="true">{@html icon_x}</span>
   </button>
