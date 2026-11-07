@@ -7,14 +7,14 @@ use webrtc::media_stream::MediaStreamTrack;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-use ::rtc::peer_connection::configuration::media_engine::{MIME_TYPE_OPUS, MIME_TYPE_VP8};
+use ::rtc::peer_connection::configuration::media_engine::{MIME_TYPE_OPUS, MIME_TYPE_AV1};
 use ::rtc::rtp_transceiver::rtp_sender::{
     RTCPFeedback, RTCRtpCodec, RTCRtpCodingParameters, RTCRtpEncodingParameters, RtpCodecKind,
 };
 
 /// https://www.rfc-editor.org/rfc/rfc3551#section-6
 pub const OPUS_PAYLOAD_TYPE: u8 = 111;
-pub const VP8_PAYLOAD_TYPE: u8 = 96;
+pub const AV1_PAYLOAD_TYPE: u8 = 41;
 /// https://www.rfc-editor.org/rfc/rfc7587#section-6.1
 const OPUS_FORMAT_PARAMETERS: &str = "minptime=10;useinbandfec=1";
 
@@ -51,7 +51,7 @@ impl Media {
 /// https://www.w3.org/TR/mediacapture-streams/#dom-mediastream-id
 pub fn track_of(media: Media, stream_id: Uuid, ssrc: u32) -> MediaStreamTrack {
     let codec = match media.kind() {
-        RtpCodecKind::Video => vp8(),
+        RtpCodecKind::Video => av1(),
         _ => opus()
     };
 
@@ -83,13 +83,13 @@ pub fn opus() -> RTCRtpCodec {
     }
 }
 
-/// https://www.rfc-editor.org/rfc/rfc7741
-pub fn vp8() -> RTCRtpCodec {
+/// https://aomediacodec.github.io/av1-avc/
+pub fn av1() -> RTCRtpCodec {
     RTCRtpCodec {
-        mime_type: MIME_TYPE_VP8.to_owned(),
+        mime_type: MIME_TYPE_AV1.to_owned(),
         clock_rate: 90000,
         channels: 0,
-        sdp_fmtp_line: String::new(),
+        sdp_fmtp_line: "profile-id=0".to_owned(),
         rtcp_feedback: video_feedback()
     }
 }

@@ -48,8 +48,8 @@ pub async fn connect(
         payload_type: media::OPUS_PAYLOAD_TYPE
     };
     let video_codec = RTCRtpCodecParameters {
-        rtp_codec: media::vp8(),
-        payload_type: media::VP8_PAYLOAD_TYPE
+        rtp_codec: media::av1(),
+        payload_type: media::AV1_PAYLOAD_TYPE
     };
     media_engine.register_codec(audio_codec, RtpCodecKind::Audio)?;
     media_engine.register_codec(video_codec, RtpCodecKind::Video)?;
