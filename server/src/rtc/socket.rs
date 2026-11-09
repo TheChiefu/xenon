@@ -130,6 +130,8 @@ async fn join(
         if let Err(e) = other.forwarding.add_sender(peer.user_id).await {
             tracing::error!("could not add {}'s tracks for {}: {e}", peer.user_id, other.user_id);
         }
+        peer.keyframes.relay_sender(&peer.forwarding, other.user_id);
+        other.keyframes.relay_sender(&other.forwarding, peer.user_id);
         other.negotiate().await;
 
         if connections::is_sharing(&app_state.rtc, other.user_id) {

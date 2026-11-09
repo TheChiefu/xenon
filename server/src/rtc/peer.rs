@@ -10,14 +10,17 @@ use webrtc::peer_connection::{
     register_default_interceptors, MediaEngine, PeerConnection, PeerConnectionBuilder, Registry,
 };
 
+use ::rtc::interceptor::Slot;
 use ::rtc::rtp_transceiver::rtp_sender::{RTCRtpCodecParameters, RtpCodecKind};
 
 use crate::rtc::connections::Connections;
 use crate::rtc::events::{RTCSessionDescriptionInit, RtcCloseCode};
 use crate::rtc::forwarding::Forwarding;
 use crate::rtc::handler::Handler;
+use crate::rtc::keyframes::Keyframes;
 use crate::rtc::link::Link;
 use crate::rtc::media;
+use crate::rtc::rtcp_forwarder::RtcpForwarder;
 use crate::rtc::signal::Signal;
 
 // DATA STRUCTS //
@@ -27,7 +30,8 @@ pub struct Peer {
     pub room_id: Uuid,
     pub signal: Arc<Signal>,
     pub link: Link,
-    pub forwarding: Forwarding
+    pub forwarding: Forwarding,
+    pub keyframes: Keyframes
 }
 
 // PUBLIC METHODS //
@@ -53,7 +57,8 @@ pub async fn connect(
     };
     media_engine.register_codec(audio_codec, RtpCodecKind::Audio)?;
     media_engine.register_codec(video_codec, RtpCodecKind::Video)?;
-    let interceptors = register_default_interceptors(Registry::new(), &mut media_engine)?;
+    let interceptors = register_default_interceptors(Registry::new(), &mut media_engine)?
+        .with(Slot::from(14_000), RtcpForwarder::default());
 
     let addresses = vec![
         SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port).to_string(),
@@ -63,7 +68,7 @@ pub async fn connect(
     let handler = Handler {
         user_id,
         room_id,
-        connections,
+        connections: connections.clone(),
         signal: signal.clone()
     };
 
@@ -81,6 +86,7 @@ pub async fn connect(
         room_id,
         signal,
         forwarding: Forwarding::new(connection.clone()).await?,
+        keyframes: Keyframes::new(connections),
         link: Link::new(connection)
     };
 

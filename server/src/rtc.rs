@@ -7,9 +7,11 @@ pub mod events;
 pub mod socket;
 mod forwarding;
 mod handler;
+mod keyframes;
 mod link;
 mod media;
 mod peer;
+mod rtcp_forwarder;
 mod signal;
 
 use std::sync::Arc;
@@ -35,6 +37,7 @@ pub async fn leave(
     };
 
     for other in &remaining {
+        other.keyframes.stop_sender(peer.user_id);
         other.forwarding.remove_sender(peer.user_id).await;
         other.negotiate().await;
     }

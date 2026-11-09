@@ -95,6 +95,7 @@ async fn forward(
     track: Arc<dyn TrackRemote>,
 ) {
     let mut media: Option<Media> = None;
+    let mut source_ssrc: Option<u32> = None;
 
     while let Some(event) = track.poll().await {
         match event {
@@ -107,6 +108,13 @@ async fn forward(
                 let Some(media) = media else {
                     continue;
                 };
+
+                if source_ssrc != Some(packet.header.ssrc) {
+                    if let Some(peer) = connections::peer(&connections, sender_id) {
+                        peer.keyframes.open_source(media, track.clone(), packet.header.ssrc);
+                        source_ssrc = Some(packet.header.ssrc);
+                    }
+                }
 
                 for peer in connections::in_room(&connections, room_id) {
                     if peer.user_id == sender_id {
@@ -134,6 +142,10 @@ async fn forward(
             }
             _ => {}
         }
+    }
+
+    if let (Some(media), Some(peer)) = (media, connections::peer(&connections, sender_id)) {
+        peer.keyframes.close_source(media, &track);
     }
 }
 
