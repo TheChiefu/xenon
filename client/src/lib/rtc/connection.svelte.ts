@@ -186,8 +186,7 @@ export async function applyScreenSettings(
 
   await sender.setParameters({
     ...parameters,
-    encodings,
-    degradationPreference: "maintain-framerate",
+    encodings
   });
 }
 
