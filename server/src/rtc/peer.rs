@@ -6,11 +6,12 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use webrtc::error::Result;
-use webrtc::peer_connection::{
-    register_default_interceptors, MediaEngine, PeerConnection, PeerConnectionBuilder, Registry,
-};
+use webrtc::peer_connection::{MediaEngine, PeerConnection, PeerConnectionBuilder, Registry};
 
 use ::rtc::interceptor::Slot;
+use ::rtc::peer_connection::configuration::interceptor_registry::{
+    configure_nack, configure_rtcp_reports, configure_simulcast_extension_headers,
+};
 use ::rtc::rtp_transceiver::rtp_sender::{RTCRtpCodecParameters, RtpCodecKind};
 
 use crate::rtc::connections::Connections;
@@ -22,6 +23,9 @@ use crate::rtc::link::Link;
 use crate::rtc::media;
 use crate::rtc::rtcp_forwarder::RtcpForwarder;
 use crate::rtc::signal::Signal;
+
+/// After the library's interceptors, so they process inbound RTCP first
+const RTCP_FORWARDER_SLOT: usize = Slot::JitterBuffer.slot() + 1_000;
 
 // DATA STRUCTS //
 
@@ -57,8 +61,12 @@ pub async fn connect(
     };
     media_engine.register_codec(audio_codec, RtpCodecKind::Audio)?;
     media_engine.register_codec(video_codec, RtpCodecKind::Video)?;
-    let interceptors = register_default_interceptors(Registry::new(), &mut media_engine)?
-        .with(Slot::from(14_000), RtcpForwarder::default());
+
+    // The default interceptors, without transport-wide congestion control
+    let interceptors = configure_nack(Registry::new(), &mut media_engine);
+    configure_simulcast_extension_headers(&mut media_engine)?;
+    let interceptors = configure_rtcp_reports(interceptors)
+        .with(Slot::from(RTCP_FORWARDER_SLOT), RtcpForwarder::default());
 
     let addresses = vec![
         SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port).to_string(),
