@@ -147,8 +147,9 @@ export async function applyScreenSettings(
     return;
   }
 
-  // Tell the encoder the content is a screen
-  track.contentHint = "screen";
+  // Tell the encoder the content moves, so it keeps the framerate over detail
+  // https://www.w3.org/TR/mst-content-hint/#video-content-hints
+  track.contentHint = "motion";
 
   // The encoder downscales the capture to fit these sizes
   // https://www.w3.org/TR/mediacapture-main/#dom-mediastreamtrack-applyconstraints
@@ -183,7 +184,11 @@ export async function applyScreenSettings(
     encodings[0].maxBitrate = undefined;
   }
 
-  await sender.setParameters({ ...parameters, encodings });
+  await sender.setParameters({
+    ...parameters,
+    encodings,
+    degradationPreference: "maintain-framerate",
+  });
 }
 
 export function send(event: RtcClientEvent): void {
