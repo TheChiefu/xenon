@@ -12,6 +12,7 @@ use ::rtc::interceptor::Slot;
 use ::rtc::peer_connection::configuration::interceptor_registry::{
     configure_nack, configure_rtcp_reports, configure_simulcast_extension_headers,
 };
+use ::rtc::peer_connection::configuration::setting_engine::SettingEngineBuilder;
 use ::rtc::rtp_transceiver::rtp_sender::{RTCRtpCodecParameters, RtpCodecKind};
 
 use crate::rtc::connections::Connections;
@@ -26,6 +27,9 @@ use crate::rtc::signal::Signal;
 
 /// After the library's interceptors, so they process inbound RTCP first
 const RTCP_FORWARDER_SLOT: usize = Slot::JitterBuffer.slot() + 1_000;
+
+/// Recent packets per stream checked for repeats, wide enough to accept late resends
+const SRTP_REPLAY_WINDOW: usize = 1024;
 
 // DATA STRUCTS //
 
@@ -80,7 +84,12 @@ pub async fn connect(
         signal: signal.clone()
     };
 
+    let settings = SettingEngineBuilder::new()
+        .with_srtp_replay_protection_window(SRTP_REPLAY_WINDOW)
+        .build();
+
     let connection = PeerConnectionBuilder::new()
+        .with_setting_engine(settings)
         .with_media_engine(media_engine)
         .with_interceptor_registry(interceptors)
         .with_handler(Arc::new(handler))
