@@ -73,18 +73,11 @@ Each service is a feature, and none are enabled by default:
 | `rtc` | Voice calls |
 | `full` | All of the above |
 
-For example, `cargo build --release --features push,rtc` leaves out account linking,
-and `cargo build --release` builds chat only.
-
 To update the client TypeScript bindings based off of the rust code, run this from
 the `server` directory:
 ```bash
-TS_RS_EXPORT_DIR=../client/src/bindings TS_RS_LARGE_INT=number cargo test --features ts_bindings,full export_bindings
+cargo bindings
 ```
-
-Both variables are required. `TS_RS_EXPORT_DIR` is where the files are written, which
-otherwise defaults to `server/bindings`. `TS_RS_LARGE_INT` writes 64 bit integers as
-`number`, which otherwise defaults to `bigint`.
 
 ## Configuration
 To configure the server, edit the `config.toml` file that is generated when the server
@@ -97,22 +90,8 @@ To see more information on the configuration file and its options, see here: [se
 To see the commands typed into the server's terminal, including setting up the first
 admin account, see here: [server/commands.md](server/commands.md).
 
-## Optional Services
-Each is turned on by adding its section to the config file:
-
-- Web push notifications (so closed mobile clients are told about new messages)
-- Xbox account linking and game presence
-- Steam account linking and game presence
-
 ## API
 The server exposes a REST API along with a WebSocket that delivers live events.
-
-## Basic Security
-|Category| Method | Description |
-|-|-|-|
-| Invite Codes (12 Characters) | OsRng | Invite is required by an Admin to enter server |
-| Password Hashing| Argon2id | Prevents password snooping (no plain-text) |
-| Session Tokens | OsRng + SHA256 | Randomly generated token per login session |
 
 ## Developer Comment(s):
 I am not a database, server, or security developer; so have no expectation of a
@@ -127,9 +106,14 @@ setup on first run.
 _Set expectations accordingly_
 
 ## AI Usage:
-Server code I write myself and use AI for adding/modifying snippets of code that match the
-existing codebase. I keep AI usage minimal here since it's core infrastructure code.
-It is also used for re-writing docstrings and comments in bulk.
+Agents such as Claude and Qwen (open source versions) were used in the creation of this repo.
+It is advised anyone reading the repo to vet the source code before blindly trusting it.
+
+It was not completely vibe coded where agents were left to create all the code on their own unmonitored.
+Days/weeks have been spent reviewing code, reiterating, and manually changing/updating pieces in order
+to clean it the repo or reduce excessive bloat. Rewrites and reordering is likely to continue throughout until
+a 1.0 release is set.
 
 ## License:
-TBD
+TBD / Expect compeltely free usage one. Cannot be decided until project is mostly complete as external
+libraries are used and their licenses need to be vetted.

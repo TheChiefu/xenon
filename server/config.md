@@ -102,7 +102,7 @@ When `ip` is a loopback address, `localhost` and loopback origins are allowed on
 
 ## Optional services
 
-These sections are never written by the server. Adding one turns that service on.
+These sections are never written by the server.
 
 ### `[push]`
 
