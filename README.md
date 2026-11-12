@@ -114,6 +114,10 @@ Days/weeks have been spent reviewing, reiterating, critiquing, and manually upda
 to reduce excessive bloat. Rewrites and reordering is likely to continue throughout until
 a 1.0 release is set.
 
+This project was primarily to move away from corporate communication software and onto something locally
+hosted and something with features particularlly relevant to my (and my friends') needs. So expect it to be
+largely bloated early, then as time goes on, iterated, reduced, and refined.
+
 ## License:
 TBD / Expect compeltely free usage one. Cannot be decided until project is mostly complete as external
 libraries are used and their licenses need to be vetted.
