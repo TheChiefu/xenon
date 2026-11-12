@@ -110,8 +110,8 @@ Agents such as Claude and Qwen (open source versions) were used in the creation 
 It is advised anyone reading the repo to vet the source code before blindly trusting it.
 
 It was not completely vibe coded where agents were left to create all the code on their own unmonitored.
-Days/weeks have been spent reviewing code, reiterating, critiquing, and manually updating code in order
-to clean it or reduce excessive bloat. Rewrites and reordering is likely to continue throughout until
+Days/weeks have been spent reviewing, reiterating, critiquing, and manually updating code in order
+to reduce excessive bloat. Rewrites and reordering is likely to continue throughout until
 a 1.0 release is set.
 
 ## License:
