@@ -60,7 +60,7 @@ winget install NASM.NASM
 
 Then build:
 ```bash
-cd server
+cd crates/server
 cargo build --release --features full
 ```
 
@@ -73,8 +73,8 @@ Each service is a feature, and none are enabled by default:
 | `rtc` | Voice calls |
 | `full` | All of the above |
 
-To update the client TypeScript bindings based off of the rust code, run this from
-the `server` directory:
+To update the web TypeScript bindings based off of the rust code, run this from
+the `crates/types` directory:
 ```bash
 cargo bindings
 ```
@@ -84,11 +84,11 @@ To configure the server, edit the `config.toml` file that is generated when the 
 is first run. By default it is written to the same directory the server is run at.
 To change this set the `XENON_CONFIG` environment variable to a path.
 
-To see more information on the configuration file and its options, see here: [server/config.md](server/config.md).
+To see more information on the configuration file and its options, see here: [crates/server/config.md](crates/server/config.md).
 
 ## Commands
 To see the commands typed into the server's terminal, including setting up the first
-admin account, see here: [server/commands.md](server/commands.md).
+admin account, see here: [crates/server/commands.md](crates/server/commands.md).
 
 ## API
 The server exposes a REST API along with a WebSocket that delivers live events.

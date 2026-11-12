@@ -1,0 +1,144 @@
+//! HTTP handlers for users.
+
+use axum::Json;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use sqlx::SqlitePool;
+use uuid::Uuid;
+use types::routes::users::{RequestRoleSet, RequestUsers, RespondSummary};
+use types::users::UserProfile;
+
+use crate::api::users::UserSummary;
+use crate::error::{AppError, Result};
+use crate::routes::AuthUser;
+use crate::state::{self, AppState};
+use crate::api;
+use crate::config;
+
+#[cfg(any(feature = "push", feature = "links"))]
+use crate::services;
+
+// RESPONSES //
+
+impl From<UserSummary> for RespondSummary {
+    fn from(user: UserSummary) -> Self {
+        Self {
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
+            avatar_file_id: user.avatar_file_id,
+            banner_file_id: user.banner_file_id,
+            global_role: user.global_role,
+        }
+    }
+}
+
+// ROUTING METHODS //
+
+/// Get summaries of multiple users
+pub async fn query(
+    AuthUser(..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Json(body): Json<RequestUsers>,
+) -> Result<Json<Vec<RespondSummary>>> {
+
+    let users = match body.ids {
+
+        // Look up users by id
+        Some(ids) => {
+            // Reject ids mixed with the search fields
+            if body.username.is_some() || body.after.is_some() || body.limit.is_some() {
+                return Err(AppError::Validation(
+                    "ids cannot be combined with username, after, or limit".to_string()
+                ));
+            }
+
+            // Reject more ids than the lookup limit
+            let max = config::get().responses.users_per_lookup;
+            if ids.len() > max {
+                return Err(AppError::Validation(format!("at most {max} ids per lookup")));
+            }
+
+            api::users::by_ids(&pool, &ids).await?
+        }
+
+        // Search users by username prefix, one page at a time
+        None => {
+            let max = config::get().responses.users_per_page;
+            let limit = body.limit.unwrap_or(max).clamp(1, max);
+
+            api::users::list_page(&pool, body.username, body.after, limit).await?
+        }
+    };
+
+    let mut response = Vec::with_capacity(users.len());
+    for user in users {
+        response.push(RespondSummary::from(user));
+    }
+
+    Ok(Json(response))
+}
+
+/// Get a user's public profile
+pub async fn get(
+    AuthUser(..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<UserProfile>> {
+    let profile = api::users::profile(&pool, user_id).await?;
+    Ok(Json(profile))
+}
+
+/// Change a user's global role
+pub async fn set_role(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(target_id): Path<Uuid>,
+    Json(body): Json<RequestRoleSet>,
+) -> Result<StatusCode> {
+    if !api::users::can_moderate(&pool, caller_id, target_id).await? {
+        return Err(AppError::Forbidden);
+    }
+
+    api::users::set_global_role(&pool, target_id, body.role).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Ban a user
+pub async fn ban(
+    AuthUser(caller_id, ..): AuthUser,
+    State(app_state): State<AppState>,
+    Path(target_id): Path<Uuid>,
+) -> Result<StatusCode> {
+    if !api::users::can_moderate(&app_state.pool, caller_id, target_id).await? {
+        return Err(AppError::Forbidden);
+    }
+
+    api::users::ban(&app_state.pool, target_id).await?;
+
+    #[cfg(feature = "push")]
+    services::push::remove_subscriptions(&app_state, target_id).await?;
+
+    #[cfg(feature = "links")]
+    services::links::remove_user(&app_state, target_id).await?;
+
+    state::disconnect(&app_state, target_id).await;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Unban a user
+pub async fn unban(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Path(target_id): Path<Uuid>,
+) -> Result<StatusCode> {
+    if !api::users::can_moderate(&pool, caller_id, target_id).await? {
+        return Err(AppError::Forbidden);
+    }
+
+    api::users::unban(&pool, target_id).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}

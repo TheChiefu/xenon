@@ -1,0 +1,84 @@
+//! HTTP handlers for registration, login, and registration codes.
+
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::Json;
+use sqlx::SqlitePool;
+use types::routes::auth::{
+    RequestLogin,
+    RequestRegistrationCreate,
+    RequestRegistrationRevoke,
+    RespondLogin,
+    RespondRegistration,
+    RespondRegistrationCode,
+};
+use types::auth::{Registration, RegistrationCode};
+
+use crate::error::Result;
+use crate::routes::{AuthUser, ClientIp};
+use crate::state::AppState;
+use crate::api;
+use crate::validate;
+
+// ROUTING METHODS //
+
+/// Create an account
+pub async fn register(
+    ClientIp(ip): ClientIp,
+    State(app_state): State<AppState>,
+    Json(body): Json<Registration>,
+) -> Result<(StatusCode, Json<RespondRegistration>)> {
+    let (id, token) = api::auth::register(&app_state.pool, &app_state.address_limits, ip, &body).await?;
+    Ok((StatusCode::CREATED, Json(RespondRegistration { id, session_token: token })))
+}
+
+/// Start a new session
+pub async fn login(
+    ClientIp(ip): ClientIp,
+    State(app_state): State<AppState>,
+    Json(body): Json<RequestLogin>,
+) -> Result<Json<RespondLogin>> {
+    let token = api::auth::sign_in(
+        &app_state.pool,
+        &app_state.address_limits,
+        &app_state.login_failures,
+        ip,
+        &body.username,
+        &body.password
+    ).await?;
+    Ok(Json(RespondLogin { session_token: token }))
+}
+
+/// Create a code that lets someone register
+pub async fn create_registration_code(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Json(body): Json<RequestRegistrationCreate>,
+) -> Result<(StatusCode, Json<RespondRegistrationCode>)> {
+    let max_uses = body.max_uses.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_MAX_USES);
+    let lifetime = body.lifetime.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_LIFETIME_MS);
+    let length = body.length.unwrap_or(validate::REGISTRATION_CODE_DEFAULT_LENGTH);
+    let code = api::auth::create_registration_code(
+        &pool, caller_id, max_uses, lifetime, length
+    ).await?;
+    Ok((StatusCode::CREATED, Json(RespondRegistrationCode { code })))
+}
+
+/// List every registration code
+pub async fn list_registration_codes(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<RegistrationCode>>> {
+    let codes = api::auth::list_registration_codes(&pool, caller_id).await?;
+    Ok(Json(codes))
+}
+
+/// Revoke a registration code
+pub async fn revoke_registration_code(
+    AuthUser(caller_id, ..): AuthUser,
+    State(pool): State<SqlitePool>,
+    Json(body): Json<RequestRegistrationRevoke>,
+) -> Result<StatusCode> {
+    api::auth::revoke_registration_code(&pool, caller_id, &body.code).await?;
+    Ok(StatusCode::NO_CONTENT)
+}

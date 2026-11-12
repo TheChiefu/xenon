@@ -1,0 +1,19 @@
+[package]
+name = "xenon-client"
+rust-version = "1.85"
+version = "0.1.0"
+edition = "2024"
+description = "Native desktop client for Xenon."
+publish = false
+
+[dependencies]
+types = { path = "../types" }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+slint = "1.18"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+uuid = { version = "1", features = ["serde"] }
+
+[build-dependencies]
+slint-build = "1.18"
