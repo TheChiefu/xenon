@@ -96,6 +96,8 @@ pub fn init(path: &str) {
         std::process::exit(1);
     }
 
+    config.warn_unbuilt(path);
+
     // Set global in memory config
     CONFIG.set(config).expect("config already initialized");
 }
@@ -117,6 +119,21 @@ fn write_default(path: &str) -> Config {
 }
 
 impl Config {
+
+    /// Warn about sections in config that server doesn't have in build
+    fn warn_unbuilt(&self, path: &str) {
+        if self.push.is_some() && !cfg!(feature = "push") {
+            eprintln!("{path}: [push] ignored | server was built without the push feature");
+        }
+
+        if self.xbox.is_some() && !cfg!(feature = "links") {
+            eprintln!("{path}: [xbox] ignored | server was built without the links feature");
+        }
+
+        if self.steam.is_some() && !cfg!(feature = "links") {
+            eprintln!("{path}: [steam] ignored | server was built without the links feature");
+        }
+    }
 
     /// Errors on the first invalid value in any section
     fn validate(&self) -> Result<(), String> {
