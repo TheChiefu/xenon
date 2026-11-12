@@ -2,6 +2,7 @@ import { Media } from "@/bindings/rtc/events";
 import type { RtcCloseCode } from "@/bindings/rtc/events";
 import { LocalEvent, RtcEventType, ServerEventType } from "@/lib/events";
 import * as events from "@/lib/events";
+import * as devices from "@/lib/client/devices.svelte";
 import * as connection from "@/lib/rtc/connection.svelte";
 import * as levels from "@/lib/rtc/levels.svelte";
 import * as microphones from "@/lib/rtc/microphones.svelte";
@@ -49,7 +50,7 @@ export async function join(roomId: string): Promise<void> {
   let microphone: MediaStream;
 
   try {
-    microphone = await navigator.mediaDevices.getUserMedia({ audio: true });
+    microphone = await devices.captureMic();
   } catch {
     failure = MSG_MICROPHONE_DENIED;
     return;
@@ -100,25 +101,26 @@ export async function setScreenEnabled(enabled: boolean): Promise<void> {
     return;
   }
 
-  let screen: MediaStream;
+  let display: MediaStream;
 
   try {
-    screen = await navigator.mediaDevices.getDisplayMedia({
+    display = await navigator.mediaDevices.getDisplayMedia({
       video: {
         width: { ideal: screen_share.getWidth() },
         height: { ideal: screen_share.getHeight() },
         frameRate: { ideal: screen_share.getFrameRate() },
       },
-      audio: true,
     });
   } catch {
     return;
   }
 
   // Sharing stopped from the browser's own controls
-  screen.getVideoTracks()[0]?.addEventListener("ended", () => {
+  display.getVideoTracks()[0]?.addEventListener("ended", () => {
     setScreenEnabled(false).catch(console.warn);
   });
+
+  const screen = await attachAudioSource(display);
 
   screen_enabled = true;
   await connection.setScreen(screen);
@@ -132,6 +134,28 @@ export async function setScreenEnabled(enabled: boolean): Promise<void> {
 }
 
 // HELPERS //
+
+// Adds the preselected audio source to a display capture, if any, falling back to video-only
+async function attachAudioSource(display: MediaStream): Promise<MediaStream> {
+  const audio_device = screen_share.getAudioSource();
+
+  if (audio_device === null) {
+    return display;
+  }
+
+  try {
+    const audio = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: audio_device } },
+    });
+    return new MediaStream([
+      ...display.getVideoTracks(),
+      ...audio.getAudioTracks(),
+    ]);
+  } catch {
+    console.warn("Screen share audio source unavailable, sharing video only");
+    return display;
+  }
+}
 
 // Hands a participant's incoming stream to the microphones or the screens
 function play(event: RTCTrackEvent): void {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as devices from "@/lib/client/devices.svelte";
   import * as screen_share from "@/lib/client/screen_share.svelte";
   import { MSG_SAVED } from "@/lib/labels";
 
@@ -7,9 +8,20 @@
   let share_height = $state<number | null>(screen_share.getHeight());
   let share_frame_rate = $state<number | null>(screen_share.getFrameRate());
   let share_bitrate = $state<number | null>(screen_share.getBitrate());
-  let share_notify = $state("");
+  let share_audio_source = $state<string>(screen_share.getAudioSource() ?? "");
+  let mic_device = $state<string>(devices.getMicDevice() ?? "");
+  let audio_inputs = $state<MediaDeviceInfo[]>([]);
+  let notify = $state("");
 
-  function saveScreenShare() {
+  $effect(() => {
+    devices.listAudioInputs().then(set_audio_inputs).catch(console.warn);
+  });
+
+  function set_audio_inputs(inputs: MediaDeviceInfo[]): void {
+    audio_inputs = inputs;
+  }
+
+  function save() {
     if (share_width !== null) {
       screen_share.setWidth(Number(share_width));
     }
@@ -22,14 +34,18 @@
     if (share_bitrate !== null) {
       screen_share.setBitrate(Number(share_bitrate));
     }
+    screen_share.setAudioSource(share_audio_source === "" ? null : share_audio_source);
+    devices.setMicDevice(mic_device === "" ? null : mic_device);
 
     // Revert on invalid
     share_width = screen_share.getWidth();
     share_height = screen_share.getHeight();
     share_frame_rate = screen_share.getFrameRate();
     share_bitrate = screen_share.getBitrate();
+    share_audio_source = screen_share.getAudioSource() ?? "";
+    mic_device = devices.getMicDevice() ?? "";
 
-    share_notify = MSG_SAVED;
+    notify = MSG_SAVED;
   }
 </script>
 
@@ -48,7 +64,7 @@
   <div class="grid-title">
     <h3>Screen Share</h3>
   </div>
-  <p class="message">{share_notify}</p>
+  <p class="message">{notify}</p>
 
   <span>Resolution</span>
   <div class="resolution">
@@ -97,5 +113,27 @@
     bind:value={share_bitrate}
   />
 
-  <button class="full-row" onclick={saveScreenShare}>Save Changes</button>
+  <label for="share-audio-source">Audio Source</label>
+  <select id="share-audio-source" bind:value={share_audio_source}>
+    <option value="">None</option>
+    {#each audio_inputs as device (device.deviceId)}
+      <option value={device.deviceId}>{device.label || "Unknown device"}</option>
+    {/each}
+  </select>
+</div>
+
+<div class="section fields">
+  <div class="grid-title full-row">
+    <h3>Microphone</h3>
+  </div>
+
+  <label for="mic-device">Device</label>
+  <select id="mic-device" bind:value={mic_device}>
+    <option value="">Default</option>
+    {#each audio_inputs as device (device.deviceId)}
+      <option value={device.deviceId}>{device.label || "Unknown device"}</option>
+    {/each}
+  </select>
+
+  <button class="full-row" onclick={save}>Save Changes</button>
 </div>

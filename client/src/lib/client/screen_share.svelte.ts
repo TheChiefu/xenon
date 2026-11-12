@@ -204,3 +204,23 @@ function readBitrate(): number {
 
   return stored;
 }
+
+// AUDIO SOURCE //
+// The input device used as the share's audio, null for none
+const keyAudioSource = "screen_share_audio_source";
+
+let currentAudioSource: string | null = $state(localStorage.getItem(keyAudioSource));
+
+export function getAudioSource(): string | null {
+  return currentAudioSource;
+}
+
+export function setAudioSource(device_id: string | null): void {
+  currentAudioSource = device_id;
+
+  if (device_id === null) {
+    localStorage.removeItem(keyAudioSource);
+  } else {
+    localStorage.setItem(keyAudioSource, device_id);
+  }
+}
