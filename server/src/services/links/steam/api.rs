@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::config;
 use crate::error::{AppError, Result};
-use crate::services::CLIENT;
+use crate::services::client::CLIENT;
 
 const PLAYER_SUMMARIES_URL: &str = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/";
 

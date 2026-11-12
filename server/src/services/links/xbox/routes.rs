@@ -16,7 +16,7 @@ use crate::config;
 use crate::error::Result;
 use crate::routes::AuthUser;
 use crate::services;
-use crate::services::xbox::{self, accounts, link, REDIRECT_PATH};
+use crate::services::links::xbox::{self, accounts, link, REDIRECT_PATH};
 use crate::state::AppState;
 
 // DATA STRUCTS //
@@ -87,7 +87,7 @@ pub async fn redirect(
     Query(query): Query<RedirectQuery>,
 ) -> Response {
     let result = link::complete(&pool, query.state, query.code).await;
-    services::linked_response("Xbox", query.state, result)
+    services::links::linked_response("Xbox", query.state, result)
 }
 
 /// Returns caller's linked account

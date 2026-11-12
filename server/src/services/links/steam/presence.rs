@@ -1,10 +1,10 @@
 //! Steam presence polling for linked accounts
 
-use crate::services::steam::accounts;
-use crate::services::steam::api::{self, PersonaState, PlayerSummary};
-use crate::state::platforms;
+use crate::services::links::steam::accounts;
+use crate::services::links::steam::api::{self, PersonaState, PlayerSummary};
+use crate::services::links::platforms;
 use crate::state::AppState;
-use crate::types::platforms::{Availability, Metadata, Platform};
+use crate::services::links::types::{Availability, Metadata, Platform};
 
 const SUMMARIES_PER_REQUEST: usize = 100;
 

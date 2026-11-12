@@ -10,7 +10,9 @@ use uuid::Uuid;
 use ts_rs::TS;
 
 use crate::error::{AppError, Result};
-use crate::types::platforms::Platform;
+
+#[cfg(feature = "links")]
+use crate::services::links::types::LinkedAccount;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts", repr(enum = name)))]
@@ -57,15 +59,9 @@ pub struct UserProfile {
     pub global_role: GlobalRole,
     pub created_at: i64,
     pub banned: bool,
-    pub linked_accounts: Vec<LinkedAccount>,
-}
 
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
-pub struct LinkedAccount {
-    pub platform: Platform,
-    pub id: String,
-    pub handle: String,
+    #[cfg(feature = "links")]
+    pub linked_accounts: Vec<LinkedAccount>,
 }
 
 #[derive(sqlx::FromRow, Serialize)]

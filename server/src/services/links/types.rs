@@ -1,4 +1,4 @@
-//! Platform types for reporting
+//! Platform presence types for reporting
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -13,6 +13,14 @@ use ts_rs::TS;
 pub enum Platform {
     Xbox,
     Steam,
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
+pub struct LinkedAccount {
+    pub platform: Platform,
+    pub id: String,
+    pub handle: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

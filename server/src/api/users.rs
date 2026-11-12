@@ -7,10 +7,12 @@ use uuid::Uuid;
 
 use crate::db;
 use crate::error::{AppError, Result};
-use crate::services;
 use crate::types::users::{GlobalRole, UserPreferences, UserProfile};
 use crate::utils;
 use crate::validate;
+
+#[cfg(feature = "links")]
+use crate::services;
 
 // DATA STRUCTS //
 
@@ -106,7 +108,9 @@ pub async fn profile(
 ) -> Result<UserProfile> {
 
     let row = get(pool, user_id).await?;
-    let linked_accounts = services::list_linked_accounts(pool, user_id).await?;
+
+    #[cfg(feature = "links")]
+    let linked_accounts = services::links::list_linked_accounts(pool, user_id).await?;
 
     Ok(UserProfile {
         id: row.id,
@@ -118,6 +122,8 @@ pub async fn profile(
         global_role: row.global_role,
         created_at: row.created_at,
         banned: row.banned,
+
+        #[cfg(feature = "links")]
         linked_accounts,
     })
 }

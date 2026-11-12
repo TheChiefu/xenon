@@ -13,7 +13,7 @@ use web_push_native::{Auth, WebPushBuilder};
 
 use crate::config;
 use crate::error::Result;
-use crate::services::CLIENT;
+use crate::services::client::CLIENT;
 use crate::services::push::store::{self, Subscription};
 use crate::sockets::session::registry;
 use crate::state::AppState;

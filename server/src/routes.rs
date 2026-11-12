@@ -29,9 +29,11 @@ use crate::api;
 use crate::config;
 use crate::error::{AppError, Result};
 use crate::ratelimit::AddressLimits;
-use crate::services;
 use crate::state::AppState;
 use crate::security::{self, HashedToken};
+
+#[cfg(any(feature = "push", feature = "links"))]
+use crate::services;
 
 /// Auth scheme in the Authorization header and the WebSocket subprotocol
 pub const BEARER: &str = "Bearer";
@@ -104,7 +106,7 @@ where
 
 /// Build the router carrying every route on the server
 pub fn router(state: AppState) -> Router {
-    Router::new()
+    let router = Router::new()
         .route("/login", post(auth::login))
         .route("/codes",
             post(auth::create_registration_code)
@@ -206,8 +208,15 @@ pub fn router(state: AppState) -> Router {
         .route("/server", get(server::info))
         .route("/server/version", get(server::version))
         .route("/server/type", get(server::kind))
-        .merge(services::router())
-        .merge(rtc_router())
+        .merge(rtc_router());
+
+    #[cfg(feature = "push")]
+    let router = router.merge(services::push::routes::router());
+
+    #[cfg(feature = "links")]
+    let router = router.merge(services::links::router());
+
+    router
         .layer(middleware::from_fn_with_state(state.clone(), refuse_blocked))
         .with_state(state)
         .layer(cors_layer())

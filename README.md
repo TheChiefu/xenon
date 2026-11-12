@@ -61,15 +61,25 @@ winget install NASM.NASM
 Then build:
 ```bash
 cd server
-cargo build --release
+cargo build --release --features full
 ```
 
-Voice calls are behind the `rtc` feature: add `--features rtc` to the build command.
+Each service is a feature, and none are enabled by default:
+
+| Feature | Service |
+|-|-|
+| `push` | Web push notifications |
+| `links` | Xbox and Steam account linking |
+| `rtc` | Voice calls |
+| `full` | All of the above |
+
+For example, `cargo build --release --features push,rtc` leaves out account linking,
+and `cargo build --release` builds chat only.
 
 To update the client TypeScript bindings based off of the rust code, run this from
 the `server` directory:
 ```bash
-TS_RS_EXPORT_DIR=../client/src/bindings TS_RS_LARGE_INT=number cargo test --features ts_bindings export_bindings
+TS_RS_EXPORT_DIR=../client/src/bindings TS_RS_LARGE_INT=number cargo test --features ts_bindings,full export_bindings
 ```
 
 Both variables are required. `TS_RS_EXPORT_DIR` is where the files are written, which

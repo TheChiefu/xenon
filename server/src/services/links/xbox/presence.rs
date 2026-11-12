@@ -11,14 +11,14 @@ use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, AUTHORIZATION};
 use serde::Deserialize;
 
 use crate::config;
-use crate::services::CLIENT;
-use crate::services::xbox::accounts::{self, Account};
-use crate::services::xbox;
-use crate::services::xbox::auth::{self, Failure};
-use crate::services::xbox::presence::mappings::{Mapping, Mappings};
-use crate::state::platforms;
+use crate::services::client::CLIENT;
+use crate::services::links::xbox::accounts::{self, Account};
+use crate::services::links::xbox;
+use crate::services::links::xbox::auth::{self, Failure};
+use crate::services::links::xbox::presence::mappings::{Mapping, Mappings};
+use crate::services::links::platforms;
 use crate::state::AppState;
-use crate::types::platforms::{Availability, Metadata, Platform};
+use crate::services::links::types::{Availability, Metadata, Platform};
 
 const PRESENCE_URL: &str = "https://userpresence.xboxlive.com/users";
 const HOME_TITLE_ID: &str = "750323071";

@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::{AppError, Result};
-use crate::services::xbox::accounts;
-use crate::services::xbox::auth::{self, microsoft, xsts};
+use crate::services::links::xbox::accounts;
+use crate::services::links::xbox::auth::{self, microsoft, xsts};
 use crate::utils;
 
 // STATE //

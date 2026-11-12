@@ -157,6 +157,7 @@ pub fn inform_users(
 }
 
 /// Read which of the given users are not connected
+#[cfg(feature = "push")]
 pub fn offline_users(
     registry: &Registry,
     users: &[Uuid],

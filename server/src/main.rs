@@ -11,7 +11,10 @@ mod routes;
 mod rtc;
 mod security;
 mod serve;
+
+#[cfg(any(feature = "push", feature = "links"))]
 mod services;
+
 mod sockets;
 mod state;
 mod storage;
@@ -54,7 +57,8 @@ async fn main() -> Result<()> {
     drop(conn);
 
     // Build outbound HTTP client if any service is enabled
-    services::init();
+    #[cfg(any(feature = "push", feature = "links"))]
+    services::client::init();
 
     // Server state
     let app_state = AppState::new(pool);
@@ -65,7 +69,11 @@ async fn main() -> Result<()> {
     // Read commands typed into the terminal
     tokio::spawn(cli::console(app_state.clone()));
 
-    services::start(&app_state).await?;
+    #[cfg(feature = "push")]
+    services::push::start(&app_state).await?;
+
+    #[cfg(feature = "links")]
+    services::links::start(&app_state);
 
     let app: axum::Router = routes::router(app_state);
     let bind_addr = config::get().socket_addr();

@@ -7,9 +7,9 @@ use serde::Deserialize;
 use url::form_urlencoded::Serializer;
 
 use crate::config;
-use crate::services::CLIENT;
-use crate::services::xbox::REDIRECT_PATH;
-use crate::services::xbox::auth::Failure;
+use crate::services::client::CLIENT;
+use crate::services::links::xbox::REDIRECT_PATH;
+use crate::services::links::xbox::auth::Failure;
 
 const AUTHORIZE_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize";
 const TOKEN_URL: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";

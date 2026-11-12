@@ -13,11 +13,13 @@ use ts_rs::TS;
 use crate::api::users::UserSummary;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::services;
 use crate::state::{self, AppState};
 use crate::types::users::{GlobalRole, UserProfile};
 use crate::api;
 use crate::config;
+
+#[cfg(any(feature = "push", feature = "links"))]
+use crate::services;
 
 // REQUESTS //
 
@@ -153,7 +155,12 @@ pub async fn ban(
     }
 
     api::users::ban(&app_state.pool, target_id).await?;
-    services::remove_user(&app_state, target_id).await?;
+
+    #[cfg(feature = "push")]
+    services::push::remove_subscriptions(&app_state, target_id).await?;
+
+    #[cfg(feature = "links")]
+    services::links::remove_user(&app_state, target_id).await?;
 
     state::disconnect(&app_state, target_id).await;
 

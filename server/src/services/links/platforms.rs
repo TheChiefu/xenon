@@ -1,21 +1,18 @@
 //! What each linked account last reported, and who it is sent to.
 
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::collections::BTreeMap;
+use std::sync::RwLock;
 
 use uuid::Uuid;
 
 use crate::sockets::session::events::ServerEvent;
 use crate::state::{self, appearance, AppState};
 use crate::types::appearance::Appearance;
-use crate::types::platforms::{Activity, Metadata, Platform, UserActivity};
+use crate::services::links::types::{Activity, Metadata, Platform, UserActivity};
 use crate::utils;
 
 /// What each user's linked accounts last reported, keyed by user id
-#[derive(Clone, Default)]
-pub struct ReportedPlatforms {
-    by_user: Arc<RwLock<HashMap<Uuid, Activity>>>
-}
+static REPORTED: RwLock<BTreeMap<Uuid, Activity>> = RwLock::new(BTreeMap::new());
 
 /// Stores a reported platform metadata and sends it to everyone sharing a room with its owner,
 /// or clears it while the owner appears Offline
@@ -27,20 +24,17 @@ pub async fn report_metadata(
 ) {
     // Offline users show no platform presence
     if appearance::get(&state.appearances, user_id) == Some(Appearance::Offline) {
-        remove_metadata(&state.platforms, user_id, platform);
+        remove_metadata(user_id, platform);
         return;
     }
 
-    store_metadata(&state.platforms, user_id, platform, metadata.clone());
+    store_metadata(user_id, platform, metadata.clone());
     inform_updated(state, user_id, platform, Some(metadata)).await;
 }
 
 /// Build the platform activity of every given member
-pub fn snapshot(
-    platforms: &ReportedPlatforms,
-    members: &[Uuid],
-) -> Vec<UserActivity> {
-    let held = utils::read_lock(&platforms.by_user);
+pub fn snapshot(members: &[Uuid]) -> Vec<UserActivity> {
+    let held = utils::read_lock(&REPORTED);
 
     let mut users = Vec::new();
     for member_id in members {
@@ -63,7 +57,7 @@ pub async fn clear_metadata(
     user_id: Uuid,
     platform: Platform,
 ) {
-    if remove_metadata(&state.platforms, user_id, platform) {
+    if remove_metadata(user_id, platform) {
         inform_updated(state, user_id, platform, None).await;
     }
 }
@@ -93,22 +87,20 @@ async fn inform_updated(
 }
 
 fn store_metadata(
-    platforms: &ReportedPlatforms,
     user_id: Uuid,
     platform: Platform,
     metadata: Metadata,
 ) {
-    let mut held = utils::write_lock(&platforms.by_user);
+    let mut held = utils::write_lock(&REPORTED);
     let activity = held.entry(user_id).or_default();
     activity.set(platform, Some(metadata));
 }
 
 fn remove_metadata(
-    platforms: &ReportedPlatforms,
     user_id: Uuid,
     platform: Platform,
 ) -> bool {
-    let mut held = utils::write_lock(&platforms.by_user);
+    let mut held = utils::write_lock(&REPORTED);
 
     let Some(activity) = held.get_mut(&user_id) else {
         return false;

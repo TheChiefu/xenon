@@ -176,21 +176,6 @@ impl Config {
         self.socket_addr().ip().is_loopback()
     }
 
-    pub fn public_url(&self) -> &str {
-        let url = self.network.public_url.as_deref().expect("network.public_url validated at startup");
-        url.trim_end_matches('/')
-    }
-
-    /// Returns xbox section
-    pub fn xbox(&self) -> &Xbox {
-        self.xbox.as_ref().expect("xbox routes require xbox config")
-    }
-
-    /// Returns steam section
-    pub fn steam(&self) -> &Steam {
-        self.steam.as_ref().expect("steam routes require steam config")
-    }
-
     /// Whether a certificate and key are configured for the listener.
     pub fn tls_configured(&self) -> bool {
         self.network.certificate.is_some() && self.network.key.is_some()
