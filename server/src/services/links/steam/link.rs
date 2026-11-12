@@ -9,8 +9,8 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::{AppError, Result};
-use crate::services::CLIENT;
-use crate::services::steam::{accounts, api, REDIRECT_PATH};
+use crate::services::client::CLIENT;
+use crate::services::links::steam::{accounts, api, REDIRECT_PATH};
 use crate::utils;
 
 // CONSTANTS //

@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
-use crate::state::{self, platforms, AppState};
+use crate::state::{self, AppState};
 use crate::types::appearance::{Appearance, UserState};
 use crate::utils;
 
@@ -104,10 +104,22 @@ pub async fn on_connect(
     }
 
     if let Some(current) = get(&state.appearances, user_id) {
-        if current == Appearance::Offline {
-            platforms::clear_all(state, user_id).await;
-        }
-        announce(state, user_id, current).await;
+        change(state, user_id, current).await;
+    }
+}
+
+/// Announce a user's changed appearance
+/// Hides their platform presence set set to "Offline" (invisible)
+pub async fn change(
+    state: &AppState,
+    user_id: Uuid,
+    appearance: Appearance,
+) {
+    announce(state, user_id, appearance).await;
+
+    #[cfg(feature = "links")]
+    if appearance == Appearance::Offline {
+        crate::services::links::platforms::clear_all(state, user_id).await;
     }
 }
 

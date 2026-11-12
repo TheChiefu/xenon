@@ -13,8 +13,8 @@ use uuid::Uuid;
 
 use crate::config;
 use crate::error::Result;
-use crate::services::xbox::presence::mappings::{self, Mappings};
-use crate::state::platforms;
+use crate::services::links::xbox::presence::mappings::{self, Mappings};
+use crate::services::links::platforms;
 use crate::state::AppState;
 use crate::types::platforms::Platform;
 use crate::types::users::LinkedAccount;

@@ -16,9 +16,10 @@
   let login_url: string | null = $state(null);
 
   // The caller's linked Steam account, from their profile
-  const steam_account = $derived(
-    profile.get()?.linked_accounts.find((account) => account.platform === Platform.steam) ?? null
-  );
+  const steam_account = $derived.by(() => {
+    const accounts = profile.get()?.linked_accounts ?? [];
+    return accounts.find((account) => account.platform === Platform.steam) ?? null;
+  });
 
   // Fetch the caller's profile to read the linked Steam account
   async function loadSteamAccount(): Promise<void> {

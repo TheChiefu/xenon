@@ -1,7 +1,6 @@
 //! What every handler is given: the database and everything held in memory
 
 pub mod appearance;
-pub mod platforms;
 
 use axum::extract::FromRef;
 use sqlx::SqlitePool;
@@ -17,7 +16,6 @@ use crate::sockets::session;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry::Registry;
 use crate::state::appearance::Appearances;
-use crate::state::platforms::ReportedPlatforms;
 
 /// Cloned per request
 #[derive(Clone, FromRef)]
@@ -28,18 +26,15 @@ pub struct AppState {
     /// The appearance each user last declared
     pub appearances: Appearances,
 
-    /// Who is connected over RTC in each room
-    #[cfg(feature = "rtc")]
-    pub rtc: crate::rtc::connections::Connections,
-
-    /// What each user's linked account last reported
-    pub platforms: ReportedPlatforms,
-
     /// Failures each IP has made, and whether it is blocked
     pub address_limits: AddressLimits,
 
     /// Failed logins each account has made since its last successful login
-    pub login_failures: LoginFailures
+    pub login_failures: LoginFailures,
+
+    /// Who is connected over RTC in each room
+    #[cfg(feature = "rtc")]
+    pub rtc: crate::rtc::connections::Connections,
 }
 
 impl AppState {
@@ -50,11 +45,11 @@ impl AppState {
             pool,
             registry: Registry::default(),
             appearances: Appearances::default(),
-            #[cfg(feature = "rtc")]
-            rtc: crate::rtc::connections::Connections::default(),
-            platforms: ReportedPlatforms::default(),
             address_limits: AddressLimits::default(),
             login_failures: LoginFailures::default(),
+
+            #[cfg(feature = "rtc")]
+            rtc: crate::rtc::connections::Connections::default(),
         }
     }
 }
@@ -85,9 +80,11 @@ pub async fn snapshots(
                     users: appearance::snapshot(state, &members)
                 }
             );
+
+            #[cfg(feature = "links")]
             events.push(
                 ServerEvent::PlatformSnapshot {
-                    users: platforms::snapshot(&state.platforms, &members)
+                    users: crate::services::links::platforms::snapshot(&members)
                 }
             );
         }
@@ -176,6 +173,7 @@ async fn shared_members(
 }
 
 /// Read every room a user is a member of
+#[cfg(feature = "rtc")]
 async fn member_rooms(
     state: &AppState,
     user_id: Uuid,

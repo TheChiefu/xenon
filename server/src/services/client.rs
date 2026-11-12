@@ -1,0 +1,40 @@
+//! Outbound HTTP client shared by every service
+
+use std::sync::LazyLock;
+use std::time::Duration;
+
+use reqwest::Client;
+
+use crate::config;
+
+pub static CLIENT: LazyLock<Client> = LazyLock::new(build_client);
+
+/// Build outbound HTTP client at startup when config enables a service
+pub fn init() {
+    #[cfg(feature = "push")]
+    if config::get().push.is_some() {
+        LazyLock::force(&CLIENT);
+    }
+
+    #[cfg(feature = "links")]
+    if super::links::enabled() {
+        LazyLock::force(&CLIENT);
+    }
+}
+
+/// Build outbound HTTP client with request timeout, exits server if it cannot be built
+fn build_client() -> Client {
+    let timeout = Duration::from_secs(config::get().network.request_timeout_seconds);
+
+    let built = Client::builder()
+        .timeout(timeout)
+        .build();
+
+    match built {
+        Ok(client) => client,
+        Err(e) => {
+            tracing::error!("a service is enabled in config, but the outbound HTTP client could not be created: {e}");
+            std::process::exit(1);
+        }
+    }
+}

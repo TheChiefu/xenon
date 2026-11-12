@@ -13,7 +13,7 @@ use crate::routes::{AuthUser, BEARER};
 use crate::sockets;
 use crate::sockets::session::events::{ClientEvent, ServerEvent};
 use crate::sockets::session::registry::{self, SocketDevice};
-use crate::state::{self, appearance, platforms, AppState};
+use crate::state::{self, appearance, AppState};
 use crate::types::appearance::{Appearance, Device};
 
 // DATA STRUCTS //
@@ -142,10 +142,7 @@ async fn read_events(
         match event {
             ClientEvent::Appearance { appearance } => {
                 appearance::set(&app_state.appearances, user_id, appearance);
-                if appearance == Appearance::Offline {
-                    platforms::clear_all(app_state, user_id).await;
-                }
-                appearance::announce(app_state, user_id, appearance).await;
+                appearance::change(app_state, user_id, appearance).await;
             }
         }
     }

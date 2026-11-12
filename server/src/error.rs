@@ -38,8 +38,10 @@ pub enum AppError {
     Validation(String),
     Unavailable(String),
     Io(std::io::Error),
-    Http(reqwest::Error),
     Url(url::ParseError),
+
+    #[cfg(any(feature = "push", feature = "links"))]
+    Http(reqwest::Error),
 }
 
 impl fmt::Display for AppError {
@@ -56,10 +58,12 @@ impl fmt::Display for AppError {
             AppError::Forbidden => write!(f,"action not allowed"),
             AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
             AppError::Io(e) => write!(f, "i/o error: {e}"),
-            AppError::Http(e) => write!(f, "http error: {e}"),
             AppError::Url(e) => write!(f, "url error: {e}"),
             AppError::NotFound => write!(f, "not found"),
             AppError::AddressBlocked => write!(f, "this address is blocked"),
+
+            #[cfg(any(feature = "push", feature = "links"))]
+            AppError::Http(e) => write!(f, "http error: {e}"),
         }
     }
 }
@@ -70,8 +74,11 @@ impl std::error::Error for AppError {
             AppError::Db(e) => Some(e),
             AppError::Hash(e) => Some(e),
             AppError::Io(e) => Some(e),
-            AppError::Http(e) => Some(e),
             AppError::Url(e) => Some(e),
+
+            #[cfg(any(feature = "push", feature = "links"))]
+            AppError::Http(e) => Some(e),
+
             _ => None
         }
     }
@@ -101,6 +108,7 @@ impl From<std::io::Error> for AppError {
     }
 }
 
+#[cfg(any(feature = "push", feature = "links"))]
 impl From<reqwest::Error> for AppError {
     fn from(e: reqwest::Error) -> Self {
         AppError::Http(e)
@@ -151,7 +159,10 @@ impl AppError {
             },
 
             // Never reaches client
-            AppError::Hash(_) | AppError::Http(_) | AppError::Url(_) => self.internal_error(),
+            AppError::Hash(_) | AppError::Url(_) => self.internal_error(),
+
+            #[cfg(any(feature = "push", feature = "links"))]
+            AppError::Http(_) => self.internal_error(),
         }
     }
 }

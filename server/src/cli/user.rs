@@ -11,10 +11,12 @@ use crate::cli;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::security;
-use crate::services;
 use crate::state::{self, AppState};
 use crate::types::users::GlobalRole;
 use crate::validate;
+
+#[cfg(any(feature = "push", feature = "links"))]
+use crate::services;
 
 const COMMANDS: &[&str] = &[
     "user create <username>",
@@ -74,7 +76,13 @@ async fn set_role(pool: &SqlitePool, username: &str, role: &str) -> Result<()> {
 async fn ban(state: &AppState, username: &str) -> Result<()> {
     let user_id = get_user_id(&state.pool, username).await?;
     api::users::ban(&state.pool, user_id).await?;
-    services::remove_user(state, user_id).await?;
+
+    #[cfg(feature = "push")]
+    services::push::remove_subscriptions(state, user_id).await?;
+
+    #[cfg(feature = "links")]
+    services::links::remove_user(state, user_id).await?;
+
     state::disconnect(state, user_id).await;
 
     println!("banned user account: \"{username}\"");

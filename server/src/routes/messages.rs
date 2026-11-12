@@ -15,11 +15,13 @@ use crate::api::messages::{Cursor, Posted, CLIENT_NONCE_LENGTH};
 use crate::api::messages::attachments::Attachment;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
-use crate::services;
 use crate::sockets::session::events::ServerEvent;
 use crate::sockets::session::registry;
 use crate::state::{self, AppState};
 use crate::types::messages::{AttachmentInfo, AttachmentRequest, MessageInfo};
+
+#[cfg(feature = "push")]
+use crate::services;
 
 // REQUESTS //
 
@@ -225,10 +227,11 @@ async fn notify_users(
         message.body.as_deref()
     ).await?;
 
-    services::notify_offline(app_state, &notification);
+    #[cfg(feature = "push")]
+    services::push::notify_offline(app_state, &notification);
 
     let event = ServerEvent::Notification {
-        room_id,
+        room_id: notification.room_id,
         room_name: notification.room_name,
         author: notification.author,
         body: notification.body

@@ -8,9 +8,14 @@ use ts_rs::TS;
 
 #[cfg(feature = "rtc")]
 use crate::rtc::events::RtcRoom;
+
+#[cfg(feature = "links")]
+use crate::services::links::types::{Metadata, UserActivity};
+#[cfg(feature = "links")]
+use crate::types::platforms::Platform;
+
 use crate::types::appearance::{Appearance, Device, UserState};
 use crate::types::messages::MessageInfo;
-use crate::types::platforms::{Metadata, Platform, UserActivity};
 
 /// What a client sends over its socket
 #[derive(Deserialize)]
@@ -84,14 +89,20 @@ pub enum ServerEvent {
         author: String,
         body: String
     },
+    SessionRevoked,
+
+    #[cfg(feature = "links")]
     PlatformSnapshot {
         users: Vec<UserActivity>
     },
+
+    #[cfg(feature = "links")]
     PlatformUpdated {
         user_id: Uuid,
         platform: Platform,
         metadata: Option<Metadata>
     },
+
     #[cfg(feature = "rtc")]
     RtcSnapshot {
         rooms: Vec<RtcRoom>
@@ -106,5 +117,5 @@ pub enum ServerEvent {
         room_id: Uuid,
         user_id: Uuid
     },
-    SessionRevoked
+    
 }

@@ -5,9 +5,9 @@
 
 use serde::Deserialize;
 
-use crate::services::CLIENT;
-use crate::services::xbox;
-use crate::services::xbox::auth::Failure;
+use crate::services::client::CLIENT;
+use crate::services::links::xbox;
+use crate::services::links::xbox::auth::Failure;
 
 const USER_AUTH_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
 const XSTS_AUTH_URL: &str = "https://xsts.auth.xboxlive.com/xsts/authorize";

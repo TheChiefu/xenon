@@ -96,6 +96,8 @@ pub fn init(path: &str) {
         std::process::exit(1);
     }
 
+    config.warn_unbuilt(path);
+
     // Set global in memory config
     CONFIG.set(config).expect("config already initialized");
 }
@@ -117,6 +119,21 @@ fn write_default(path: &str) -> Config {
 }
 
 impl Config {
+
+    /// Warn about sections in config that server doesn't have in build
+    fn warn_unbuilt(&self, path: &str) {
+        if self.push.is_some() && !cfg!(feature = "push") {
+            eprintln!("{path}: [push] ignored | server was built without the push feature");
+        }
+
+        if self.xbox.is_some() && !cfg!(feature = "links") {
+            eprintln!("{path}: [xbox] ignored | server was built without the links feature");
+        }
+
+        if self.steam.is_some() && !cfg!(feature = "links") {
+            eprintln!("{path}: [steam] ignored | server was built without the links feature");
+        }
+    }
 
     /// Errors on the first invalid value in any section
     fn validate(&self) -> Result<(), String> {
@@ -174,21 +191,6 @@ impl Config {
     /// Whether the listener binds a loopback address.
     pub fn binds_loopback(&self) -> bool {
         self.socket_addr().ip().is_loopback()
-    }
-
-    pub fn public_url(&self) -> &str {
-        let url = self.network.public_url.as_deref().expect("network.public_url validated at startup");
-        url.trim_end_matches('/')
-    }
-
-    /// Returns xbox section
-    pub fn xbox(&self) -> &Xbox {
-        self.xbox.as_ref().expect("xbox routes require xbox config")
-    }
-
-    /// Returns steam section
-    pub fn steam(&self) -> &Steam {
-        self.steam.as_ref().expect("steam routes require steam config")
     }
 
     /// Whether a certificate and key are configured for the listener.

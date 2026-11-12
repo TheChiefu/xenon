@@ -15,7 +15,7 @@ use crate::config;
 use crate::error::Result;
 use crate::routes::AuthUser;
 use crate::services;
-use crate::services::steam::{self, link, REDIRECT_PATH};
+use crate::services::links::steam::{self, link, REDIRECT_PATH};
 use crate::state::AppState;
 
 #[cfg(feature = "ts_bindings")]
@@ -64,7 +64,7 @@ pub async fn redirect(
     Query(query): Query<RedirectQuery>,
 ) -> Response {
     let result = link::complete(&pool, query.user_id, &query.token, &query.params).await;
-    services::linked_response("Steam", query.user_id, result)
+    services::links::linked_response("Steam", query.user_id, result)
 }
 
 pub async fn unlink(
