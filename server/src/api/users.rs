@@ -112,6 +112,9 @@ pub async fn profile(
     #[cfg(feature = "links")]
     let linked_accounts = services::links::list_linked_accounts(pool, user_id).await?;
 
+    #[cfg(not(feature = "links"))]
+    let linked_accounts = Vec::new();
+
     Ok(UserProfile {
         id: row.id,
         username: row.username,
@@ -122,8 +125,6 @@ pub async fn profile(
         global_role: row.global_role,
         created_at: row.created_at,
         banned: row.banned,
-
-        #[cfg(feature = "links")]
         linked_accounts,
     })
 }

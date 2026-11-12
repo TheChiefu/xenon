@@ -10,7 +10,9 @@ use ts_rs::TS;
 use crate::rtc::events::RtcRoom;
 
 #[cfg(feature = "links")]
-use crate::services::links::types::{Metadata, Platform, UserActivity};
+use crate::services::links::types::{Metadata, UserActivity};
+#[cfg(feature = "links")]
+use crate::types::platforms::Platform;
 
 use crate::types::appearance::{Appearance, Device, UserState};
 use crate::types::messages::MessageInfo;

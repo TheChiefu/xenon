@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Appearance } from "@/bindings/types/appearance";
-  import { Availability } from "@/bindings/types/platforms";
+  import { Availability } from "@/bindings/services/links";
   import type { GameActivity } from "@/lib/users/data.svelte";
   import { ICONS_DEVICE, ICONS_PLATFORM, LABELS_AVAILABILITY, LABELS_DEVICE, LABELS_PLATFORM } from "@/lib/labels";
   import { failureText } from "@/lib/utils";

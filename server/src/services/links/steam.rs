@@ -15,7 +15,8 @@ use crate::config;
 use crate::error::Result;
 use crate::services::links::platforms;
 use crate::state::AppState;
-use crate::services::links::types::{LinkedAccount, Platform};
+use crate::types::platforms::Platform;
+use crate::types::users::LinkedAccount;
 
 pub const REDIRECT_PATH: &str = "/steam/redirect";
 

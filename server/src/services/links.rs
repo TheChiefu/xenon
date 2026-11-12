@@ -13,7 +13,8 @@ use uuid::Uuid;
 use crate::config::{self, Config, Steam, Xbox};
 use crate::error::Result;
 use crate::state::AppState;
-use crate::services::links::types::{LinkedAccount, Platform};
+use crate::types::platforms::Platform;
+use crate::types::users::LinkedAccount;
 
 pub const PLATFORMS: &[Platform] = &[Platform::Steam, Platform::Xbox];
 

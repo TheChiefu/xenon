@@ -6,25 +6,10 @@ use uuid::Uuid;
 #[cfg(feature = "ts_bindings")]
 use ts_rs::TS;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, sqlx::Type, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/platforms.ts", repr(enum = name)))]
-#[serde(rename_all = "lowercase")]
-#[sqlx(rename_all = "lowercase")]
-pub enum Platform {
-    Xbox,
-    Steam,
-}
-
-#[derive(Serialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
-pub struct LinkedAccount {
-    pub platform: Platform,
-    pub id: String,
-    pub handle: String,
-}
+use crate::types::platforms::Platform;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/platforms.ts", repr(enum = name)))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/links.ts", repr(enum = name)))]
 #[serde(rename_all = "lowercase")]
 pub enum Availability {
     Online,
@@ -33,7 +18,7 @@ pub enum Availability {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/platforms.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/links.ts"))]
 pub struct Metadata {
     pub availability: Availability,
     pub game: Option<String>,
@@ -41,7 +26,7 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/platforms.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/links.ts"))]
 pub struct Activity {
     pub xbox: Option<Metadata>,
     pub steam: Option<Metadata>
@@ -64,7 +49,7 @@ impl Activity {
 }
 
 #[derive(Serialize, Clone)]
-#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/platforms.ts"))]
+#[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "services/links.ts"))]
 pub struct UserActivity {
     pub user_id: Uuid,
     pub activity: Activity

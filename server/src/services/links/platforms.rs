@@ -8,7 +8,8 @@ use uuid::Uuid;
 use crate::sockets::session::events::ServerEvent;
 use crate::state::{self, appearance, AppState};
 use crate::types::appearance::Appearance;
-use crate::services::links::types::{Activity, Metadata, Platform, UserActivity};
+use crate::services::links::types::{Activity, Metadata, UserActivity};
+use crate::types::platforms::Platform;
 use crate::utils;
 
 /// What each user's linked accounts last reported, keyed by user id

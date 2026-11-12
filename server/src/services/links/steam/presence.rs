@@ -4,7 +4,8 @@ use crate::services::links::steam::accounts;
 use crate::services::links::steam::api::{self, PersonaState, PlayerSummary};
 use crate::services::links::platforms;
 use crate::state::AppState;
-use crate::services::links::types::{Availability, Metadata, Platform};
+use crate::services::links::types::{Availability, Metadata};
+use crate::types::platforms::Platform;
 
 const SUMMARIES_PER_REQUEST: usize = 100;
 

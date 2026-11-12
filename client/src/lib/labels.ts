@@ -2,7 +2,8 @@
 
 import { GlobalRole } from "@/bindings/types/users";
 import { Notify, Permission, Visibility } from "@/bindings/types/rooms";
-import { Availability, Platform } from "@/bindings/types/platforms";
+import { Platform } from "@/bindings/types/platforms";
+import { Availability } from "@/bindings/services/links";
 import { Appearance } from "@/bindings/types/appearance";
 import { RtcCloseCode } from "@/bindings/rtc/events";
 import { Device } from "@/bindings/types/appearance";

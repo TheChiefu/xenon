@@ -18,7 +18,8 @@ use crate::services::links::xbox::auth::{self, Failure};
 use crate::services::links::xbox::presence::mappings::{Mapping, Mappings};
 use crate::services::links::platforms;
 use crate::state::AppState;
-use crate::services::links::types::{Availability, Metadata, Platform};
+use crate::services::links::types::{Availability, Metadata};
+use crate::types::platforms::Platform;
 
 const PRESENCE_URL: &str = "https://userpresence.xboxlive.com/users";
 const HOME_TITLE_ID: &str = "750323071";
