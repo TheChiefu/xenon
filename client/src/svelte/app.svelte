@@ -17,7 +17,6 @@
   import Active from "./call/active.svelte";
   import Preview from "./call/preview.svelte";
   import Content from "./content.svelte";
-  import Xbox from "./panes/xbox.svelte";
   import Inbox from "./panes/inbox.svelte";
   import ContextMenu from "./context_menu.svelte";
 
@@ -40,9 +39,6 @@
   import { COMPACT_CLASS, isCompact } from "@/lib/utils";
   import type { ToolbarButton } from "@/lib/display/toolbar";
   import { Kind } from "@/lib/display/toolbar";
-  import * as xbox from "@/lib/services/xbox.svelte";
-  import { Platform } from "@/bindings/types/platforms";
-  import { ICONS_PLATFORM } from "@/lib/labels";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
 
@@ -58,63 +54,41 @@
   const opened: Record<Pane, boolean> = $state({
     [Pane.rooms]: false,
     [Pane.call]: false,
-    [Pane.xbox]: false,
     [Pane.inbox]: false,
   });
 
   // Pane toggles, laid out by whichever toolbar is shown
-  const paneButtons: ToolbarButton[] = $derived.by(() => {
-    const buttons: ToolbarButton[] = [
-      {
-        label: "Rooms",
-        icon: icon_rooms,
-        active: panes.isOpen(Pane.rooms),
-        kind: Kind.Regular,
-        onclick: () => panes.toggle(Pane.rooms),
-      },
-      {
-        label: "Call",
-        icon: icon_call,
-        active: panes.isOpen(Pane.call),
-        kind: Kind.Regular,
-        onclick: () => panes.toggle(Pane.call),
-      },
-      {
-        label: "Inbox",
-        icon: icon_inbox,
-        active: panes.isOpen(Pane.inbox),
-        badge: invites.getInvites().length,
-        kind: Kind.Overlay,
-        onclick: () => panes.toggle(Pane.inbox),
-      },
-      {
-        label: "Search",
-        icon: icon_search,
-        active: modals.isOpen(Modal.search),
-        kind: Kind.Modal,
-        onclick: () => events.dispatch(LocalEvent.search_requested),
-      },
-    ];
-
-    // Xbox only once an account is linked
-    if (xbox.isLinked()) {
-      buttons.push({
-        label: "Xbox",
-        icon: ICONS_PLATFORM[Platform.xbox],
-        active: panes.isOpen(Pane.xbox),
-        kind: Kind.Overlay,
-        onclick: () => panes.toggle(Pane.xbox),
-      });
-    }
-
-    return buttons;
-  });
-
-  // Close Xbox pane without a linked account
-  $effect(() => {
-    if (profile.get() === null) return;
-    if (!xbox.isLinked()) panes.setOpenState(Pane.xbox, false);
-  });
+  const paneButtons: ToolbarButton[] = $derived([
+    {
+      label: "Rooms",
+      icon: icon_rooms,
+      active: panes.isOpen(Pane.rooms),
+      kind: Kind.Regular,
+      onclick: () => panes.toggle(Pane.rooms),
+    },
+    {
+      label: "Call",
+      icon: icon_call,
+      active: panes.isOpen(Pane.call),
+      kind: Kind.Regular,
+      onclick: () => panes.toggle(Pane.call),
+    },
+    {
+      label: "Inbox",
+      icon: icon_inbox,
+      active: panes.isOpen(Pane.inbox),
+      badge: invites.getInvites().length,
+      kind: Kind.Overlay,
+      onclick: () => panes.toggle(Pane.inbox),
+    },
+    {
+      label: "Search",
+      icon: icon_search,
+      active: modals.isOpen(Modal.search),
+      kind: Kind.Modal,
+      onclick: () => events.dispatch(LocalEvent.search_requested),
+    },
+  ]);
 
   // Open loaded panes on their open/closed state
   $effect.pre(() => {
@@ -182,13 +156,6 @@
       {#if opened[Pane.inbox]}
         <Container pane={Pane.inbox}>
           <Inbox/>
-        </Container>
-      {/if}
-
-      <!-- Xbox Navigator-->
-      {#if opened[Pane.xbox]}
-        <Container pane={Pane.xbox}>
-          <Xbox/>
         </Container>
       {/if}
     </div>

@@ -72,8 +72,7 @@
   width: 16rem;
 }
 
-.panes > .pane-inbox,
-.panes > .pane-xbox {
+.panes > .pane-inbox {
   position: absolute;
   top: 0;
   right: 0;
