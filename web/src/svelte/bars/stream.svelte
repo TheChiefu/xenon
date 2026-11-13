@@ -3,7 +3,7 @@
   import * as users from "@/lib/users/data.svelte";
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   const watching: string | null = $derived(screens.getWatching());
 </script>

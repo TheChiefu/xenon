@@ -3,9 +3,9 @@
   import * as events from "@/lib/events";
   import * as rooms from "@/lib/rooms/data.svelte";
   import * as selection from "@/lib/rooms/selection.svelte";
-  import icon_back from "@/assets/icons/back.svg?raw";
-  import icon_copy from "@/assets/icons/copy.svg?raw";
-  import icon_gear from "@/assets/icons/gear.svg?raw";
+  import icon_back from "@assets/icons/back.svg?raw";
+  import icon_copy from "@assets/icons/copy.svg?raw";
+  import icon_gear from "@assets/icons/gear.svg?raw";
 
   interface Props {
     roomId: string;

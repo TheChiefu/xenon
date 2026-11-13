@@ -42,10 +42,10 @@
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
 
-  import icon_rooms from "@/assets/icons/door-open.svg?raw";
-  import icon_call from "@/assets/icons/user-broadcast.svg?raw";
-  import icon_inbox from "@/assets/icons/mail.svg?raw";
-  import icon_search from "@/assets/icons/search.svg?raw";
+  import icon_rooms from "@assets/icons/door-open.svg?raw";
+  import icon_call from "@assets/icons/user-broadcast.svg?raw";
+  import icon_inbox from "@assets/icons/mail.svg?raw";
+  import icon_search from "@assets/icons/search.svg?raw";
 
   // Room shown by chat and members
   const roomId: string | null = $derived(session.getSelectedRoom());

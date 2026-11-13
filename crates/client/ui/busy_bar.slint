@@ -1,0 +1,14 @@
+import { Layout } from "layout.slint";
+import { Theme } from "theme.slint";
+
+export component BusyBar inherits Rectangle {
+    height: Layout.busy-bar-height;
+    background: Theme.colors.surface;
+    clip: true;
+
+    Rectangle {
+        width: parent.width * Layout.busy-bar-fraction;
+        x: mod(animation-tick() / Layout.busy-bar-period, 1) * (parent.width + self.width) - self.width;
+        background: Theme.colors.accent;
+    }
+}

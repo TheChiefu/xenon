@@ -1,0 +1,91 @@
+import { Button } from "widgets/button.slint";
+import { TextField } from "widgets/text_field.slint";
+import { Divider } from "widgets/divider.slint";
+import { Strings } from "strings.slint";
+import { Layout } from "layout.slint";
+import { Theme } from "theme.slint";
+
+component Field inherits VerticalLayout {
+    in property <string> label;
+    spacing: Layout.spacing / 2;
+
+    Text {
+        text: root.label;
+        color: Theme.colors.text;
+    }
+
+    @children
+}
+
+export component LoginView inherits Rectangle {
+    property <string> username;
+    property <string> password;
+    property <string> server;
+    callback sign-in(username: string, password: string, server: string);
+
+    function submit() {
+        root.sign-in(root.username, root.password, root.server);
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        HorizontalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: Layout.card-width;
+                background: Theme.colors.surface;
+                border-width: Layout.border-width;
+                border-color: Theme.colors.border;
+
+                VerticalLayout {
+                    padding: Layout.card-padding;
+                    spacing: Layout.spacing;
+
+                    HorizontalLayout {
+                        alignment: center;
+
+                        Image {
+                            source: @image-url("@assets/logo.png");
+                            height: Layout.logo-height;
+                            width: self.height * self.source.width / self.source.height;
+                        }
+                    }
+
+                    Divider {}
+
+                    Field {
+                        label: Strings.username;
+                        TextField {
+                            text <=> root.username;
+                            accepted => { root.submit(); }
+                        }
+                    }
+
+                    Field {
+                        label: Strings.password;
+                        TextField {
+                            text <=> root.password;
+                            input-type: InputType.password;
+                            accepted => { root.submit(); }
+                        }
+                    }
+
+                    Field {
+                        label: Strings.server;
+                        TextField {
+                            text <=> root.server;
+                            accepted => { root.submit(); }
+                        }
+                    }
+
+                    Button {
+                        text: Strings.sign-in;
+                        clicked => { root.submit(); }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -5,11 +5,11 @@
   import * as settings from "@/lib/rooms/settings.svelte";
   import * as profile from "@/lib/users/profile.svelte";
   import { UserSearch } from "@/lib/users/search.svelte";
-  import icon_search from "@/assets/icons/search.svg?raw";
-  import icon_mail from "@/assets/icons/mail.svg?raw";
-  import icon_mail_x from "@/assets/icons/mail-x.svg?raw";
-  import icon_user_ban from "@/assets/icons/user-ban.svg?raw";
-  import icon_user from "@/assets/icons/user.svg?raw";
+  import icon_search from "@assets/icons/search.svg?raw";
+  import icon_mail from "@assets/icons/mail.svg?raw";
+  import icon_mail_x from "@assets/icons/mail-x.svg?raw";
+  import icon_user_ban from "@assets/icons/user-ban.svg?raw";
+  import icon_user from "@assets/icons/user.svg?raw";
 
   const user_search = new UserSearch();
   let username = $state("");

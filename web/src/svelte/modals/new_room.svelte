@@ -3,7 +3,7 @@
   import { DESCRIPTIONS_VISIBILITY, LABELS_PERMISSION, LABELS_VISIBILITY } from "@/lib/labels";
   import { dialogFly } from "@/lib/display/transitions";
   import { getError, isPending, submit } from "@/lib/rooms/creation.svelte";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     onClose: () => void;

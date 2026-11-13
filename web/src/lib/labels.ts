@@ -7,17 +7,17 @@ import { Availability } from "@/bindings/services/links";
 import { Appearance } from "@/bindings/types/appearance";
 import { RtcCloseCode } from "@/bindings/rtc/events";
 import { Device } from "@/bindings/types/appearance";
-import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";import icon_steam from "@/assets/platforms/steam.svg?raw";
-import icon_steam_outline from "@/assets/platforms/steam_outline.svg?raw";
-import icon_xbox from "@/assets/platforms/xbox.svg?raw";
-import icon_android from "@/assets/devices/android.svg?raw";
-import icon_desktop from "@/assets/devices/desktop.svg?raw";
-import icon_ios from "@/assets/devices/ios.svg?raw";
-import icon_linux from "@/assets/devices/linux.svg?raw";
-import icon_mac from "@/assets/devices/mac.svg?raw";
-import icon_mobile from "@/assets/devices/mobile.svg?raw";
-import icon_tablet from "@/assets/devices/tablet.svg?raw";
-import icon_windows from "@/assets/devices/windows.svg?raw";
+import { AnimatePhotos, isLightScheme, SendKey } from "@/lib/client/settings.svelte";import icon_steam from "@assets/platforms/steam.svg?raw";
+import icon_steam_outline from "@assets/platforms/steam_outline.svg?raw";
+import icon_xbox from "@assets/platforms/xbox.svg?raw";
+import icon_android from "@assets/devices/android.svg?raw";
+import icon_desktop from "@assets/devices/desktop.svg?raw";
+import icon_ios from "@assets/devices/ios.svg?raw";
+import icon_linux from "@assets/devices/linux.svg?raw";
+import icon_mac from "@assets/devices/mac.svg?raw";
+import icon_mobile from "@assets/devices/mobile.svg?raw";
+import icon_tablet from "@assets/devices/tablet.svg?raw";
+import icon_windows from "@assets/devices/windows.svg?raw";
 
 export const ICONS_DEVICE: Record<Device, string> = {
   [Device.windows]: icon_windows,

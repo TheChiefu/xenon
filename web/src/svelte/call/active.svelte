@@ -13,13 +13,13 @@
   import { LocalEvent } from "@/lib/events";
   import * as events from "@/lib/events";
 
-  import icon_headphones from "@/assets/icons/headphones.svg?raw";
-  import icon_headphones_muted from "@/assets/icons/headphones-muted.svg?raw";
-  import icon_mic from "@/assets/icons/mic.svg?raw";
-  import icon_mic_muted from "@/assets/icons/mic-muted.svg?raw";
-  import icon_monitor from "@/assets/icons/monitor.svg?raw";
-  import icon_volume from "@/assets/icons/volume.svg?raw";
-  import icon_volume_off from "@/assets/icons/volume-off.svg?raw";
+  import icon_headphones from "@assets/icons/headphones.svg?raw";
+  import icon_headphones_muted from "@assets/icons/headphones-muted.svg?raw";
+  import icon_mic from "@assets/icons/mic.svg?raw";
+  import icon_mic_muted from "@assets/icons/mic-muted.svg?raw";
+  import icon_monitor from "@assets/icons/monitor.svg?raw";
+  import icon_volume from "@assets/icons/volume.svg?raw";
+  import icon_volume_off from "@assets/icons/volume-off.svg?raw";
 
   const self_id: string = $derived(profile.get()?.id ?? "");
   const room_id: string | null = $derived(session.getRoomId());

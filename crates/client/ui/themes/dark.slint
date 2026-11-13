@@ -1,0 +1,29 @@
+import { Palette } from "palette.slint";
+
+export global Dark {
+    out property <Palette> colors: {
+        background: rgba(21, 24, 29, 1),
+        surface: rgba(27, 31, 38, 1),
+        surface-raised: rgba(47, 54, 67, 1),
+        surface-hover: rgba(60, 60, 60, 1),
+        overlay: rgba(0, 0, 0, 0.15),
+
+        border: rgba(47, 54, 65, 1),
+        border-dim: rgba(47, 54, 65, 0.5),
+
+        text: rgba(231, 234, 239, 1),
+        text-dim: rgba(152, 162, 179, 1),
+        link: rgba(110, 168, 254, 1),
+        link-active: rgba(39, 125, 253, 1),
+
+        accent: rgba(79, 140, 255, 1),
+        accent-hover: rgba(79, 120, 255, 1),
+        disabled: rgba(50, 50, 50, 1),
+        danger: rgba(190, 0, 0, 1),
+
+        status-online: rgba(59, 165, 93, 1),
+        status-busy: rgba(190, 0, 0, 1),
+        status-away: rgba(240, 166, 55, 1),
+        status-offline: rgba(152, 162, 179, 1),
+    };
+}

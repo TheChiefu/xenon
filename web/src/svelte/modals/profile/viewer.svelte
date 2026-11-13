@@ -8,7 +8,7 @@
   import * as profile_viewer from "@/lib/users/profile_viewer.svelte";
   import { dialogFly } from "@/lib/display/transitions";
   import { failureText } from "@/lib/utils";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     onClose: () => void;

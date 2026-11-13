@@ -8,8 +8,8 @@
   import * as rooms from "@/lib/rooms/data.svelte";
   import * as users from "@/lib/users/data.svelte";
   import { failureText } from "@/lib/utils";
-  import icon_x from "@/assets/icons/x.svg?raw";
-  import icon_back from "@/assets/icons/back.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
+  import icon_back from "@assets/icons/back.svg?raw";
 
   interface Props {
     onClose: () => void;

@@ -1,4 +1,4 @@
-![project logo](./logo.png)
+![project logo](./assets/logo.png)
 
 ## Description
 A simple chat application for use in small to medium sized groups. It is a single

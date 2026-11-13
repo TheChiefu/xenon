@@ -5,8 +5,8 @@
   import * as events from "@/lib/events";
   import { DAY_MS, failureText } from "@/lib/utils";
 
-  import icon_refresh from "@/assets/icons/refresh.svg?raw";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_refresh from "@assets/icons/refresh.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   let codes: RegistrationCode[] = $state([]);
   let notify = $state("");

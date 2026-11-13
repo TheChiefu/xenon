@@ -1,9 +1,9 @@
 <script lang="ts">
   import { MSG_ERROR } from "@/lib/labels";
   import * as invites from "@/lib/rooms/invites.svelte";
-  import icon_check from "@/assets/icons/check.svg?raw";
-  import icon_refresh from "@/assets/icons/refresh.svg?raw";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_check from "@assets/icons/check.svg?raw";
+  import icon_refresh from "@assets/icons/refresh.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 </script>
 
 <style>

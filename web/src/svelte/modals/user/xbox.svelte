@@ -7,10 +7,10 @@
   import * as xboxAPI from "@/lib/api/xbox";
   import { failureText } from "@/lib/utils";
   import * as profile from "@/lib/users/profile.svelte";
-  import icon_link from "@/assets/icons/link.svg?raw";
-  import icon_link_broken from "@/assets/icons/link_broken.svg?raw";
-  import icon_refresh from "@/assets/icons/refresh.svg?raw";
-  import icon_enter from "@/assets/icons/enter.svg?raw";
+  import icon_link from "@assets/icons/link.svg?raw";
+  import icon_link_broken from "@assets/icons/link_broken.svg?raw";
+  import icon_refresh from "@assets/icons/refresh.svg?raw";
+  import icon_enter from "@assets/icons/enter.svg?raw";
 
   let xbox_account: XboxResponse | null = $state(null);
   let xbox_notify = $state("");

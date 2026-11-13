@@ -16,15 +16,15 @@
     import * as creation from "@/lib/rooms/creation.svelte";
     import { LocalEvent } from "@/lib/events";
     import * as events from "@/lib/events";
-    import icon_plus from "@/assets/icons/plus.svg?raw";
-    import icon_compass from "@/assets/icons/compass.svg?raw";
-    import icon_lock from "@/assets/icons/lock.svg?raw";
-    import icon_lock_open from "@/assets/icons/lock-open.svg?raw";
-    import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
-    import icon_broadcast from "@/assets/icons/broadcast.svg?raw";
-    import icon_folder from "@/assets/icons/folder.svg?raw";
-    import icon_arrow_down from "@/assets/icons/arrow-down.svg?raw";
-    import icon_arrow_right from "@/assets/icons/arrow-right.svg?raw";
+    import icon_plus from "@assets/icons/plus.svg?raw";
+    import icon_compass from "@assets/icons/compass.svg?raw";
+    import icon_lock from "@assets/icons/lock.svg?raw";
+    import icon_lock_open from "@assets/icons/lock-open.svg?raw";
+    import icon_eye_off from "@assets/icons/eye-off.svg?raw";
+    import icon_broadcast from "@assets/icons/broadcast.svg?raw";
+    import icon_folder from "@assets/icons/folder.svg?raw";
+    import icon_arrow_down from "@assets/icons/arrow-down.svg?raw";
+    import icon_arrow_right from "@assets/icons/arrow-right.svg?raw";
 
     interface Props {
         hasCall?: (roomId: RoomId) => boolean;

@@ -12,9 +12,9 @@
   import * as events from "@/lib/events";
   import { dialogFly } from "@/lib/display/transitions";
 
-  import icon_refresh from "@/assets/icons/refresh.svg?raw";
-  import icon_gear from "@/assets/icons/gear.svg?raw";
-  import icon_shield from "@/assets/icons/shield.svg?raw";
+  import icon_refresh from "@assets/icons/refresh.svg?raw";
+  import icon_gear from "@assets/icons/gear.svg?raw";
+  import icon_shield from "@assets/icons/shield.svg?raw";
 
   let menuOpen = $state(false);
 

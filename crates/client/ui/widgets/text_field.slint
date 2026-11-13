@@ -1,0 +1,24 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component TextField inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in property <InputType> input-type <=> input.input-type;
+    callback accepted <=> input.accepted;
+
+    background: Theme.colors.background;
+    border-width: Layout.border-width;
+    border-color: input.has-focus ? Theme.colors.accent : Theme.colors.border;
+
+    HorizontalLayout {
+        padding-top: Layout.control-padding;
+        padding-bottom: Layout.control-padding;
+        padding-left: Layout.control-padding * 2;
+        padding-right: Layout.control-padding * 2;
+
+        input := TextInput {
+            color: Theme.colors.text;
+            vertical-alignment: center;
+        }
+    }
+}

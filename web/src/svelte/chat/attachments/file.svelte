@@ -1,5 +1,5 @@
 <script lang="ts">
-import download from "@/assets/icons/download.svg?raw";
+import download from "@assets/icons/download.svg?raw";
 
 interface Props {
     url: string;

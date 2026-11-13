@@ -1,0 +1,29 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    callback clicked <=> touch.clicked;
+
+    background: touch.has-hover ? Theme.colors.accent-hover : Theme.colors.accent;
+    border-width: Layout.border-width;
+    border-color: Theme.colors.border;
+
+    HorizontalLayout {
+        padding-top: Layout.control-padding;
+        padding-bottom: Layout.control-padding;
+        padding-left: Layout.control-padding * 2;
+        padding-right: Layout.control-padding * 2;
+
+        Text {
+            text: root.text;
+            color: Theme.colors.text;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+    }
+}

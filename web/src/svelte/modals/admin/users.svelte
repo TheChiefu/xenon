@@ -17,10 +17,10 @@
   import * as events from "@/lib/events";
   import { UserSearch } from "@/lib/users/search.svelte";
   import { failureText } from "@/lib/utils";
-  import icon_search from "@/assets/icons/search.svg?raw";
-  import icon_trash from "@/assets/icons/trash.svg?raw";
-  import icon_user_ban from "@/assets/icons/user-ban.svg?raw";
-  import icon_user from "@/assets/icons/user.svg?raw";
+  import icon_search from "@assets/icons/search.svg?raw";
+  import icon_trash from "@assets/icons/trash.svg?raw";
+  import icon_user_ban from "@assets/icons/user-ban.svg?raw";
+  import icon_user from "@assets/icons/user.svg?raw";
 
   const user_search = new UserSearch();
   let username = $state("");

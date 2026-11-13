@@ -13,7 +13,7 @@
   import * as members from "@/lib/rooms/members.svelte";
   import * as users from "@/lib/users/data.svelte";
   import { failureText } from "@/lib/utils";
-  import icon_arrow_up from "@/assets/icons/arrow-up.svg?raw";
+  import icon_arrow_up from "@assets/icons/arrow-up.svg?raw";
 
   interface Props {
     roomId: string | null;

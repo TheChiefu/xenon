@@ -7,9 +7,9 @@
 </script>
 
 <script lang="ts">
-  import icon_eye from "@/assets/icons/eye.svg?raw";
-  import icon_eye_off from "@/assets/icons/eye-off.svg?raw";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_eye from "@assets/icons/eye.svg?raw";
+  import icon_eye_off from "@assets/icons/eye-off.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     attachment: DraftAttachment;

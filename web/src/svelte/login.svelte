@@ -3,7 +3,7 @@
   import * as session from "@/lib/connection/session.svelte";
   import type { Account } from "@/lib/connection/session.svelte";
   import { failureText } from "@/lib/utils";
-  import iconX from "@/assets/icons/x.svg?raw";
+  import iconX from "@assets/icons/x.svg?raw";
 
   export const DEFAULT_BASE_URL = import.meta.env.DEV ? "" : location.origin; // Address the page was loaded from
   // User Credentials

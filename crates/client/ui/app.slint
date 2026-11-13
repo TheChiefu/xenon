@@ -1,0 +1,31 @@
+import { Strings } from "strings.slint";
+import { Layout } from "layout.slint";
+import { Theme } from "theme.slint";
+import { BusyBar } from "busy_bar.slint";
+import { ErrorBar } from "error_bar.slint";
+import { LoginView } from "login.slint";
+
+export component AppWindow inherits Window {
+    in property <bool> busy;
+    in-out property <string> error;
+    callback sign-in <=> login.sign-in;
+
+    title: Strings.app-name;
+    icon: @image-url("@assets/icon.png");
+    preferred-width: Layout.window-width;
+    preferred-height: Layout.window-height;
+    min-width: Layout.window-min-width;
+    min-height: Layout.window-min-height;
+    background: Theme.colors.background;
+
+    VerticalLayout {
+        if root.busy: BusyBar { }
+
+        if root.error != "": ErrorBar {
+            text: root.error;
+            dismissed => { root.error = ""; }
+        }
+
+        login := LoginView { }
+    }
+}

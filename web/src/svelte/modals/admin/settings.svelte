@@ -4,7 +4,7 @@
   import { modal } from "@/lib/display/modal";
   import Codes from "./codes.svelte";
   import Users from "./users.svelte";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     onClose: () => void;

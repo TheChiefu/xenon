@@ -3,7 +3,7 @@
   import { dialogFly } from "@/lib/display/transitions";
   import { modal } from "@/lib/display/modal";
   import * as discovery from "@/lib/rooms/discovery.svelte";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     onClose: () => void;

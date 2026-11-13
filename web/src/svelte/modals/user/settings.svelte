@@ -6,7 +6,7 @@
   import Call from "./call.svelte";
   import Account from "./account.svelte";
   import Links from "./links.svelte";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     onClose: () => void;

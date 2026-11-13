@@ -7,7 +7,7 @@
   import * as settings from "@/lib/rooms/settings.svelte";
   import General from "./general.svelte";
   import Access from "./access.svelte";
-  import icon_x from "@/assets/icons/x.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
 
   interface Props {
     onClose: () => void;

@@ -8,8 +8,8 @@
   import { failureText } from "@/lib/utils";
   import DraftAttachmentRow, { type DraftAttachment } from "./draft_attachment.svelte";
 
-  import icon_clip from "@/assets/icons/clip.svg?raw";
-  import icon_send from "@/assets/icons/send.svg?raw";
+  import icon_clip from "@assets/icons/clip.svg?raw";
+  import icon_send from "@assets/icons/send.svg?raw";
 
   interface Props {
     roomId: string;

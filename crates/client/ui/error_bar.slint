@@ -1,0 +1,34 @@
+import { Layout } from "layout.slint";
+import { Theme } from "theme.slint";
+
+export component ErrorBar inherits Rectangle {
+    in property <string> text;
+    callback dismissed();
+
+    background: Theme.colors.danger;
+
+    HorizontalLayout {
+        padding: Layout.control-padding;
+        spacing: Layout.spacing;
+
+        Text {
+            text: root.text;
+            color: Theme.colors.text;
+            wrap: word-wrap;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+
+        Image {
+            source: @image-url("@assets/icons/x.svg");
+            colorize: Theme.colors.text;
+            width: Layout.icon-size;
+            height: Layout.icon-size;
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.dismissed(); }
+            }
+        }
+    }
+}

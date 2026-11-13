@@ -17,7 +17,8 @@
     "checkJs": true,
     "moduleDetection": "force",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@assets/*": ["../assets/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]

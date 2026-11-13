@@ -1,7 +1,7 @@
 <script lang="ts">
 import { LocalEvent } from "@/lib/events";
 import * as events from "@/lib/events";
-import download from "@/assets/icons/download.svg?raw";
+import download from "@assets/icons/download.svg?raw";
 
 interface Props {
     url: string;

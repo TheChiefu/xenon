@@ -3,10 +3,10 @@
 
   import * as image_viewer from "@/lib/display/image_viewer.svelte";
   import { dialogFly } from "@/lib/display/transitions";
-  import icon_fit from "@/assets/icons/fit.svg?raw";
-  import icon_x from "@/assets/icons/x.svg?raw";
-  import icon_zoom_in from "@/assets/icons/zoom-in.svg?raw";
-  import icon_zoom_out from "@/assets/icons/zoom-out.svg?raw";
+  import icon_fit from "@assets/icons/fit.svg?raw";
+  import icon_x from "@assets/icons/x.svg?raw";
+  import icon_zoom_in from "@assets/icons/zoom-in.svg?raw";
+  import icon_zoom_out from "@assets/icons/zoom-out.svg?raw";
 
   interface Point {
     x: number;
