@@ -44,7 +44,7 @@ impl FromStr for GlobalRole {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
 pub struct UserProfile {
     pub id: Uuid,
@@ -59,7 +59,7 @@ pub struct UserProfile {
     pub linked_accounts: Vec<LinkedAccount>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "types/users.ts"))]
 pub struct LinkedAccount {
     pub platform: Platform,

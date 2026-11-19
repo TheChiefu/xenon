@@ -1,0 +1,55 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Account inherits HorizontalLayout {
+    in property <string> username;
+    in property <string> server;
+    callback selected();
+    callback removed();
+
+    Rectangle {
+        horizontal-stretch: 1;
+        background: select.has-hover ? Theme.colors.surface-hover : transparent;
+
+        VerticalLayout {
+            padding: Layout.control-padding;
+
+            Text {
+                text: "@" + root.username;
+                color: Theme.colors.text;
+                overflow: elide;
+            }
+
+            Text {
+                text: root.server;
+                color: Theme.colors.text;
+                overflow: elide;
+            }
+        }
+
+        select := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.selected(); }
+        }
+    }
+
+    Rectangle {
+        background: remove.has-hover ? Theme.colors.danger : transparent;
+
+        HorizontalLayout {
+            padding: Layout.control-padding;
+
+            Image {
+                source: @image-url("@assets/icons/x.svg");
+                colorize: Theme.colors.text;
+                width: Layout.icon-size;
+                height: Layout.icon-size;
+            }
+        }
+
+        remove := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.removed(); }
+        }
+    }
+}

@@ -1,0 +1,18 @@
+export struct Entry {
+    key: string,
+    username: string,
+    server: string,
+}
+
+export global Session {
+    in property <bool> signed-in;
+
+    callback sign-in(username: string, password: string, server: string);
+    callback register(username: string, password: string, display-name: string, code: string, server: string);
+    callback switch-account();
+    callback sign-out();
+
+    callback accounts() -> [Entry];
+    callback select(key: string);
+    callback remove(key: string);
+}

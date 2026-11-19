@@ -1,0 +1,26 @@
+import { Account } from "account.slint";
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+import { Session, Entry } from "../state/session.slint";
+
+export component Accounts inherits VerticalLayout {
+    in property <[Entry]> accounts;
+    callback removed(key: string);
+
+    spacing: Layout.spacing;
+
+    Rectangle {
+        background: Theme.colors.background;
+        border-width: Layout.border-width;
+        border-color: Theme.colors.border-dim;
+
+        VerticalLayout {
+            for entry in root.accounts: Account {
+                username: entry.username;
+                server: entry.server;
+                selected => { Session.select(entry.key); }
+                removed => { root.removed(entry.key); }
+            }
+        }
+    }
+}

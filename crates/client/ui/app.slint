@@ -1,15 +1,17 @@
 import { Strings } from "strings.slint";
 import { Layout } from "layout.slint";
 import { Theme } from "theme.slint";
-import { BusyBar } from "busy_bar.slint";
-import { ErrorBar } from "error_bar.slint";
-import { LoginView } from "login.slint";
+import { Status } from "state/status.slint";
+import { Session, Entry } from "state/session.slint";
+import { Profile } from "state/profile.slint";
+import { Progress } from "progress.slint";
+import { Alert } from "alert.slint";
+import { Login } from "login/login.slint";
+import { Primary } from "primary.slint";
 
-export component AppWindow inherits Window {
-    in property <bool> busy;
-    in-out property <string> error;
-    callback sign-in <=> login.sign-in;
+export { Status, Session, Profile, Entry }
 
+export component App inherits Window {
     title: Strings.app-name;
     icon: @image-url("@assets/icon.png");
     preferred-width: Layout.window-width;
@@ -19,13 +21,20 @@ export component AppWindow inherits Window {
     background: Theme.colors.background;
 
     VerticalLayout {
-        if root.busy: BusyBar { }
+        if !Session.signed-in: Login { }
+        if Session.signed-in: Primary { }
+    }
 
-        if root.error != "": ErrorBar {
-            text: root.error;
-            dismissed => { root.error = ""; }
-        }
+    // Drawn over the screens so they don't shift when shown
+    Progress {
+        y: 0;
+        width: root.width;
+        height: self.preferred-height;
+    }
 
-        login := LoginView { }
+    Alert {
+        y: 0;
+        width: root.width;
+        height: self.preferred-height;
     }
 }

@@ -1,0 +1,66 @@
+import { Button } from "../widgets/button.slint";
+import { Input } from "../widgets/input.slint";
+import { Field } from "field.slint";
+import { Strings } from "../strings.slint";
+import { Layout } from "../layout.slint";
+import { Session } from "../state/session.slint";
+
+export component Register inherits VerticalLayout {
+    property <string> username;
+    property <string> password;
+    property <string> display-name;
+    property <string> code;
+    property <string> server;
+
+    function submit() {
+        Session.register(root.username, root.password, root.display-name, root.code, root.server);
+    }
+
+    spacing: Layout.spacing;
+
+    Field {
+        label: Strings.username;
+        Input {
+            text <=> root.username;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Field {
+        label: Strings.password;
+        Input {
+            text <=> root.password;
+            input-type: InputType.password;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Field {
+        label: Strings.display-name;
+        Input {
+            text <=> root.display-name;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Field {
+        label: Strings.registration-code;
+        Input {
+            text <=> root.code;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Field {
+        label: Strings.server;
+        Input {
+            text <=> root.server;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Button {
+        text: Strings.create-account;
+        clicked => { root.submit(); }
+    }
+}
