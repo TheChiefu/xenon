@@ -1,40 +1,15 @@
 # AI Usage
 
 ## Overview
-This document is fully outline and be transparent in how AI was used in this project.
-The reason I am making this is because I (and I assume others) have some reservations about
-using a project with any AI usage in it; primarily due to security, privacy, and performance concerns.
+This document describes how AI was used in this project and the reasoning behind it.
+The reason this exists is because I (TheChiefu) and others have reservations about
+using a project with AI usage in it; primarily due to security, privacy, and performance concerns.
 So, I wanted to describe how I used AI in this project to give any users/readers information about
 whether or not they want to use this project or not. Additionally, I am writing this document
-without any AI assistance to try to drive home the point that I actually care about this project
+without any AI assistance to try to convey the point that I actually care about this project
 and the quality of it.
 
-## About the Project and Me
-This sections can be skipped if you don't care about the how and why the project
-came about, nor about my software background. Go to [decisions](#decisions) to skip over this section.
-This is for readers who want to be more critial in the project's AI usage and my ability to manage the project.
-
-The impetus of this project was that I wanted a self hosted chat app my friends and I could use without
-the worry of a company or anyone else being able to have access to our private conversations and data.
-Especially after the privacy scare Discord had when they introduced age verification in (around early 2026).
-I tried alternatives like Spacebar/Fermo, Fluxer, Stoat, TeamSpeak, Matrix, etc; and while all of those are
-perfectly fine apps, they all either didn't have features I wanted or had way too many that I didn't need 
-(they also sometimes had way too much setup involved).
-
-Mid 2026, I started to try and see if I could make a simple chat app. I thought about Dart/Flutter,
-Python/Qt, Rust/Slint, but could never nail anything down that felt like it would work for the group's needs.
-Since I needed to have it work for Linux, Windows, iOS, and Android; I eventually settled on a bare rust
-server backend with a web front-end.
-
-There were two main reasons why I picked Rust as the backend and TS as the frontend. One, I wanted to learn Rust
-in general but never had a real reason to. Two, TypeScript has type checking built in and follows JS to keep
-up with web.
-
-In terms of my background, I have 6 years of software development experience (as of writing this) and CS degrees
-(undergrad and post-grad). At work I work on GUI development with Python/Qt and also do testing (unit, functional, integration, etc);
-and have worked in the past in devops/automated deployments. In terms of personal projects it's all game development.
-I have very little web and database background, so going in that is a weak area that I've had to learn about while
-making this.
+For more details about the project and other background info refer to the [About](ABOUT.md) document.
 
 ## Decisions
 This section is about how certain decisions were made and which ones were made either: with no AI at all, partially AI guided, or completely done by AI.
