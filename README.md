@@ -94,7 +94,7 @@ admin account, see here: [crates/server/commands.md](crates/server/commands.md).
 The server exposes a REST API along with a WebSocket that delivers live events.
 
 ## AI Usage:
-Refer to the [AI Usage](AI_USAGE.md) document for more details.
+Refer to the [AI Usage](docs/AI_USAGE.md) document for more details.
 
 ## License:
 TBD / Expect compeltely free usage one. Cannot be decided until project is mostly complete as external
