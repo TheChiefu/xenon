@@ -16,7 +16,7 @@ pub async fn login(
     server: &str,
     username: &str,
     password: &str
-) -> Result<String, String> {
+) -> Result<String, ErrorMessage> {
 
     // Construct URL and request body
     let url = format!("{server}/login");
@@ -80,7 +80,9 @@ pub async fn sign_out(server: &str, session: &str) -> Result<(), ErrorMessage> {
 }
 
 /// Read a response body as `T`, or the server's error message when the request failed
-async fn read<T: DeserializeOwned>(sent: reqwest::Result<Response>) -> Result<T, ErrorMessage> {
+async fn read<T: DeserializeOwned>(
+    sent: reqwest::Result<Response>
+) -> Result<T, ErrorMessage> {
     let response = match sent {
         Ok(response) => response,
         Err(e) => return Err(e.to_string()),

@@ -8,8 +8,9 @@ const LOCK_FAILED: &str = "handlers should not be left locked by a crash";
 
 
 /// Event with no data
-type Handler = Box<dyn Fn() + Send + Sync>;
-pub struct Event { handlers: Mutex<Vec<Handler>> }
+pub struct Event {
+    handlers: Mutex<Vec<Box<dyn Fn() + Send + Sync>>> // Vec of function signatures
+}
 impl Event {
 
     /// Create an event with no handlers
@@ -37,8 +38,9 @@ impl Event {
 }
 
 /// Event with data
-type HandlerWith<T> = Box<dyn Fn(&T) + Send + Sync>;
-pub struct EventWith<T> { handlers: Mutex<Vec<HandlerWith<T>>> }
+pub struct EventWith<T> {
+    handlers: Mutex<Vec<Box<dyn Fn(&T) + Send + Sync>>> // Vec of function signatures (w/data)
+}
 impl<T> EventWith<T> {
 
     /// Create an event with no handlers

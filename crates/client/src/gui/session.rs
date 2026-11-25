@@ -41,8 +41,16 @@ pub fn connect(app: &App) {
 // ACTIONS //
 
 /// Start signing in on a background thread
-fn sign_in(username: SharedString, password: SharedString, server: SharedString) {
-    tokio::spawn(auth::sign_in(username.to_string(), password.to_string(), server.to_string()));
+fn sign_in(
+    username: SharedString,
+    password: SharedString,
+    server: SharedString
+) {
+    tokio::spawn(auth::sign_in(
+        username.to_string(),
+        password.to_string(),
+        server.to_string()
+    ));
 }
 
 /// Start creating an account on a background thread
