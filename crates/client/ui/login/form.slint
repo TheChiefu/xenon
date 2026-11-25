@@ -1,0 +1,48 @@
+import { Button } from "../widgets/button.slint";
+import { Input } from "../widgets/input.slint";
+import { Field } from "field.slint";
+import { Strings } from "../strings.slint";
+import { Layout } from "../layout.slint";
+import { Session } from "../state/session.slint";
+
+export component Form inherits VerticalLayout {
+    property <string> username;
+    property <string> password;
+    property <string> server;
+
+    function submit() {
+        Session.sign-in(root.username, root.password, root.server);
+    }
+
+    spacing: Layout.spacing;
+
+    Field {
+        label: Strings.username;
+        Input {
+            text <=> root.username;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Field {
+        label: Strings.password;
+        Input {
+            text <=> root.password;
+            input-type: InputType.password;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Field {
+        label: Strings.server;
+        Input {
+            text <=> root.server;
+            accepted => { root.submit(); }
+        }
+    }
+
+    Button {
+        text: Strings.sign-in;
+        clicked => { root.submit(); }
+    }
+}

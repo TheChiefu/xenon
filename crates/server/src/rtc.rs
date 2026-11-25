@@ -1,0 +1,79 @@
+//! Voice and video in rooms over WebRTC, relayed through the server
+//!
+//! https://www.w3.org/TR/webrtc/
+
+pub mod connections;
+pub mod socket;
+mod forwarding;
+mod handler;
+mod keyframes;
+mod link;
+mod media;
+mod peer;
+mod rtcp_forwarder;
+mod signal;
+
+use std::sync::Arc;
+
+use uuid::Uuid;
+use types::events::ServerEvent;
+use types::rtc::events::RtcCloseCode;
+
+use crate::rtc::peer::Peer;
+use crate::state::{self, AppState};
+
+// PUBLIC METHODS //
+
+/// Remove a peer, take its tracks from the others in the room, and tell the room it left
+pub async fn leave(
+    state: &AppState,
+    peer: &Arc<Peer>,
+) {
+    let lock = state.rtc.track_lock.lock().await;
+
+    let Some(remaining) = connections::remove(&state.rtc, peer) else {
+        return;
+    };
+
+    for other in &remaining {
+        other.keyframes.stop_sender(peer.user_id);
+        other.forwarding.remove_sender(peer.user_id).await;
+        other.negotiate().await;
+    }
+
+    drop(lock);
+
+    peer.signal.end(RtcCloseCode::Normal);
+    if let Err(e) = peer.link.close().await {
+        tracing::warn!("could not close the connection of {}: {e}", peer.user_id);
+    }
+
+    let event = ServerEvent::RtcLeft { room_id: peer.room_id, user_id: peer.user_id };
+    state::broadcast(state, peer.room_id, event).await;
+}
+
+/// End a user's RTC socket, only when they are connected in the given room if one is given
+pub fn end_user(
+    state: &AppState,
+    user_id: Uuid,
+    room_id: Option<Uuid>,
+    code: RtcCloseCode,
+) {
+    let Some(peer) = connections::peer(&state.rtc, user_id) else {
+        return;
+    };
+
+    if room_id.is_none_or(|room_id| room_id == peer.room_id) {
+        peer.signal.end(code);
+    }
+}
+
+/// End every RTC socket in a room
+pub fn end_room(
+    state: &AppState,
+    room_id: Uuid,
+) {
+    for peer in connections::in_room(&state.rtc, room_id) {
+        peer.signal.end(RtcCloseCode::Normal);
+    }
+}

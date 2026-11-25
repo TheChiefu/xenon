@@ -1,0 +1,40 @@
+import { Strings } from "strings.slint";
+import { Layout } from "layout.slint";
+import { Theme } from "theme.slint";
+import { Status } from "state/status.slint";
+import { Session, Entry } from "state/session.slint";
+import { Profile } from "state/profile.slint";
+import { Progress } from "progress.slint";
+import { Alert } from "alert.slint";
+import { Login } from "login/login.slint";
+import { Primary } from "primary.slint";
+
+export { Status, Session, Profile, Entry }
+
+export component App inherits Window {
+    title: Strings.app-name;
+    icon: @image-url("@assets/icon.png");
+    preferred-width: Layout.window-width;
+    preferred-height: Layout.window-height;
+    min-width: Layout.window-min-width;
+    min-height: Layout.window-min-height;
+    background: Theme.colors.background;
+
+    VerticalLayout {
+        if !Session.signed-in: Login { }
+        if Session.signed-in: Primary { }
+    }
+
+    // Drawn over the screens so they don't shift when shown
+    Progress {
+        y: 0;
+        width: root.width;
+        height: self.preferred-height;
+    }
+
+    Alert {
+        y: 0;
+        width: root.width;
+        height: self.preferred-height;
+    }
+}

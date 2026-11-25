@@ -1,0 +1,194 @@
+//! The one error type every fallible path returns, and its HTTP mapping.
+
+use std::fmt;
+
+use axum::extract::multipart::MultipartError;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
+use types::error::ErrorResponse;
+use uuid::Uuid;
+
+use crate::bytesize::ByteSize;
+const SQLITE_BUSY: &str = "5"; // https://sqlite.org/rescode.html#busy
+
+/// Everything a request can fail with.
+#[derive(Debug)]
+pub enum AppError {
+    InvalidCredentials,
+    Banned,
+    InvalidRegistrationCode,
+    UsernameTaken,
+    Forbidden,
+    NotFound,
+    AddressBlocked,
+    TooLarge(ByteSize),
+    Db(sqlx::Error),
+    Hash(argon2::password_hash::Error),
+    Validation(String),
+    Unavailable(String),
+    Io(std::io::Error),
+    Url(url::ParseError),
+
+    #[cfg(any(feature = "push", feature = "links"))]
+    Http(reqwest::Error),
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::InvalidCredentials => write!(f, "invalid username or password"),
+            AppError::Banned => write!(f, "account is banned"),
+            AppError::InvalidRegistrationCode => write!(f, "invalid or unusable registration code"),
+            AppError::UsernameTaken => write!(f, "username is already taken"),
+            AppError::Db(e) => write!(f, "database error: {e}"),
+            AppError::Hash(e) => write!(f, "password hashing error: {e}"),
+            AppError::Validation(msg) => write!(f, "{msg}"),
+            AppError::Unavailable(msg) => write!(f, "{msg}"),
+            AppError::Forbidden => write!(f,"action not allowed"),
+            AppError::TooLarge(bytes) => write!(f, "content exceeds {bytes} file limit"),
+            AppError::Io(e) => write!(f, "i/o error: {e}"),
+            AppError::Url(e) => write!(f, "url error: {e}"),
+            AppError::NotFound => write!(f, "not found"),
+            AppError::AddressBlocked => write!(f, "this address is blocked"),
+
+            #[cfg(any(feature = "push", feature = "links"))]
+            AppError::Http(e) => write!(f, "http error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for AppError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            AppError::Db(e) => Some(e),
+            AppError::Hash(e) => Some(e),
+            AppError::Io(e) => Some(e),
+            AppError::Url(e) => Some(e),
+
+            #[cfg(any(feature = "push", feature = "links"))]
+            AppError::Http(e) => Some(e),
+
+            _ => None
+        }
+    }
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(e: sqlx::Error) -> Self {
+        AppError::Db(e)
+    }
+}
+
+impl From<argon2::password_hash::Error> for AppError {
+    fn from(e: argon2::password_hash::Error) -> Self {
+        AppError::Hash(e)
+    }
+}
+
+impl From<sqlx::migrate::MigrateError> for AppError {
+    fn from(e: sqlx::migrate::MigrateError) -> Self {
+        AppError::Db(e.into())
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(e: std::io::Error) -> Self {
+        AppError::Io(e)
+    }
+}
+
+#[cfg(any(feature = "push", feature = "links"))]
+impl From<reqwest::Error> for AppError {
+    fn from(e: reqwest::Error) -> Self {
+        AppError::Http(e)
+    }
+}
+
+impl From<url::ParseError> for AppError {
+    fn from(e: url::ParseError) -> Self {
+        AppError::Url(e)
+    }
+}
+
+impl AppError {
+    /// Logs the error and answers with a generic 500, carrying the same id in
+    /// both so the response can be matched to its log line.
+    fn internal_error(&self) -> (StatusCode, String) {
+        let id = Uuid::now_v7();
+        tracing::error!("internal error {id}: {self}");
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("internal server error ({id})"))
+    }
+
+    pub fn status_and_message(&self) -> (StatusCode, String) {
+        match self {
+            AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::Banned => (StatusCode::FORBIDDEN, self.to_string()),
+            AppError::InvalidRegistrationCode => (StatusCode::FORBIDDEN, self.to_string()),
+            AppError::UsernameTaken => (StatusCode::CONFLICT, self.to_string()),
+            AppError::Validation(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            AppError::Unavailable(_) => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
+            AppError::TooLarge(_) => (StatusCode::PAYLOAD_TOO_LARGE, self.to_string()),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
+            AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
+            AppError::AddressBlocked => (StatusCode::FORBIDDEN, self.to_string()),
+
+            // A rejected request body reaches server as an io error
+            AppError::Io(e) => match multipart_rejection(e) {
+                Some(rejection) => rejection,
+                None => self.internal_error(),
+            },
+
+            // Handle Database Errors
+            AppError::Db(e) => match e {
+                sqlx::Error::Database(db) => match db.code().as_deref() {
+                    Some(SQLITE_BUSY) => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
+                    _ => self.internal_error(), // Add new SQL error codes here if necessary
+                },
+                _ => self.internal_error(),
+            },
+
+            // Never reaches client
+            AppError::Hash(_) | AppError::Url(_) => self.internal_error(),
+
+            #[cfg(any(feature = "push", feature = "links"))]
+            AppError::Http(_) => self.internal_error(),
+        }
+    }
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, message) = self.status_and_message();
+        (status, Json(ErrorResponse { error: message })).into_response()
+    }
+}
+
+/// Result whose error is always this server's error
+pub type Result<T> = std::result::Result<T, AppError>;
+
+/// Map a unique-constraint failure to the error naming the column it hit
+pub fn unique_violation(e: sqlx::Error) -> AppError {
+    let mapped = match &e {
+        sqlx::Error::Database(db) if db.is_unique_violation() => {
+            let msg = db.message();
+            if msg.contains("users.username") {
+                Some(AppError::UsernameTaken)
+            } else {
+                None
+            }
+        }
+
+        _ => None,
+    };
+
+    mapped.unwrap_or(AppError::Db(e))
+}
+
+/// Recover the status axum picked for a rejected body, such as 413 when the
+/// route's body size limit was exceeded
+fn multipart_rejection(e: &std::io::Error) -> Option<(StatusCode, String)> {
+    let source = e.get_ref()?;
+    let multipart = source.downcast_ref::<MultipartError>()?;
+    Some((multipart.status(), multipart.body_text()))
+}

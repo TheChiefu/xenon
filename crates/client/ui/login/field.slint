@@ -1,0 +1,14 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Field inherits VerticalLayout {
+    in property <string> label;
+    spacing: Layout.spacing / 2;
+
+    Text {
+        text: root.label;
+        color: Theme.colors.text;
+    }
+
+    @children
+}

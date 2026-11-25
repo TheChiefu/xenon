@@ -1,0 +1,26 @@
+import { Tab } from "../widgets/tab.slint";
+import { Strings } from "../strings.slint";
+
+export enum LoginTab { login, register, accounts }
+
+export component Tabs inherits HorizontalLayout {
+    in-out property <LoginTab> current;
+
+    Tab {
+        text: Strings.login;
+        active: root.current == LoginTab.login;
+        clicked => { root.current = LoginTab.login; }
+    }
+
+    Tab {
+        text: Strings.register;
+        active: root.current == LoginTab.register;
+        clicked => { root.current = LoginTab.register; }
+    }
+
+    Tab {
+        text: Strings.accounts;
+        active: root.current == LoginTab.accounts;
+        clicked => { root.current = LoginTab.accounts; }
+    }
+}

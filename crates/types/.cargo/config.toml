@@ -1,0 +1,9 @@
+[alias]
+bindings = "test --features ts_bindings,links,push,rtc export_bindings"
+
+[env]
+# Where `#[ts(export)]` writes generated TypeScript, relative to this crate root.
+TS_RS_EXPORT_DIR = { value = "../../web/src/bindings", relative = true }
+
+# Binds i64 and u64 as `number`, since JSON carries them as plain numbers.
+TS_RS_LARGE_INT = "number"

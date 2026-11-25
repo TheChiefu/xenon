@@ -1,0 +1,18 @@
+import { Divider } from "../widgets/divider.slint";
+import { Identity } from "identity.slint";
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Toolbar inherits Rectangle {
+    height: Layout.toolbar-height;
+    background: Theme.colors.surface;
+
+    VerticalLayout {
+        HorizontalLayout {
+            Rectangle { horizontal-stretch: 1; }
+            Identity { }
+        }
+
+        Divider { }
+    }
+}

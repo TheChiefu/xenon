@@ -1,0 +1,17 @@
+import { Layout } from "layout.slint";
+import { Theme } from "theme.slint";
+import { Status } from "state/status.slint";
+
+export component Progress inherits VerticalLayout {
+    if Status.busy: Rectangle {
+        height: Layout.progress-height;
+        background: Theme.colors.surface;
+        clip: true;
+
+        Rectangle {
+            width: parent.width * Layout.progress-fraction;
+            x: mod(animation-tick() / Layout.progress-period, 1) * (parent.width + self.width) - self.width;
+            background: Theme.colors.accent;
+        }
+    }
+}

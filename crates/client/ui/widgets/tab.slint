@@ -1,0 +1,26 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Tab inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked <=> touch.clicked;
+
+    horizontal-stretch: 1;
+    background: root.active ? Theme.colors.tab-active : Theme.colors.tab;
+
+    HorizontalLayout {
+        padding: Layout.control-padding;
+
+        Text {
+            text: root.text;
+            color: Theme.colors.text;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+    }
+}

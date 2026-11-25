@@ -1,4 +1,4 @@
-![project logo](./logo.png)
+![project logo](./assets/logo.png)
 
 ## Description
 A simple chat application for use in small to medium sized groups. It is a single
@@ -60,7 +60,7 @@ winget install NASM.NASM
 
 Then build:
 ```bash
-cd server
+cd crates/server
 cargo build --release --features full
 ```
 
@@ -73,8 +73,8 @@ Each service is a feature, and none are enabled by default:
 | `rtc` | Voice calls |
 | `full` | All of the above |
 
-To update the client TypeScript bindings based off of the rust code, run this from
-the `server` directory:
+To update the web TypeScript bindings based off of the rust code, run this from
+the `crates/types` directory:
 ```bash
 cargo bindings
 ```
@@ -84,39 +84,19 @@ To configure the server, edit the `config.toml` file that is generated when the 
 is first run. By default it is written to the same directory the server is run at.
 To change this set the `XENON_CONFIG` environment variable to a path.
 
-To see more information on the configuration file and its options, see here: [server/config.md](server/config.md).
+To see more information on the configuration file and its options, see here: [crates/server/config.md](crates/server/config.md).
 
 ## Commands
 To see the commands typed into the server's terminal, including setting up the first
-admin account, see here: [server/commands.md](server/commands.md).
+admin account, see here: [crates/server/commands.md](crates/server/commands.md).
 
 ## API
 The server exposes a REST API along with a WebSocket that delivers live events.
 
-## Developer Comment(s):
-I am not a database, server, or security developer; so have no expectation of a
-professional grade chat application. Although I work in software development I
-primarily work on the GUI side (Qt) and video game space.
+## AI Usage and Background:
+Refer to the [AI Usage](docs/AI_USAGE.md) document for more details on how AI is used in the project.
 
-My plan for this project is something very easy to setup, deploy, and maintain.
-The only thing required to get it running is compiling the program and running the
-executable. The config file, file upload path, database file, and defaults are all
-setup on first run.
-
-_Set expectations accordingly_
-
-## AI Usage:
-Agents such as Claude and Qwen (open source versions) were used in the creation of this repo.
-It is advised anyone reading the repo to vet the source code before blindly trusting it.
-
-It was not completely vibe coded where agents were left to create all the code on their own unmonitored.
-Days/weeks have been spent reviewing, reiterating, critiquing, and manually updating code in order
-to reduce excessive bloat. Rewrites and reordering is likely to continue throughout until
-a 1.0 release is set.
-
-This project was primarily to move away from corporate communication software and onto something locally
-hosted and something with features particularlly relevant to my (and my friends') needs. So expect it to be
-largely bloated early, then as time goes on, iterated, reduced, and refined.
+In terms of how this project was created and the background behind it, refer to the [About](docs/ABOUT.md) document.
 
 ## License:
 TBD / Expect compeltely free usage one. Cannot be decided until project is mostly complete as external
