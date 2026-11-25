@@ -2,26 +2,29 @@
 
 use slint::ComponentHandle;
 
-use client::events::{EventKind, Listeners};
+use client::api::ErrorMessage;
+use client::events;
+use crate::gui::subscriptions::{Subscribe, SubscribeWith};
 use crate::gui::window::{App, Status};
 
-/// Show the progress bar while work runs, and hide it when the work finishes or fails
-pub fn subscribe(app: &App, listeners: &mut Listeners) {
-    let working_app = app.clone_strong();
-    listeners.subscribe(
-        EventKind::Working,
-        Box::new(move |_| working_app.global::<Status>().set_busy(true))
-    );
+// PUBLIC METHODS //
 
-    let done_app = app.clone_strong();
-    listeners.subscribe(
-        EventKind::Done,
-        Box::new(move |_| done_app.global::<Status>().set_busy(false))
-    );
+pub fn subscribe(app: &App) {
+    events::WORKING.subscribe_window(app, show_busy);
+    events::DONE.subscribe_window(app, hide_busy);
+    events::ERROR.subscribe_window(app, hide_busy_after_error);
+}
 
-    let error_app = app.clone_strong();
-    listeners.subscribe(
-        EventKind::Error,
-        Box::new(move |_| error_app.global::<Status>().set_busy(false))
-    );
+// HELPER METHODS //
+
+fn show_busy(app: &App) {
+    app.global::<Status>().set_busy(true);
+}
+
+fn hide_busy(app: &App) {
+    app.global::<Status>().set_busy(false);
+}
+
+fn hide_busy_after_error(app: &App, _: ErrorMessage) {
+    app.global::<Status>().set_busy(false);
 }

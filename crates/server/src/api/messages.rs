@@ -188,11 +188,11 @@ pub async fn fetch(
 
     // Fetch messages and insert into vector
     let mut messages: Vec<Message> = sqlx::query_as(query)
-    .bind(room_id)
-    .bind(anchor)
-    .bind(config::get().responses.messages_per_page)
-    .fetch_all(&mut *conn)
-    .await?;
+        .bind(room_id)
+        .bind(anchor)
+        .bind(config::get().responses.messages_per_page)
+        .fetch_all(&mut *conn)
+        .await?;
 
     // The descending query returns newest first, callers always get ascending
     if older {
@@ -387,7 +387,7 @@ async fn fetch_by_nonce(
     Ok(message)
 }
 
-/// Reads a message by id
+/// Read message by id
 async fn fetch_by_id(
     conn: &mut sqlx::SqliteConnection,
     message_id: Uuid,
@@ -432,7 +432,7 @@ fn can_post(perms: Option<Vec<Permission>>, has_attachments: bool) -> bool {
     true
 }
 
-/// Reports whether a user may delete a message
+/// Report whether a user may delete a message
 fn can_delete(perms: Option<Vec<Permission>>, caller_id: Uuid, author_id: Option<Uuid>) -> bool {
 
     // Not a member, so the room cannot be read

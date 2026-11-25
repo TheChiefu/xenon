@@ -33,7 +33,7 @@ pub struct Auth {
 
 impl Auth {
 
-    /// Errors on the first invalid value in the section
+    /// Error on the first invalid value in the section
     pub(super) fn validate(&self) -> Result<(), String> {
 
         if self.lifetime_days < 1 {

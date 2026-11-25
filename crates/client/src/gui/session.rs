@@ -10,9 +10,9 @@ use rfd::{
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use client::auth;
-use client::events::{self, Event};
+use client::events;
 use client::state::session;
-use crate::gui::WINDOW;
+use crate::gui::subscriptions::Subscribe;
 use crate::gui::window::{App, Entry, Session};
 
 const SIGN_OUT_TITLE: &str = "Sign Out";
@@ -23,6 +23,9 @@ const REMOVE_QUESTION: &str = "Are you sure you want to remove this account?";
 /// Restore the session
 pub fn connect(app: &App) {
     auth::restore();
+
+    events::SIGNED_IN.subscribe_window(app, show_signed_in);
+    events::SIGNED_OUT.subscribe_window(app, show_signed_out);
 
     let actions = app.global::<Session>();
     actions.set_signed_in(session::active_account().is_some());
@@ -39,18 +42,7 @@ pub fn connect(app: &App) {
 
 /// Start signing in on a background thread
 fn sign_in(username: SharedString, password: SharedString, server: SharedString) {
-    events::dispatch(Event::Working);
-    tokio::spawn(finish_sign_in(username.to_string(), password.to_string(), server.to_string()));
-}
-
-async fn finish_sign_in(username: String, password: String, server: String) {
-    match auth::sign_in(username, password, server).await {
-        Ok(()) => {
-            events::dispatch(Event::Done);
-            set_signed_in(true);
-        }
-        Err(reason) => events::dispatch(Event::Error(reason)),
-    }
+    tokio::spawn(auth::sign_in(username.to_string(), password.to_string(), server.to_string()));
 }
 
 /// Start creating an account on a background thread
@@ -61,8 +53,7 @@ fn register(
     code: SharedString,
     server: SharedString
 ) {
-    events::dispatch(Event::Working);
-    tokio::spawn(finish_register(
+    tokio::spawn(auth::register(
         username.to_string(),
         password.to_string(),
         display_name.to_string(),
@@ -71,25 +62,8 @@ fn register(
     ));
 }
 
-async fn finish_register(
-    username: String,
-    password: String,
-    display_name: String,
-    code: String,
-    server: String
-) {
-    match auth::register(username, password, display_name, code, server).await {
-        Ok(()) => {
-            events::dispatch(Event::Done);
-            set_signed_in(true);
-        }
-        Err(reason) => events::dispatch(Event::Error(reason)),
-    }
-}
-
 fn switch_account() {
     auth::switch_account();
-    set_signed_in(false);
 }
 
 /// Ask to confirm before signing out
@@ -108,7 +82,6 @@ async fn confirm_sign_out() {
 
     if let MessageDialogResult::Yes = answer {
         auth::sign_out();
-        set_signed_in(false);
     }
 }
 
@@ -127,9 +100,7 @@ fn accounts() -> ModelRc<Entry> {
 }
 
 fn select(key: SharedString) {
-    if auth::select(&key) {
-        set_signed_in(true);
-    }
+    auth::select(&key);
 }
 
 /// Ask to confirm before removing a saved account
@@ -150,11 +121,10 @@ fn remove(key: SharedString) {
 
 // HELPERS //
 
-/// Set which screen the window shows
-fn set_signed_in(signed_in: bool) {
-    if let Some(window) = WINDOW.get() {
-        let _ = window.upgrade_in_event_loop(move |app| {
-            app.global::<Session>().set_signed_in(signed_in);
-        });
-    }
+fn show_signed_in(app: &App) {
+    app.global::<Session>().set_signed_in(true);
+}
+
+fn show_signed_out(app: &App) {
+    app.global::<Session>().set_signed_in(false);
 }

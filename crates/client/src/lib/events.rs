@@ -1,77 +1,76 @@
-//! Events published by one part of the client and handled by others
+//! Events published by one part of the client and subscribed to by others
 
-use std::collections::HashMap;
-use std::sync::OnceLock;
-
-use tokio::sync::mpsc::{self, UnboundedSender};
+use std::sync::Mutex;
 
 use crate::api::ErrorMessage;
 
-static SENDER: OnceLock<UnboundedSender<Event>> = OnceLock::new();
+const LOCK_FAILED: &str = "handlers should not be left locked by a crash";
 
-// TYPES //
-pub enum Event {
-    Working,
-    Done,
-    Error(ErrorMessage),
-    ProfileLoaded,
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EventKind {
-    Working,
-    Done,
-    Error,
-    ProfileLoaded,
-}
-
-// METHODS // 
+/// Event with no data
+type Handler = Box<dyn Fn() + Send + Sync>;
+pub struct Event { handlers: Mutex<Vec<Handler>> }
 impl Event {
-    pub fn kind(&self) -> EventKind {
-        match self {
-            Event::Working => EventKind::Working,
-            Event::Done => EventKind::Done,
-            Event::Error(_) => EventKind::Error,
-            Event::ProfileLoaded => EventKind::ProfileLoaded,
+
+    /// Create an event with no handlers
+    const fn new() -> Self {
+        Event {
+            handlers: Mutex::new(Vec::new())
+        }
+    }
+
+    /// Add a handler to the event
+    pub fn subscribe<H>(&self, handler: H)
+    where
+        H: Fn() + Send + Sync + 'static, // Callable from any thread
+    {
+        self.handlers.lock().expect(LOCK_FAILED).push(Box::new(handler));
+    }
+
+    /// Announce the event
+    pub fn publish(&self) {
+        let handlers = self.handlers.lock().expect(LOCK_FAILED);
+        for handler in handlers.iter() {
+            handler();
         }
     }
 }
-pub struct Listeners {
-    by_kind: HashMap<EventKind, Vec<Box<dyn Fn(&Event)>>>,
-}
 
-impl Listeners {
-    pub fn new() -> Self {
-        Listeners { by_kind: HashMap::new() }
+/// Event with data
+type HandlerWith<T> = Box<dyn Fn(&T) + Send + Sync>;
+pub struct EventWith<T> { handlers: Mutex<Vec<HandlerWith<T>>> }
+impl<T> EventWith<T> {
+
+    /// Create an event with no handlers
+    const fn new() -> Self {
+        EventWith {
+            handlers: Mutex::new(Vec::new())
+        }
     }
 
-    /// Register a listener for one kind of event
-    pub fn subscribe(&mut self, kind: EventKind, listener: Box<dyn Fn(&Event)>) {
-        self.by_kind.entry(kind).or_default().push(listener);
+    /// Add a handler to the event
+    pub fn subscribe<H>(&self, handler: H)
+    where
+        H: Fn(&T) + Send + Sync + 'static, // Callable with the event's data from any thread
+    {
+        self.handlers.lock().expect(LOCK_FAILED).push(Box::new(handler));
     }
 
-    /// Deliver each dispatched event to the listeners of its kind, on the UI thread
-    pub fn start(self) {
-        let (sender, mut receiver) = mpsc::unbounded_channel();
-        SENDER.set(sender).expect("events should only start once");
-
-        slint::spawn_local(async move {
-            while let Some(event) = receiver.recv().await {
-                if let Some(listeners) = self.by_kind.get(&event.kind()) {
-                    for listener in listeners {
-                        listener(&event);
-                    }
-                }
-            }
-        })
-        .expect("events should start on the UI thread");
+    /// Announce the event
+    pub fn publish(&self, data: T) {
+        let handlers = self.handlers.lock().expect(LOCK_FAILED);
+        for handler in handlers.iter() {
+            handler(&data);
+        }
     }
 }
 
-/// Publish an event to its listeners, from any thread
-pub fn dispatch(event: Event) {
-    if let Some(sender) = SENDER.get() {
-        // Only fails once the app is closing and nothing is listening anymore
-        let _ = sender.send(event);
-    }
-}
+
+// EVENTS //
+
+pub static WORKING: Event = Event::new();
+pub static DONE: Event = Event::new();
+pub static PROFILE_CHANGED: Event = Event::new();
+pub static SIGNED_IN: Event = Event::new();
+pub static SIGNED_OUT: Event = Event::new();
+pub static ERROR: EventWith<ErrorMessage> = EventWith::new();

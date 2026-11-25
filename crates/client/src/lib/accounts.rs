@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::events::{self, Event};
+use crate::events;
 
 const ACCOUNTS_FILE: &str = "accounts.json";
 
@@ -56,7 +56,7 @@ impl Saved {
         let text = serde_json::to_string_pretty(self).expect("saved accounts should serialize");
 
         if let Err(e) = fs::write(path(), text) {
-            events::dispatch(Event::Error(e.to_string()));
+            events::ERROR.publish(e.to_string());
         }
     }
 

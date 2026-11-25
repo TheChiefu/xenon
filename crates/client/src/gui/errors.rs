@@ -2,28 +2,22 @@
 
 use slint::{ComponentHandle, SharedString};
 
-use client::events::{Event, EventKind, Listeners};
+use client::api::ErrorMessage;
+use client::events;
+use crate::gui::subscriptions::{Subscribe, SubscribeWith};
 use crate::gui::window::{App, Status};
 
-/// Show each error, and clear it when new work starts
-pub fn subscribe(app: &App, listeners: &mut Listeners) {
-    let error_app = app.clone_strong();
-    listeners.subscribe(
-        EventKind::Error,
-        Box::new(move |event| show(&error_app, event))
-    );
+// PUBLIC METHODS //
 
-    let working_app = app.clone_strong();
-    listeners.subscribe(
-        EventKind::Working,
-        Box::new(move |_| clear(&working_app))
-    );
+pub fn subscribe(app: &App) {
+    events::ERROR.subscribe_window(app, show);
+    events::WORKING.subscribe_window(app, clear);
 }
 
-fn show(app: &App, event: &Event) {
-    if let Event::Error(message) = event {
-        app.global::<Status>().set_error(message.as_str().into());
-    }
+// HELPER METHODS //
+
+fn show(app: &App, message: ErrorMessage) {
+    app.global::<Status>().set_error(message.into());
 }
 
 fn clear(app: &App) {

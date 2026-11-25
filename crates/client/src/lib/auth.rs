@@ -1,8 +1,8 @@
 use types::auth::Registration;
 
 use crate::accounts::Account;
-use crate::api::{self, ErrorMessage};
-use crate::events::{self, Event};
+use crate::api;
+use crate::events;
 use crate::state::profile;
 use crate::state::session;
 
@@ -13,13 +13,19 @@ pub async fn sign_in(
     username: String,
     password: String,
     server: String
-) -> Result<(), ErrorMessage> {
-    let server = server.trim_end_matches('/').to_string();
-    let token = api::login(&server, &username, &password).await?;
+) {
+    events::WORKING.publish();
 
-    session::add(&Account { server, username, session: token });
-    tokio::spawn(begin());
-    Ok(())
+    let server = server.trim_end_matches('/').to_string();
+    match api::login(&server, &username, &password).await {
+        Ok(token) => {
+            session::add(&Account { server, username, session: token });
+            tokio::spawn(begin());
+            events::DONE.publish();
+            events::SIGNED_IN.publish();
+        }
+        Err(reason) => events::ERROR.publish(reason),
+    }
 }
 
 /// Create an account on the server and make it the active one
@@ -29,7 +35,9 @@ pub async fn register(
     display_name: String,
     code: String,
     server: String
-) -> Result<(), ErrorMessage> {
+) {
+    events::WORKING.publish();
+
     let server = server.trim_end_matches('/').to_string();
     let registration = Registration {
         registration_code: Some(code),
@@ -37,21 +45,25 @@ pub async fn register(
         password,
         display_name,
     };
-    let token = api::register(&server, &registration).await?;
-
-    session::add(&Account { server, username, session: token });
-    tokio::spawn(begin());
-    Ok(())
+    match api::register(&server, &registration).await {
+        Ok(token) => {
+            session::add(&Account { server, username, session: token });
+            tokio::spawn(begin());
+            events::DONE.publish();
+            events::SIGNED_IN.publish();
+        }
+        Err(reason) => events::ERROR.publish(reason),
+    }
 }
 
 /// Sign in with a saved account's existing session
-pub fn select(key: &str) -> bool {
+pub fn select(key: &str) {
     if !session::activate(key) {
-        return false;
+        return;
     }
 
     tokio::spawn(begin());
-    true
+    events::SIGNED_IN.publish();
 }
 
 /// Restore the last active account
@@ -66,6 +78,7 @@ pub fn restore() {
 /// Stop using the active account, keeping it saved
 pub fn switch_account() {
     session::deactivate();
+    events::SIGNED_OUT.publish();
 }
 
 /// Remove the active account and end its session on the server
@@ -73,6 +86,7 @@ pub fn sign_out() {
     if let Some(account) = session::remove_active() {
         tokio::spawn(end_session(account));
     }
+    events::SIGNED_OUT.publish();
 }
 
 /// Remove a saved account and end its session on the server
@@ -84,11 +98,11 @@ pub fn remove(key: &str) {
 
 /// Load the signed-in session's data
 pub async fn begin() {
-    events::dispatch(Event::Working);
+    events::WORKING.publish();
 
     match profile::load().await {
-        Ok(()) => events::dispatch(Event::Done),
-        Err(reason) => events::dispatch(Event::Error(reason)),
+        Ok(()) => events::DONE.publish(),
+        Err(reason) => events::ERROR.publish(reason),
     }
 }
 
@@ -96,6 +110,6 @@ pub async fn begin() {
 
 async fn end_session(account: Account) {
     if let Err(reason) = api::sign_out(&account.server, &account.session).await {
-        events::dispatch(Event::Error(reason));
+        events::ERROR.publish(reason);
     }
 }
