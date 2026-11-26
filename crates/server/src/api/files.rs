@@ -13,7 +13,7 @@ use crate::config;
 use crate::db;
 use crate::error::{AppError, Result};
 use crate::storage;
-use crate::bytesize::{ByteSize, KIBIBYTE};
+use types::bytesize::{ByteSize, KIBIBYTE};
 use crate::utils;
 
 // DATA STRUCTS //

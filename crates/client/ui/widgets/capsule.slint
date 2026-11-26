@@ -1,0 +1,24 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Capsule inherits Rectangle {
+    in property <string> text;
+
+    background: Theme.colors.surface;
+    border-width: Layout.border-width;
+    border-color: Theme.colors.border;
+    border-radius: self.height / 2;
+
+    HorizontalLayout {
+        padding-top: 1px;
+        padding-bottom: 1px;
+        padding-left: 6px;
+        padding-right: 6px;
+
+        Text {
+            text: root.text;
+            color: Theme.colors.text-dim;
+            font-size: Layout.tiny-font-size;
+        }
+    }
+}

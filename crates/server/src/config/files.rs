@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::bytesize::{ByteSize, MEBIBYTE};
+use types::bytesize::{ByteSize, MEBIBYTE};
 use crate::time::{DAY, SECOND};
 
 /// Where uploaded files are kept, and how large they may be

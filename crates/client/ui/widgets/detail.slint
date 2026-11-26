@@ -1,0 +1,23 @@
+import { Layout } from "../layout.slint";
+import { Theme } from "../theme.slint";
+
+export component Detail inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value;
+
+    spacing: Layout.control-padding;
+
+    Text {
+        text: root.label;
+        color: Theme.colors.text-dim;
+        font-size: Layout.small-font-size;
+        horizontal-stretch: 1;
+    }
+
+    Text {
+        text: root.value;
+        color: Theme.colors.text;
+        font-size: Layout.small-font-size;
+        horizontal-alignment: right;
+    }
+}

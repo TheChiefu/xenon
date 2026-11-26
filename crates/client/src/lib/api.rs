@@ -5,6 +5,7 @@ use serde::de::DeserializeOwned;
 use types::auth::Registration;
 use types::error::ErrorResponse;
 use types::routes::auth::{RequestLogin, RespondLogin, RespondRegistration};
+use types::routes::server::ServerInfo;
 use types::users::UserProfile;
 
 /// Text explaining why a request failed
@@ -57,6 +58,18 @@ pub async fn me(server: &str, session: &str) -> Result<UserProfile, ErrorMessage
     let sent = Client::new()
         .get(url)
         .bearer_auth(session)
+        .send()
+        .await;
+
+    read(sent).await
+}
+
+/// Get the server's information
+pub async fn server_info(server: &str) -> Result<ServerInfo, ErrorMessage> {
+    let url = format!("{server}/server");
+
+    let sent = Client::new()
+        .get(url)
         .send()
         .await;
 

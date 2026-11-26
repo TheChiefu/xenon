@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// General server information and limits clients need to know about
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts_bindings", derive(TS), ts(export, export_to = "routes/server.ts"))]
 pub struct ServerInfo {
     pub name: String,

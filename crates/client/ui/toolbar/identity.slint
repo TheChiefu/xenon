@@ -1,64 +1,17 @@
-import { Button, ButtonKind } from "../widgets/button.slint";
-import { Strings } from "../strings.slint";
 import { Layout } from "../layout.slint";
-import { Theme } from "../theme.slint";
-import { Session } from "../state/session.slint";
-import { Profile } from "../state/profile.slint";
+import { IdentityCard } from "identity/card.slint";
+import { IdentityMenu } from "identity/menu.slint";
 
 export component Identity inherits Rectangle {
-    background: touch.has-hover ? Theme.colors.surface-hover : Theme.colors.surface-raised;
+    width: card.width;
 
-    VerticalLayout {
-        padding-left: Layout.control-padding * 2;
-        padding-right: Layout.control-padding * 2;
-        alignment: center;
-
-        Text {
-            text: Profile.display-name;
-            color: Theme.colors.text;
-            font-weight: 700;
-            horizontal-alignment: center;
-        }
-
-        Text {
-            text: "@" + Profile.username;
-            color: Theme.colors.text-dim;
-            font-size: Layout.small-font-size;
-            horizontal-alignment: center;
-        }
-    }
-
-    touch := TouchArea {
-        mouse-cursor: pointer;
+    card := IdentityCard {
+        height: root.height;
         clicked => { menu.show(); }
     }
 
-    menu := PopupWindow {
+    menu := IdentityMenu {
         x: root.width - Layout.menu-width;
         y: root.height;
-        width: Layout.menu-width;
-
-        Rectangle {
-            background: Theme.colors.surface;
-            border-width: Layout.border-width;
-            border-color: Theme.colors.border;
-
-            VerticalLayout {
-                padding: Layout.menu-padding;
-                spacing: Layout.control-padding;
-
-                Button {
-                    text: Strings.switch-account;
-                    kind: ButtonKind.normal;
-                    clicked => { Session.switch-account(); }
-                }
-
-                Button {
-                    text: Strings.sign-out;
-                    kind: ButtonKind.danger;
-                    clicked => { Session.sign-out(); }
-                }
-            }
-        }
     }
 }

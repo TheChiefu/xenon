@@ -12,7 +12,7 @@ use uuid::Uuid;
 use types::routes::files::RespondFile;
 
 use crate::api::files::{File, Stored};
-use crate::bytesize::MEBIBYTE;
+use types::bytesize::MEBIBYTE;
 use crate::error::{AppError, Result};
 use crate::routes::AuthUser;
 use crate::api;

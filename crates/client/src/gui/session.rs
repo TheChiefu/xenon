@@ -9,6 +9,7 @@ use rfd::{
 };
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
+use client::accounts;
 use client::auth;
 use client::events;
 use client::state::session;
@@ -96,7 +97,7 @@ async fn confirm_sign_out() {
 /// Get the saved accounts as rows for the login screen
 fn accounts() -> ModelRc<Entry> {
     let mut entries = Vec::new();
-    for (key, account) in session::accounts() {
+    for (key, account) in accounts::list() {
         entries.push(Entry {
             key: key.into(),
             username: account.username.into(),

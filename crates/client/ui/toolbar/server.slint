@@ -1,0 +1,16 @@
+import { ServerCard } from "server/card.slint";
+import { ServerDetails } from "server/details.slint";
+
+export component ServerInfo inherits Rectangle {
+    width: card.width;
+
+    card := ServerCard {
+        height: root.height;
+        clicked => { details.show(); }
+    }
+
+    details := ServerDetails {
+        x: 0;
+        y: root.height;
+    }
+}

@@ -1,0 +1,51 @@
+import { Strings } from "../../strings.slint";
+import { Layout } from "../../layout.slint";
+import { Theme } from "../../theme.slint";
+import { Server } from "../../state/server.slint";
+import { Detail } from "../../widgets/detail.slint";
+import { Panel } from "../../widgets/panel.slint";
+import { Divider } from "../../widgets/divider.slint";
+
+export component ServerDetails inherits PopupWindow {
+    width: Layout.menu-width;
+
+    Panel {
+        Detail {
+            label: Strings.server-name;
+            value: Server.name;
+        }
+
+        Detail {
+            label: Strings.server-description;
+            value: Server.description;
+        }
+
+        Detail {
+            label: Strings.server-kind;
+            value: Server.kind;
+        }
+
+        Detail {
+            label: Strings.server-version;
+            value: Server.version;
+        }
+
+        Divider {}
+
+        Text {
+            text: Strings.server-attributes;
+            color: Theme.colors.text;
+            overflow: elide;
+        }
+
+        Detail {
+            label: Strings.file-size-max;
+            value: Server.file-size-max;
+        }
+
+        Detail {
+            label: Strings.attachments-max;
+            value: Server.attachments-max;
+        }
+    }
+}

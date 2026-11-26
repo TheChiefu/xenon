@@ -2,6 +2,7 @@
 
 pub mod appearance;
 pub mod auth;
+pub mod bytesize;
 pub mod error;
 pub mod events;
 pub mod messages;

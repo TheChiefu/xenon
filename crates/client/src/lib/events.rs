@@ -73,6 +73,7 @@ impl<T> EventWith<T> {
 pub static WORKING: Event = Event::new();
 pub static DONE: Event = Event::new();
 pub static PROFILE_CHANGED: Event = Event::new();
+pub static SERVER_CHANGED: Event = Event::new();
 pub static SIGNED_IN: Event = Event::new();
 pub static SIGNED_OUT: Event = Event::new();
 pub static ERROR: EventWith<ErrorMessage> = EventWith::new();

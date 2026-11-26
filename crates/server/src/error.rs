@@ -9,7 +9,7 @@ use axum::Json;
 use types::error::ErrorResponse;
 use uuid::Uuid;
 
-use crate::bytesize::ByteSize;
+use types::bytesize::ByteSize;
 const SQLITE_BUSY: &str = "5"; // https://sqlite.org/rescode.html#busy
 
 /// Everything a request can fail with.

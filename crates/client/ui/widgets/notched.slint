@@ -1,0 +1,23 @@
+export component NotchedShape inherits Path {
+    in property <length> notch;
+    in property <bool> notch-right;
+
+    viewbox-width: self.width / 1px;
+    viewbox-height: self.height / 1px;
+
+    MoveTo { x: 0; y: 0; }
+    LineTo { x: root.width / 1px; y: 0; }
+    LineTo {
+        x: root.notch-right ? (root.width - root.notch) / 1px : root.width / 1px;
+        y: root.notch-right ? root.height / 2px : root.height / 1px;
+    }
+    LineTo {
+        x: root.notch-right ? root.width / 1px : 0;
+        y: root.height / 1px;
+    }
+    LineTo {
+        x: root.notch-right ? 0 : root.notch / 1px;
+        y: root.notch-right ? root.height / 1px : root.height / 2px;
+    }
+    Close { }
+}

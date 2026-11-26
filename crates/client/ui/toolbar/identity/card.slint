@@ -1,0 +1,54 @@
+import { Layout } from "../../layout.slint";
+import { Theme } from "../../theme.slint";
+import { Profile } from "../../state/profile.slint";
+import { NotchedShape } from "../../widgets/notched.slint";
+
+export component IdentityCard inherits Rectangle {
+    width: 136px;
+
+    in property <color> status-color: Theme.colors.status-offline;
+    property <length> notch: 40px;
+    property <length> status-offset: 6.4px;
+
+    callback clicked();
+
+    NotchedShape {
+        x: -root.status-offset;
+        width: root.width;
+        height: root.height;
+        notch: root.notch;
+        fill: root.status-color;
+    }
+
+    NotchedShape {
+        width: root.width;
+        height: root.height;
+        notch: root.notch;
+        fill: touch.has-hover ? Theme.colors.surface-hover : Theme.colors.surface-raised;
+    }
+
+    VerticalLayout {
+        padding-left: root.notch;
+        padding-right: Layout.control-padding;
+        alignment: center;
+
+        Text {
+            text: Profile.display-name;
+            color: Theme.colors.text;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "@" + Profile.username;
+            color: Theme.colors.text-dim;
+            font-size: Layout.small-font-size;
+            horizontal-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

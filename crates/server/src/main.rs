@@ -1,7 +1,6 @@
 //! Starts the server: config, database, services, then the HTTP router
 
 mod api;
-mod bytesize;
 mod cli;
 mod config;
 mod db;

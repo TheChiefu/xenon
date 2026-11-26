@@ -20,7 +20,7 @@ use crate::rtc::{self, connections};
 use crate::rtc::peer::{self, Peer};
 use crate::sockets;
 use crate::state::{self, AppState};
-use crate::bytesize::KIBIBYTE;
+use types::bytesize::KIBIBYTE;
 
 /// Largest message a client may send over an RTC socket
 const SIGNAL_SIZE_MAX: usize = 16 * KIBIBYTE as usize;

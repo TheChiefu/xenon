@@ -1,0 +1,68 @@
+import { Layout } from "../../layout.slint";
+import { Theme } from "../../theme.slint";
+import { Server } from "../../state/server.slint";
+import { Capsule } from "../../widgets/capsule.slint";
+import { NotchedShape } from "../../widgets/notched.slint";
+
+export component ServerCard inherits Rectangle {
+    width: content.preferred-width;
+
+    property <color> status-color: Server.connected ? Theme.colors.status-online : Theme.colors.status-busy;
+    property <length> notch: 35px;
+    property <length> status-offset: 6.4px;
+
+    callback clicked();
+
+    NotchedShape {
+        x: root.status-offset;
+        width: root.width;
+        height: root.height;
+        notch: root.notch;
+        notch-right: true;
+        fill: root.status-color;
+    }
+
+    NotchedShape {
+        width: root.width;
+        height: root.height;
+        notch: root.notch;
+        notch-right: true;
+        fill: Theme.colors.border;
+    }
+
+    content := VerticalLayout {
+        padding-left: Layout.spacing;
+        padding-right: root.notch;
+        spacing: 3px;
+        alignment: center;
+
+        Text {
+            text: Server.name;
+            color: Theme.colors.text;
+            font-italic: true;
+            font-weight: 600;
+            overflow: elide;
+        }
+
+        HorizontalLayout {
+            spacing: 3px;
+            alignment: start;
+
+            if Server.version != "": Text {
+                text: "v" + Server.version;
+                color: Theme.colors.text-dim;
+                font-size: Layout.small-font-size;
+                vertical-alignment: center;
+            }
+
+            if Server.kind != "": Capsule {
+                text: Server.kind;
+            }
+        }
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

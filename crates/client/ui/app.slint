@@ -4,12 +4,13 @@ import { Theme } from "theme.slint";
 import { Status } from "state/status.slint";
 import { Session, Entry } from "state/session.slint";
 import { Profile } from "state/profile.slint";
+import { Server } from "state/server.slint";
 import { Progress } from "progress.slint";
 import { Alert } from "alert.slint";
 import { Login } from "login/login.slint";
 import { Primary } from "primary.slint";
 
-export { Status, Session, Profile, Entry }
+export { Status, Session, Profile, Server, Entry }
 
 export component App inherits Window {
     title: Strings.app-name;
@@ -19,6 +20,8 @@ export component App inherits Window {
     min-width: Layout.window-min-width;
     min-height: Layout.window-min-height;
     background: Theme.colors.background;
+    default-font-size: 16px;
+    default-font-family: "Segoe UI";
 
     VerticalLayout {
         if !Session.signed-in: Login { }

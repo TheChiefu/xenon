@@ -1,0 +1,23 @@
+import { Button, ButtonKind } from "../../widgets/button.slint";
+import { Panel } from "../../widgets/panel.slint";
+import { Strings } from "../../strings.slint";
+import { Layout } from "../../layout.slint";
+import { Session } from "../../state/session.slint";
+
+export component IdentityMenu inherits PopupWindow {
+    width: Layout.menu-width;
+
+    Panel {
+        Button {
+            text: Strings.switch-account;
+            kind: ButtonKind.normal;
+            clicked => { Session.switch-account(); }
+        }
+
+        Button {
+            text: Strings.sign-out;
+            kind: ButtonKind.danger;
+            clicked => { Session.sign-out(); }
+        }
+    }
+}

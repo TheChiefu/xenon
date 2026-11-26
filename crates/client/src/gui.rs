@@ -4,6 +4,7 @@ pub mod activity;
 pub mod errors;
 pub mod subscriptions;
 pub mod identity;
+pub mod server;
 pub mod session;
 
 // Private, so only the window's side can reach the generated Slint types
@@ -13,6 +14,7 @@ mod window {
 
 use slint::ComponentHandle;
 
+use client::state;
 use client::state::profile;
 use crate::gui::window::App;
 
@@ -21,9 +23,11 @@ pub fn run() -> Result<(), slint::PlatformError> {
     let app = App::new()?;
 
     profile::subscribe();
+    state::server::subscribe();
     activity::subscribe(&app);
     errors::subscribe(&app);
     identity::subscribe(&app);
+    server::subscribe(&app);
     session::connect(&app);
 
     app.run()
